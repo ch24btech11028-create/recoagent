@@ -17,7 +17,7 @@ from .legs import leg1, leg2, leg2_t1
 from .schemas import ReconResult, SourceBundle
 from .validate import Tolerance
 
-RUNGS = ("B0", "B2")
+RUNGS = ("B0", "B2", "B3")
 
 #: The two legs are independent -- Splink only touches Leg 1, SSMP only Leg 2 --
 #: so the ladder is really two ladders over shared inputs, and rungs can be
@@ -73,11 +73,35 @@ def run_b2(sources: SourceBundle, tol: Tolerance | None = None) -> ReconResult:
     return _compose(sources, tol or Tolerance.calibrated(), "B2", with_leg2_t1=True)
 
 
+def run_b3(
+    sources: SourceBundle,
+    proposer,
+    tol: Tolerance | None = None,
+) -> tuple[ReconResult, "AgentReport"]:
+    """B2 plus the LLM exception tier.
+
+    Returns the result *and* the agent report, because B3's cost and its
+    rejection count are part of the finding, not diagnostics. A rung that
+    resolves five exceptions by spending more than a human review costs has not
+    made the system better, and the scorecard alone would not show it.
+    """
+    from .agent.tier import recover_with_agent
+
+    tol = tol or Tolerance.calibrated()
+    result = _compose(sources, tol, "B3", with_leg2_t1=True)
+    report = recover_with_agent(sources, tol, result, proposer)
+    return result, report
+
+
 def run(rung: str, sources: SourceBundle, tol: Tolerance | None = None) -> ReconResult:
     if rung == "B0":
         return run_b0(sources, tol)
     if rung == "B2":
         return run_b2(sources, tol)
+    if rung == "B3":
+        raise ValueError(
+            "B3 needs a proposer; call run_b3(sources, proposer) directly"
+        )
     raise NotImplementedError(
         f"rung {rung!r} is not built yet; implemented rungs: {', '.join(RUNGS)}"
     )

@@ -58,6 +58,49 @@ report does not carry — and that territory is deliberately narrow: 7 defects o
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
 
+### B3 — the LLM exception tier
+
+**Built and tested; deliberately unmeasured.** There is no API key on this
+machine, so no number in this repository comes from a language model. When one
+is available, `run_b3(sources, AnthropicProposer())` produces the lift and the
+cost per exception resolved. Until then B3's status here is *plumbing verified,
+performance unknown* — and that is what it will say.
+
+What is verified is the part that matters:
+
+```
+7 confident, specific, wrong proposals at 0.97 confidence
+  → 7 rejected by the arithmetic gate
+  → false-match rate 0.00%, defects mishandled 0
+```
+
+The model never writes a match. It returns a set of rows it believes explain a
+residual; `prove_leg2` sums them on exactly the same footing as rows a human
+reported, and discards anything that does not close. A rejected proposal earns
+one retry with the remaining residual fed back, then the item goes to a human
+with the reason attached. That asymmetry is a response to a measured failure,
+not a stylistic preference: FinBalance found a 26–41 point gap between the
+balance sheet a model *reports* and the one produced by replaying its own
+entries through a ledger.
+
+Two further rules keep the audit trail honest. Self-reported confidence is
+**recorded but capped** at 0.70 for match confidence — an LLM's stated
+confidence is evidence about the model, not about the match. And inferred rows
+are written as `inferred:llm:*`, so nothing in the ledger can make a hypothesis
+look like a row someone reported.
+
+**B3's territory is small on purpose: 7 exceptions of 129 defects on dev.**
+`TIMING_SPILL` was moved *into* the deterministic solver rather than left for
+the model, because a T+2 spill is mechanically detectable and handing it over
+would have let the model take credit for arithmetic. What reaches B3 is only
+what genuinely needs a reason — a mid-cycle repricing, an FX rate the report
+does not carry.
+
+The control that makes any future lift attributable: running B3 with
+`NullProposer` reproduces B2 **exactly** — same matches, same exceptions, same
+value share. Any improvement measured later belongs to the model, not to
+plumbing.
+
 **Why dev and held-out track each other.** By construction: the two mixes hold
 each leg's *total* defect rate constant and invert the composition
 (`PARTIAL_CAPTURE` 56→32, `DUPLICATE_PAYMENT` 36→60, `REFUND_NETTED` 7→3,
@@ -69,10 +112,10 @@ differ, and Leg 2 recall does drop 1.2 points on the held-out mix.
 
 | Rung | Leg 1 | Leg 2 | State |
 |---|---|---|---|
-| **B0** | exact join | exact UTR | **built** |
-| B1 | + Splink (Fellegi-Sunter) | exact UTR | not built |
-| **B2** | *(unchanged)* | + SSMP + calibrated tolerance | **built** |
-| B3 | | + LLM exception tier | not built |
+| **B0** | exact join | exact UTR | **built, measured** |
+| B1 | + Splink (Fellegi-Sunter) | — | not built |
+| **B2** | *(unchanged)* | + SSMP, tolerance, spill pairing | **built, measured** |
+| **B3** | *(unchanged)* | + LLM exception tier | **built, not measured** |
 
 The two legs are independent — Splink only touches Leg 1, SSMP only Leg 2 — so
 the ladder is really two ladders over shared inputs, and rungs can be built out
@@ -167,7 +210,7 @@ recoagent/
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
   run.py                   CLI
 results/                   committed run artifacts
-tests/                     73 tests
+tests/             93 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

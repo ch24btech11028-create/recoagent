@@ -15,9 +15,18 @@ ROOT = pathlib.Path(__file__).resolve().parents[1] / "recoagent"
 MATCHER_MODULES = [
     ROOT / "legs" / "leg1.py",
     ROOT / "legs" / "leg2.py",
+    ROOT / "legs" / "leg2_t1.py",
+    ROOT / "legs" / "ssmp.py",
     ROOT / "legs" / "__init__.py",
     ROOT / "validate.py",
     ROOT / "pipeline.py",
+    # The agent tier is under the same restriction as every other matcher. A
+    # proposer that could reach ground truth would make the B3 numbers
+    # worthless in exactly the way this test exists to prevent.
+    ROOT / "agent" / "contracts.py",
+    ROOT / "agent" / "evidence.py",
+    ROOT / "agent" / "proposer.py",
+    ROOT / "agent" / "tier.py",
 ]
 
 FORBIDDEN = "generator"

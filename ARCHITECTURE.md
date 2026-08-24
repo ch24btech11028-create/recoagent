@@ -165,6 +165,45 @@ production reconciliation runs at 85–95% straight-through. A synthetic set whe
 most batches are broken would not be a harder problem — it would be a different
 one, and it would make the LLM tier look far more valuable than it is.
 
+## The agent tier (B3)
+
+Built, tested, and unmeasured — no API key on this machine, so no number in this
+repository comes from a language model.
+
+The design is one asymmetry. A proposer returns a `Hypothesis`: rows it believes
+explain a residual, a reason, and a confidence. It cannot return a match, cannot
+name a settlement, and cannot mark anything resolved. `validate.prove_leg2` sums
+its rows on exactly the same footing as rows a human reported and discards
+anything that does not close. A rejection earns one retry with the residual fed
+back; a second failure sends the item to a human with the reason attached.
+
+That shape is a response to a measured failure. FinBalance found a 26–41
+percentage-point gap between the balance sheet a model reports and the one
+produced by replaying its own entries through a ledger. A model that can assert
+a match can assert a wrong one convincingly; this one can only ever offer
+arithmetic that either closes or does not.
+
+**Confidence is recorded, not trusted.** The model's own number goes into the
+audit record, but match confidence is capped at 0.70. Self-reported confidence
+from an LLM is evidence about the model, not about the match.
+
+**Inferred rows are marked.** `inferred:llm:*` and `inferred:spill:*` never look
+like rows anyone reported.
+
+**Three proposers, one interface.** `AnthropicProposer` calls Claude — two
+tools, one call, no agent loop, because a wider tool surface is a wider blast
+radius for a wrong answer and the gate cannot tell an elaborate wrong answer
+from a simple one. `ScriptedProposer` returns whatever a test specifies,
+including malformed output and timeouts, so every failure path is a unit test
+rather than an anecdote. `NullProposer` always declines, and running B3 with it
+reproduces B2 exactly — the control that makes any future lift attributable to
+the model rather than to plumbing.
+
+**The territory is deliberately narrow.** Seven exceptions of 129 defects on
+dev. `TIMING_SPILL` was moved into the deterministic solver rather than left
+here, because it is mechanically detectable and handing it over would have
+inflated the model's apparent contribution.
+
 ## Not built yet
 
 - **B1** — Splink / Fellegi-Sunter probabilistic linkage on Leg 1
