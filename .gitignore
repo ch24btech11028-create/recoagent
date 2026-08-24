@@ -2,6 +2,10 @@
 .claude/
 CLAUDE.md
 
+# Working session notes: buildathon strategy and logistics, not for a
+# repo a judge will read. README.md and ARCHITECTURE.md are reader-facing.
+STATE.md
+
 # Python
 __pycache__/
 *.py[cod]
