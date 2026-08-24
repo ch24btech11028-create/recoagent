@@ -1,0 +1,31 @@
+# Local agent/editor config — never tracked
+.claude/
+CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Data & run outputs
+data/benchrec/
+data/raw/
+out/
+*.duckdb
+
+# Eval results are COMMITTED on purpose (they are the deliverable).
+# Only scratch runs are ignored:
+results/scratch/
+
+# OS
+.DS_Store

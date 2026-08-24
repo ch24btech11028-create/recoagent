@@ -1,0 +1,17 @@
+# Core — stdlib-first by design; the deterministic tiers have no heavy deps.
+pandas>=2.2
+numpy>=1.26
+
+# Leg 1 probabilistic linkage baseline (Fellegi-Sunter). MIT licensed.
+splink>=4.0
+duckdb>=1.0
+
+# LLM exception agent (Tier 2)
+anthropic>=0.40
+pydantic>=2.7
+
+# CLI / reporting
+rich>=13.7
+
+# Dev
+pytest>=8.0

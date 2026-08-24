@@ -1,0 +1,39 @@
+
+  sources: orders=2000  payments=2060  adjustments=31  settlements=167  bank_lines=164  defects=130
+
+========================================================================
+RUNG B0   profile=holdout   seed=21
+========================================================================
+
+  FALSE-MATCH RATE         0.00%     <- lead metric
+  Auto-match rate         93.85%
+  Credit value matched    73.77%     (Rs 1,82,86,378.33 of Rs 2,47,86,790.39)
+
+------------------------------------------------------------------------
+LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC
+------------------------------------------------------------------------
+1       2000     1908   1908      0   0.00%   95.40%     92
+2        164      123    123      0   0.00%   75.00%     41
+
+------------------------------------------------------------------------
+EXCEPTION ACCOUNTING                          INJECTED    FOUND         
+------------------------------------------------------------------------
+ADJUSTMENT_ENTRY                                     6        6       ok
+CHARGEBACK_NETTED                                    5        5       ok
+DUPLICATE_PAYMENT                                   60       60       ok
+DUPLICATE_UTR                                        1        1       ok
+FEE_TAX_VARIANCE                                     7        7       ok
+FX_CONVERSION                                        2        2       ok
+MISSING_BANK_LINE                                    4        4       ok
+NARRATION_TRUNCATION                                 2        2       ok
+PARTIAL_CAPTURE                                     32       32       ok
+REFUND_NETTED                                        3        3       ok
+ROUNDING_DRIFT                                       2        2       ok
+TIMING_SPILL                                         6        6       ok
+------------------------------------------------------------------------
+exceptions with no injected cause                             0       ok
+
+  Ground-truth accounting: RECONCILES
+========================================================================
+
+  wrote results/b0_holdout.json
