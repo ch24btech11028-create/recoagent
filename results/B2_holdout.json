@@ -838,24 +838,6 @@
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0016",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0016",
-      "leg": 2,
-      "reason": "UTR joins setl_0016 but the credit is short by 82570 paise against 17 payments and 0 linked adjustments; subset-sum over 9 unlinked rows found no explanation",
-      "residual_paise": -82570,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0017",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0017",
-      "leg": 2,
-      "reason": "UTR joins setl_0017 but the credit is over by 82570 paise against 13 payments and 0 linked adjustments; subset-sum over 9 unlinked rows found no explanation",
-      "residual_paise": 82570,
-      "suspected_class": null
-    },
-    {
       "entity_id": "bank_0018",
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0018",
@@ -892,42 +874,6 @@
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0058",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0058",
-      "leg": 2,
-      "reason": "UTR joins setl_0058 but the credit is short by 147800 paise against 6 payments and 0 linked adjustments; subset-sum over 13 unlinked rows found no explanation",
-      "residual_paise": -147800,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0059",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0059",
-      "leg": 2,
-      "reason": "UTR joins setl_0059 but the credit is over by 147800 paise against 17 payments and 0 linked adjustments; subset-sum over 12 unlinked rows found no explanation",
-      "residual_paise": 147800,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0067",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0067",
-      "leg": 2,
-      "reason": "UTR joins setl_0067 but the credit is short by 16037 paise against 15 payments and 0 linked adjustments; subset-sum over 11 unlinked rows found no explanation",
-      "residual_paise": -16037,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0068",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0068",
-      "leg": 2,
-      "reason": "UTR joins setl_0068 but the credit is over by 16037 paise against 15 payments and 0 linked adjustments; subset-sum over 11 unlinked rows found no explanation",
-      "residual_paise": 16037,
-      "suspected_class": null
-    },
-    {
       "entity_id": "bank_0072",
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0072",
@@ -943,42 +889,6 @@
       "leg": 2,
       "reason": "UTR joins setl_0090 but the credit is short by 26701 paise against 15 payments and 0 linked adjustments; subset-sum over 5 unlinked rows found no explanation",
       "residual_paise": -26701,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0094",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0094",
-      "leg": 2,
-      "reason": "UTR joins setl_0094 but the credit is short by 31199 paise against 13 payments and 0 linked adjustments; subset-sum over 5 unlinked rows found no explanation",
-      "residual_paise": -31199,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0095",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0095",
-      "leg": 2,
-      "reason": "UTR joins setl_0095 but the credit is over by 31199 paise against 10 payments and 0 linked adjustments; subset-sum over 5 unlinked rows found no explanation",
-      "residual_paise": 31199,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0099",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0099",
-      "leg": 2,
-      "reason": "UTR joins setl_0099 but the credit is short by 102600 paise against 13 payments and 0 linked adjustments; subset-sum over 5 unlinked rows found no explanation",
-      "residual_paise": -102600,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0100",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0100",
-      "leg": 2,
-      "reason": "UTR joins setl_0100 but the credit is over by 102600 paise against 17 payments and 1 linked adjustments; subset-sum over 5 unlinked rows found no explanation",
-      "residual_paise": 102600,
       "suspected_class": null
     },
     {
@@ -29913,6 +29823,36 @@
       "tier": "T1"
     },
     {
+      "confidence": 0.75,
+      "input_hash": "9c47a91ac6abcff3",
+      "left": [
+        "bank_0016"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0016",
+      "residual_paise": 0,
+      "right": [
+        "setl_0016"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "ee41736e126441e8",
+      "left": [
+        "bank_0017"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0017",
+      "residual_paise": 0,
+      "right": [
+        "setl_0017"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
       "confidence": 1.0,
       "input_hash": "b5c295c99e3ff185",
       "left": [
@@ -30453,6 +30393,36 @@
       "tier": "T0"
     },
     {
+      "confidence": 0.75,
+      "input_hash": "45392fa72ffb103d",
+      "left": [
+        "bank_0058"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0058",
+      "residual_paise": 0,
+      "right": [
+        "setl_0058"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "7cb2420e5d993835",
+      "left": [
+        "bank_0059"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0059",
+      "residual_paise": 0,
+      "right": [
+        "setl_0059"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
       "confidence": 1.0,
       "input_hash": "fc311c4b43beff19",
       "left": [
@@ -30556,6 +30526,36 @@
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "e92a81b604d3e3bd",
+      "left": [
+        "bank_0067"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0067",
+      "residual_paise": 0,
+      "right": [
+        "setl_0067"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "05a2d605f45f8a88",
+      "left": [
+        "bank_0068"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0068",
+      "residual_paise": 0,
+      "right": [
+        "setl_0068"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -30873,6 +30873,36 @@
       "tier": "T0"
     },
     {
+      "confidence": 0.75,
+      "input_hash": "0f68a720724b139d",
+      "left": [
+        "bank_0094"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0094",
+      "residual_paise": 0,
+      "right": [
+        "setl_0094"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "8949d30e41cf4035",
+      "left": [
+        "bank_0095"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0095",
+      "residual_paise": 0,
+      "right": [
+        "setl_0095"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
       "confidence": 0.95,
       "input_hash": "ef6a8fecd144acce",
       "left": [
@@ -30916,6 +30946,36 @@
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "f348d6ad791d1e91",
+      "left": [
+        "bank_0099"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0099",
+      "residual_paise": 0,
+      "right": [
+        "setl_0099"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "92a5182c3e43e2d2",
+      "left": [
+        "bank_0100"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0100",
+      "residual_paise": 0,
+      "right": [
+        "setl_0100"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -31900,13 +31960,13 @@
       },
       {
         "defect": "TIMING_SPILL",
-        "flagged": 6,
+        "flagged": 1,
         "injected": 6,
         "mishandled": 0,
-        "resolved": 0
+        "resolved": 5
       }
     ],
-    "auto_match_rate": 0.946858,
+    "auto_match_rate": 0.951479,
     "false_match_rate": 0.0,
     "fully_reconciles": true,
     "legs": {
@@ -31918,16 +31978,16 @@
         "true_matches": 1908
       },
       "2": {
-        "attempted": 141,
-        "exceptions": 23,
+        "attempted": 151,
+        "exceptions": 13,
         "false_matches": 0,
         "population": 164,
-        "true_matches": 141
+        "true_matches": 151
       }
     },
     "profile": "holdout",
     "seed": 21,
     "unattributed_exceptions": 0,
-    "value_share": 0.86955
+    "value_share": 0.935397
   }
 }

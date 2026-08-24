@@ -19,11 +19,11 @@ below. Whole batch runs in **0.15s**, single-threaded.
 | | B0 dev | B0 held-out | **B2 dev** | **B2 held-out** | clean (control) |
 |---|---:|---:|---:|---:|---:|
 | **False-match rate** | **0.00%** | **0.00%** | **0.00%** | **0.00%** | **0.00%** |
-| Auto-match rate | 93.85% | 93.85% | 94.87% | 94.69% | 100.00% |
-| Credit value matched | 74.36% | 72.64% | 88.12% | 86.95% | 100.00% |
+| Auto-match rate | 93.85% | 93.85% | 95.24% | 95.15% | 100.00% |
+| Credit value matched | 74.36% | 72.64% | 92.67% | 93.54% | 100.00% |
 | Leg 1 recall (order → payment) | 95.40% | 95.40% | 95.40% | 95.40% | 100.00% |
-| Leg 2 recall (credit → batch) | 75.00% | 75.00% | **88.41%** | **85.98%** | 100.00% |
-| Leg 2 exceptions | 41 | 41 | 19 | 23 | 0 |
+| Leg 2 recall (credit → batch) | 75.00% | 75.00% | **93.29%** | **92.07%** | 100.00% |
+| Leg 2 exceptions | 41 | 41 | 11 | 13 | 0 |
 | Defects mishandled | 0 | 0 | 0 | 0 | 0 |
 
 **Read the first row first.** A reconciliation engine that matches everything
@@ -34,19 +34,27 @@ directly — better to leave a transaction unmatched, and leave it for manual
 review, than to match it incorrectly. So false-match rate leads, throughput
 follows, and the exception list is published rather than summarised.
 
-**What B2 bought, and what it deliberately did not.** The SSMP solver closes
-the gaps that are *arithmetic*: an orphaned refund, a chargeback with its
-dispute fee, a manual adjustment, sub-rupee rounding. What stays flagged needs
-a *reason* rather than an amount — a mid-cycle repricing, an FX rate, a payment
-that settled in the next cycle. No search over amounts can tell those from a
-coincidence, which is exactly the boundary where an LLM earns its place at B3.
+**What B2 bought, and what it deliberately did not.** The solver closes the
+gaps that are *arithmetic*: an orphaned refund, a chargeback with its dispute
+fee, a manual adjustment, sub-rupee rounding, and a T+2 cutoff spill — one
+credit short by exactly X, another long by exactly X.
+
+Spill pairing is in the deterministic tier on purpose. It would have been the
+most impressive-looking thing to hand the LLM, and handing it over would have
+let the model take credit for something arithmetic closes on its own. **Every
+class that can be closed mechanically is closed mechanically first**, so what
+B3 is measured on is its own contribution rather than borrowed. What survives
+needs a *reason* rather than a sum — a mid-cycle repricing, an FX rate the
+report does not carry — and that territory is deliberately narrow: 7 defects of
+129 on dev.
 
 | Defect class | B0 | B2 |
 |---|---|---|
 | `REFUND_NETTED`, `CHARGEBACK_NETTED`, `ADJUSTMENT_ENTRY` | flagged | **resolved** |
 | `ROUNDING_DRIFT` | flagged | **resolved** |
 | `NARRATION_TRUNCATION` | flagged | **resolved** |
-| `FEE_TAX_VARIANCE`, `FX_CONVERSION`, `TIMING_SPILL` | flagged | flagged → B3 |
+| `TIMING_SPILL` | flagged | **resolved** |
+| `FEE_TAX_VARIANCE`, `FX_CONVERSION` | flagged | flagged → B3 |
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
 
@@ -55,7 +63,7 @@ each leg's *total* defect rate constant and invert the composition
 (`PARTIAL_CAPTURE` 56→32, `DUPLICATE_PAYMENT` 36→60, `REFUND_NETTED` 7→3,
 `FEE_TAX_VARIANCE` 4→7). Identical totals keep the comparison fair; the
 per-class tables in `results/*.txt` are where the distributions actually
-differ, and Leg 2 recall does drop 2.4 points on the held-out mix.
+differ, and Leg 2 recall does drop 1.2 points on the held-out mix.
 
 ### Status
 

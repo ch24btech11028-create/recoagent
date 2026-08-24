@@ -52,6 +52,9 @@ def _compose(
 
     if with_leg2_t1:
         leg2_t1.recover(sources, tol, result)
+        # Spill pairing runs after local recovery: it reasons over the
+        # residuals that survive, so it needs them to have settled first.
+        leg2_t1.pair_spills(sources, tol, result)
 
     result.exceptions.extend(
         leg2.unmatched_settlements(sources, result, adjudicated)

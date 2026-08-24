@@ -17,11 +17,18 @@ manual adjustment -- whose total is exactly that gap. Finding them is subset
 sum (see `ssmp.py`), and the subset is only accepted if it is the *only* one
 that closes.
 
-What this tier deliberately does not attempt: FEE_TAX_VARIANCE, FX_CONVERSION
-and TIMING_SPILL. Each of those needs a reason rather than an amount -- a
-repricing, a rate, a payment that settled in a different cycle. No arithmetic
-search over the local pool can distinguish them from a coincidence, which is
-exactly the boundary where the LLM tier earns its place at B3.
+**T1c -- cross-batch spill pairing.** A payment captured just before the T+2
+cutoff is reported in one batch but credited with the next, leaving one credit
+short by exactly X and another long by exactly X. That signature is mechanical,
+so it is closed here rather than handed to the model.
+
+What this tier deliberately does not attempt: FEE_TAX_VARIANCE and
+FX_CONVERSION. Both need a *reason* rather than a sum -- a mid-cycle repricing,
+a conversion rate the report does not carry -- and no arithmetic search can
+separate either from a coincidence. That is the boundary where the LLM tier at
+B3 has to earn its place, and it is deliberately narrow: every class that can
+be closed mechanically is closed mechanically first, so the model's measured
+contribution is its own rather than borrowed.
 """
 
 from __future__ import annotations
@@ -262,5 +269,139 @@ def recover(sources: SourceBundle, tol: Tolerance, result: ReconResult) -> None:
             continue
 
         survivors.append(exc)
+
+    result.exceptions = survivors
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# T1c -- cross-batch spill pairing
+# ─────────────────────────────────────────────────────────────────────────────
+
+RULE_SPILL_PAIR = "leg2.t1.spill_pair"
+
+#: A payment captured this close to the settlement cutoff is a plausible
+#: candidate for landing in the next cycle instead of this one.
+CUTOFF_PROXIMITY = timedelta(hours=12)
+
+#: Both halves of a spill are inferred together from the same evidence, so they
+#: share a confidence. Below the fungible-subset prior: this rule reasons about
+#: two batches and a capture time rather than one exact arithmetic identity.
+CONF_SPILL_PAIR = 0.75
+
+
+def pair_spills(sources: SourceBundle, tol: Tolerance, result: ReconResult) -> None:
+    """Resolve T+2 cutoff spills by pairing a short batch with a long one.
+
+    A payment captured just before the cutoff is reported inside one batch but
+    credited with the next. The signature is distinctive and entirely
+    mechanical: one credit short by exactly X, another long by exactly X, and a
+    payment of net X sitting in the short batch's member list near the cutoff.
+
+    This belongs in the deterministic tier precisely because it *is*
+    deterministic. Leaving it for the LLM would have inflated that tier's
+    apparent value -- the model would appear to solve something arithmetic
+    could have closed on its own. What survives this rule genuinely needs a
+    reason rather than a sum, which is the claim B3 has to earn.
+
+    Uniqueness is enforced across the whole pairing: if two long batches could
+    absorb the same spill, or two member payments have the same net, nothing is
+    booked. A spill mis-paired reconciles two batches while attributing the
+    money to the wrong cycle.
+    """
+    line_by_id = {b.bank_line_id: b for b in sources.bank_lines}
+    settlement_by_id = {s.settlement_id: s for s in sources.settlements}
+
+    residual_excs = [
+        e
+        for e in result.exceptions
+        if e.leg == 2
+        and e.entity_kind == "bank_line"
+        and e.residual_paise is not None
+        and e.related_id in settlement_by_id
+    ]
+    shorts = [e for e in residual_excs if (e.residual_paise or 0) < 0]
+    longs = [e for e in residual_excs if (e.residual_paise or 0) > 0]
+    if not shorts or not longs:
+        return
+
+    resolved: dict[str, tuple[str, str, int]] = {}  # exception_id -> (settlement, payment, delta)
+    used_longs: set[str] = set()
+
+    for short in shorts:
+        gap = -(short.residual_paise or 0)
+        src_id = short.related_id
+        src = settlement_by_id[src_id]
+
+        # Candidate payments: reported in this batch, net exactly the gap,
+        # captured close enough to the cutoff to plausibly have slipped.
+        candidates = [
+            p
+            for p in sources.payments_by_settlement(src_id)
+            if p.net_paise == gap
+            and abs(src.settled_at - p.captured_at) <= (timedelta(days=2) + CUTOFF_PROXIMITY)
+        ]
+        # Long batches that could absorb exactly this amount.
+        absorbers = [
+            l
+            for l in longs
+            if l.exception_id not in used_longs and (l.residual_paise or 0) == gap
+        ]
+
+        if len(candidates) != 1 or len(absorbers) != 1:
+            continue
+
+        payment, absorber = candidates[0], absorbers[0]
+        used_longs.add(absorber.exception_id)
+        resolved[short.exception_id] = (src_id, payment.payment_id, -gap)
+        resolved[absorber.exception_id] = (absorber.related_id, payment.payment_id, gap)
+
+    if not resolved:
+        return
+
+    survivors: list[ReconException] = []
+    for exc in result.exceptions:
+        pairing = resolved.get(exc.exception_id)
+        if pairing is None:
+            survivors.append(exc)
+            continue
+
+        settlement_id, payment_id, delta = pairing
+        line = line_by_id[exc.entity_id]
+        settlement = settlement_by_id[settlement_id]
+        members = sources.payments_by_settlement(settlement_id)
+        linked = sources.adjustments_by_settlement(settlement_id)
+
+        # The inferred row is explicitly marked as inferred. It is a hypothesis
+        # about where a payment settled, not a row anyone reported, and the
+        # audit trail must never let the two look alike.
+        inferred = PGAdjustment(
+            adjustment_id=f"inferred:spill:{payment_id}",
+            settlement_id=None,  # type: ignore[arg-type]
+            kind="cutoff_spill",
+            payment_id=payment_id,
+            amount_paise=delta,
+            booked_at=settlement.settled_at,
+        )
+        proof = prove_leg2(
+            line, settlement, members, linked, tol, hypothesised=[inferred]
+        )
+        if not proof.closes:
+            survivors.append(replace(exc, escalated_from_tier=TIER))
+            continue
+
+        result.matches.append(
+            MatchRecord(
+                match_id=f"m2_{line.bank_line_id}",
+                leg=2,
+                tier=TIER,
+                rule_id=RULE_SPILL_PAIR,
+                left_ids=(line.bank_line_id,),
+                right_ids=(settlement_id,),
+                confidence=CONF_SPILL_PAIR,
+                proof=proof,
+                input_hash=stable_hash(line, settlement, *members, *linked, inferred),
+                created_at=_now(),
+            )
+        )
 
     result.exceptions = survivors

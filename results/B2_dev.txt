@@ -6,14 +6,14 @@ RUNG B2   profile=dev   seed=7
 ========================================================================
 
   FALSE-MATCH RATE         0.00%     <- lead metric
-  Auto-match rate         94.87%
-  Credit value matched    88.12%     (Rs 2,06,46,759.85 of Rs 2,34,30,336.80)
+  Auto-match rate         95.24%
+  Credit value matched    92.67%     (Rs 2,17,12,150.38 of Rs 2,34,30,336.80)
 
 ------------------------------------------------------------------------
 LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC
 ------------------------------------------------------------------------
 1       2000     1908   1908      0   0.00%   95.40%     92
-2        164      145    145      0   0.00%   88.41%     19
+2        164      153    153      0   0.00%   93.29%     11
 
 ------------------------------------------------------------------------
 DEFECT ACCOUNTING                  INJECTED  FLAGGED  RESOLVED MISHANDLED
@@ -29,7 +29,7 @@ NARRATION_TRUNCATION                      3        0         3          0
 PARTIAL_CAPTURE                          56       56         0          0
 REFUND_NETTED                             7        0         7          0
 ROUNDING_DRIFT                            5        0         5          0
-TIMING_SPILL                              4        4         0          0
+TIMING_SPILL                              4        0         4          0
 ------------------------------------------------------------------------
 exceptions with no injected cause                  0                     
 

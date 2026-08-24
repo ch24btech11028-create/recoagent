@@ -60,13 +60,18 @@ def test_the_solver_closes_exactly_the_classes_it_claims(mix):
         DefectClass.CHARGEBACK_NETTED,
         DefectClass.ADJUSTMENT_ENTRY,
         DefectClass.ROUNDING_DRIFT,
+        DefectClass.TIMING_SPILL,
     ):
         assert by_class[cls].resolved == by_class[cls].injected, cls
 
+    # What is left needs a *reason* rather than a sum -- a repricing, an FX
+    # rate -- or must stay refused on principle. This is the territory B3 has
+    # to earn, and it is deliberately small: closing TIMING_SPILL
+    # deterministically rather than handing it to the model is what keeps the
+    # eventual LLM result honest.
     for cls in (
         DefectClass.FEE_TAX_VARIANCE,
         DefectClass.FX_CONVERSION,
-        DefectClass.TIMING_SPILL,
         DefectClass.DUPLICATE_UTR,
     ):
         assert by_class[cls].flagged == by_class[cls].injected, cls
