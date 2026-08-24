@@ -56,13 +56,31 @@ class LegScore:
 
 @dataclass
 class ClassAccounting:
+    """What became of each injected defect.
+
+    A defect is handled if the system either flagged it or resolved it
+    correctly. Which of the two is the interesting part -- it is how the
+    baseline ladder shows its work, as classes migrate from `flagged` to
+    `resolved` when a tier that can actually close them arrives.
+
+    `mishandled` is the number that must stay zero at every rung: a defect that
+    produced a wrong match, or one the system sailed past without noticing.
+    Both are silent failures, and silent is the only kind that matters here.
+    """
+
     defect: DefectClass
     injected: int
-    accounted: int
+    flagged: int = 0
+    resolved: int = 0
+    mishandled: int = 0
+
+    @property
+    def accounted(self) -> int:
+        return self.flagged + self.resolved
 
     @property
     def reconciles(self) -> bool:
-        return self.injected == self.accounted
+        return self.mishandled == 0 and self.accounted == self.injected
 
 
 @dataclass
@@ -101,8 +119,12 @@ class Scorecard:
 
     @property
     def fully_reconciles(self) -> bool:
-        """Every injected defect class is accounted for in the exception list."""
+        """Every injected defect was either flagged or correctly resolved."""
         return all(a.reconciles for a in self.accounting)
+
+    @property
+    def mishandled_total(self) -> int:
+        return sum(a.mishandled for a in self.accounting)
 
 
 def _reverse(mapping: dict[str, str]) -> dict[str, str]:
@@ -175,36 +197,48 @@ def score(batch: LabelledBatch, result: ReconResult) -> Scorecard:
         matched_credit=sum(v for k, v in line_amounts.items() if k in matched_ids),
     )
 
-    # ── Reconciliation: injected defects vs the exception list ───────────
+    # ── Reconciliation: what became of every injected defect ────────────
     flagged = {e.entity_id for e in result.exceptions}
 
-    injected_by_class: dict[DefectClass, int] = {}
-    accounted_by_class: dict[DefectClass, int] = {}
+    correctly_matched: set[str] = set()
+    falsely_matched: set[str] = set()
+    for m in result.matches:
+        left, right = m.left_ids[0], m.right_ids[0]
+        truth_map = truth.leg1 if m.leg == 1 else truth.leg2
+        if truth_map.get(left) == right:
+            correctly_matched |= {left, right}
+        else:
+            falsely_matched |= {left, right}
+
+    buckets: dict[DefectClass, ClassAccounting] = {}
     explained_entities: set[str] = set()
 
     for d in truth.defects:
-        injected_by_class[d.defect] = injected_by_class.get(d.defect, 0) + 1
+        acc = buckets.setdefault(d.defect, ClassAccounting(defect=d.defect, injected=0))
+        acc.injected += 1
+
         touched: set[str] = set()
         for aid in d.affected_ids:
             touched |= _expand(aid, truth)
-        hit = touched & flagged
-        if hit:
-            accounted_by_class[d.defect] = accounted_by_class.get(d.defect, 0) + 1
-            explained_entities |= hit
 
-    card.accounting = [
-        ClassAccounting(
-            defect=cls,
-            injected=injected_by_class[cls],
-            accounted=accounted_by_class.get(cls, 0),
-        )
-        for cls in sorted(injected_by_class, key=lambda c: c.value)
-    ]
+        # Order matters. A wrong match is the worst outcome and is reported as
+        # such even if some other affected entity was also flagged.
+        if touched & falsely_matched:
+            acc.mishandled += 1
+        elif touched & flagged:
+            acc.flagged += 1
+            explained_entities |= touched & flagged
+        elif touched & correctly_matched:
+            acc.resolved += 1
+            explained_entities |= touched & correctly_matched
+        else:
+            # Neither noticed nor resolved: the system walked past it.
+            acc.mishandled += 1
 
-    # Exceptions on entities no injected defect can explain. At B0 this should
-    # be zero: the baseline should only ever complain about genuine damage. A
-    # non-zero value means the matcher is rejecting clean records, which is a
-    # bug in the matcher, not a property of the data.
+    card.accounting = sorted(buckets.values(), key=lambda a: a.defect.value)
+
+    # Exceptions on entities no injected defect can explain. Should be zero at
+    # every rung: complaints about clean records are matcher bugs, not data.
     card.unattributed_exceptions = len(
         {e.entity_id for e in result.exceptions if e.entity_id not in explained_entities}
     )
@@ -250,19 +284,28 @@ def render(card: Scorecard) -> str:
     lines.append("")
 
     lines.append("-" * w)
-    lines.append(f"{'EXCEPTION ACCOUNTING':<44}{'INJECTED':>10}{'FOUND':>9}{'':>9}")
+    lines.append(
+        f"{'DEFECT ACCOUNTING':<34}{'INJECTED':>9}{'FLAGGED':>9}"
+        f"{'RESOLVED':>10}{'MISHANDLED':>11}"
+    )
     lines.append("-" * w)
     for a in card.accounting:
-        flag = "ok" if a.reconciles else "MISMATCH"
-        lines.append(f"{a.defect.value:<44}{a.injected:>10}{a.accounted:>9}{flag:>9}")
+        mark = "" if a.reconciles else "  <-"
+        lines.append(
+            f"{a.defect.value:<34}{a.injected:>9}{a.flagged:>9}"
+            f"{a.resolved:>10}{a.mishandled:>11}{mark}"
+        )
     lines.append("-" * w)
     lines.append(
-        f"{'exceptions with no injected cause':<44}"
-        f"{'':>10}{card.unattributed_exceptions:>9}"
-        f"{'ok' if card.unattributed_exceptions == 0 else 'INVESTIGATE':>9}"
+        f"{'exceptions with no injected cause':<34}{'':>9}"
+        f"{card.unattributed_exceptions:>9}"
+        f"{'' if card.unattributed_exceptions == 0 else '  <- INVESTIGATE':>21}"
     )
     lines.append("")
     verdict = "RECONCILES" if card.fully_reconciles else "DOES NOT RECONCILE"
-    lines.append(f"  Ground-truth accounting: {verdict}")
+    lines.append(
+        f"  Ground-truth accounting: {verdict}"
+        f"   (mishandled: {card.mishandled_total})"
+    )
     lines.append("=" * w)
     return "\n".join(lines)

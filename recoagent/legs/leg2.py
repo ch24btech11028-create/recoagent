@@ -151,6 +151,7 @@ def match(sources: SourceBundle, tol: Tolerance, result: ReconResult) -> set[str
                     leg=2,
                     entity_kind="bank_line",
                     entity_id=line.bank_line_id,
+                    related_id=settlement.settlement_id,
                     reason=(
                         f"UTR joins {settlement.settlement_id} but the credit is "
                         f"{'short' if residual < 0 else 'over'} by {abs(residual)} paise "

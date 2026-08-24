@@ -236,6 +236,12 @@ class MatchRecord:
     proof: ArithmeticProof | None
     input_hash: str
     created_at: datetime
+    #: Rows that were not linked to this batch in the source data but were
+    #: needed to make the arithmetic close. Recorded by id because "the credit
+    #: reconciles once you count these three rows" is the actual finding, and
+    #: an audit trail that proves a total without naming what went into it
+    #: cannot be checked by the person who has to sign it off.
+    hypothesised_ids: tuple[str, ...] = ()
 
     @property
     def pair(self) -> tuple[str, str]:
@@ -257,6 +263,11 @@ class ReconException:
     entity_kind: str
     entity_id: str
     reason: str
+    #: The counterparty this item was adjudicated against, when there was
+    #: one -- the settlement a credit joined before its arithmetic failed.
+    #: Later tiers need it to resume where the previous one stopped, and
+    #: carrying it explicitly beats re-parsing it out of `reason`.
+    related_id: str | None = None
     residual_paise: Paise | None = None
     suspected_class: DefectClass | None = None
     escalated_from_tier: str = "T0"

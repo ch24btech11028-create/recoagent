@@ -92,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n", type=int, default=500, help="number of orders to generate")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--profile", choices=sorted(MIXES), default="dev")
-    ap.add_argument("--rung", default="B0", help="baseline ladder rung to run")
+    ap.add_argument("--rung", default="B0", choices=["B0", "B2"], help="baseline ladder rung to run")
     ap.add_argument("--out", help="write the canonical run artifact to this path")
     ap.add_argument(
         "--exceptions",

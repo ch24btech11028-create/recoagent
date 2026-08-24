@@ -29,9 +29,42 @@ volume. Three solver families are known — MILP (optimal, intractable as ε
 grows), DP-greedy (near-optimal, scales, tolerates large ε), and
 meet-in-the-middle search (exponential, small instances only).
 
-Rung B2 will implement the DP-greedy solver. Notably, the SSMP literature
-contains no work applying language models to it, which is where the LLM tier
-sits rather than competing with the solver.
+Rung B2 implements this, and **not** with the DP, which is the solver usually
+recommended for reconciliation at scale. Two concrete reasons, both in
+`legs/ssmp.py`:
+
+- **S_max is enormous at paise granularity.** The DP is pseudo-polynomial in
+  the maximum achievable sum, and settlement values run to crores — 10^9 paise.
+  Discretising to rupees would make it tractable and would also discard the
+  precision that the ROUNDING_DRIFT class exists to test.
+- **The DP returns *a* solution, not *all* of them.** Uniqueness is a
+  correctness requirement here, not a nicety: if two materially different sets
+  of rows both close a gap, the honest verdict is "escalate", and a solver that
+  hands back one answer cannot tell you that.
+
+Candidate pools are small by construction — unlinked rows inside a date window
+around one settlement, typically under thirty — so bounded exact enumeration is
+complete *and* cheap, and `meet_in_middle` covers larger cases. That is the
+third of Wu et al.'s three families, so the choice stays inside the literature
+rather than around it.
+
+Notably, the SSMP literature contains no work applying language models to it,
+which is where the LLM tier sits rather than competing with the solver.
+
+### Identity ambiguity is not amount ambiguity
+
+The most interesting thing the solver found: every dispute fee is a flat
+Rs 150, so a chargeback gap is closed by several subsets that name *different
+rows containing identical amounts*. Refusing all of them leaves real money
+unreconciled over a distinction that does not affect the total.
+
+`SearchResult.value_equivalent` separates the two cases. Competing subsets with
+the same multiset of amounts are financially identical and safe to act on;
+competing subsets with different amounts are a genuine fork and stop the line.
+The pairing being decided comes from the UTR join, so the subset only has to
+prove the total — but fungible rows are interchangeable, not infinite, so the
+tier tracks which rows it has spent and will not fund two batches with one
+Rs 150 fee.
 
 ## Why the LLM is not a matcher
 
@@ -92,9 +125,26 @@ once, against the credit. An earlier version also filed it against the
 settlement, which doubled the apparent exception count and would have handed an
 ops team the same item twice.
 
-**Zero tolerance at B0.** Sub-rupee drift is real, but absorbing it requires an
-explicit, defended tolerance. The baseline refuses to absorb anything, the drift
-lands in the exception list, and a later rung has to earn the tolerance it takes.
+**Zero tolerance at B0; ten paise at B2, chosen against evidence.** This is the
+one number in the system set by judgement, so it is the one number with a
+measurement behind it (`python -m recoagent.eval.tolerance_sweep`).
+
+The obvious way to pick it is to maximise recall, and that gives the wrong
+answer. Leg 2 recall keeps climbing past 10 paise all the way to Rs 10, and
+false-match rate stays flat at 0.00% the entire way — neither headline metric
+objects to a window a thousand times too wide, because on Leg 2 the tolerance
+never governs *which* batch a credit belongs to, only whether its explanation
+may be approximate.
+
+The per-class table is what decides it. At 10 paise every ROUNDING_DRIFT closes
+and nothing else moves. At 50 the solver starts absorbing FX_CONVERSION; by
+Rs 10 it is swallowing FEE_TAX_VARIANCE. Those are not recovered matches — they
+are real differences in money reconciled green, a merchant silently short a few
+hundred rupees. Ten paise is the largest window that absorbs rounding and only
+rounding.
+
+Leg 1 stays at zero: a capture that differs from its order by any amount is a
+partial capture, not a rounding artifact.
 
 ## Why the evaluation is trustworthy
 
@@ -118,14 +168,37 @@ one, and it would make the LLM tier look far more valuable than it is.
 ## Not built yet
 
 - **B1** — Splink / Fellegi-Sunter probabilistic linkage on Leg 1
-- **B2** — SSMP DP-greedy solver and a defended tolerance on Leg 2
-- **B3** — the LLM exception agent, its tool surface, and the repair loop
+- **B3** — the LLM exception agent, its tool surface, and the repair loop.
+  The seam is already in place and tested: `prove_leg2(hypothesised=...)` takes
+  proposed rows, and `test_a_lying_solver_cannot_book_a_match` verifies that a
+  confident, well-formed, wrong proposal is rejected by the gate. Nothing about
+  that changes when the proposer becomes a model.
 - **BenchRec** — external validation on real labelled data. Until this lands,
   every number in the README is self-generated, and the independence and
   accounting checks are what stand in for external validity.
 - **Confidence calibration** — B0 emits confidence 1.0 on every match, which is
   honest for exact keys but leaves nothing to calibrate. It becomes meaningful
   at B1 and necessary at B3.
+
+## What mutation testing revealed
+
+Two findings shaped the design more than any passing test did.
+
+**Match-rate metrics are structurally blind to a broken gate.** Disabling the
+arithmetic check entirely does not move false-match rate, because the Leg 2
+pairing comes from the UTR join — a broken gate still picks the right batch, it
+just accepts one whose money is wrong. The damage is a false *audit trail*, not
+a false match. This is why defect accounting and an explicit attribution test
+sit alongside the headline number, and it is the clearest argument for why this
+system reports several numbers rather than one.
+
+**The uniqueness guard is not exercised end-to-end by the current defect mix.**
+Removing it changes nothing measurable, because the only ambiguity this data
+produces is fungible — competing subsets that name different rows with
+identical amounts. The guard is covered directly by unit test rather than by
+the integration suite. Exercising it properly would need a defect class that
+generates materially different competing explanations, which is a real gap and
+is recorded as one rather than glossed.
 
 ## Known limitations
 
@@ -137,3 +210,9 @@ one, and it would make the LLM tier look far more valuable than it is.
   lifecycle.
 - No persistence layer. Runs are in-memory and reproducible from a seed, which
   suits evaluation and would not suit production.
+- The Leg 2 tolerance is calibrated against a ROUNDING_DRIFT class this
+  repository also defines. The magnitude chosen (1-9 paise) is plausible for
+  per-step rounding differences between a gateway and a merchant, but it is
+  asserted rather than measured against a real settlement file. Real drift
+  would move both the class and the tolerance together.
+- The uniqueness guard's end-to-end coverage gap, above.

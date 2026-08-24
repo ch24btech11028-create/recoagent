@@ -2,33 +2,33 @@
   sources: orders=2000  payments=2036  adjustments=36  settlements=164  bank_lines=164  defects=129
 
 ========================================================================
-RUNG B0   profile=dev   seed=7
+RUNG B2   profile=dev   seed=7
 ========================================================================
 
   FALSE-MATCH RATE         0.00%     <- lead metric
-  Auto-match rate         93.85%
-  Credit value matched    74.36%     (Rs 1,74,22,678.05 of Rs 2,34,30,336.80)
+  Auto-match rate         94.87%
+  Credit value matched    88.12%     (Rs 2,06,46,759.85 of Rs 2,34,30,336.80)
 
 ------------------------------------------------------------------------
 LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC
 ------------------------------------------------------------------------
 1       2000     1908   1908      0   0.00%   95.40%     92
-2        164      123    123      0   0.00%   75.00%     41
+2        164      145    145      0   0.00%   88.41%     19
 
 ------------------------------------------------------------------------
 DEFECT ACCOUNTING                  INJECTED  FLAGGED  RESOLVED MISHANDLED
 ------------------------------------------------------------------------
-ADJUSTMENT_ENTRY                          4        4         0          0
-CHARGEBACK_NETTED                         3        3         0          0
+ADJUSTMENT_ENTRY                          4        0         4          0
+CHARGEBACK_NETTED                         3        0         3          0
 DUPLICATE_PAYMENT                        36       36         0          0
 DUPLICATE_UTR                             2        2         0          0
 FEE_TAX_VARIANCE                          4        4         0          0
 FX_CONVERSION                             3        3         0          0
 MISSING_BANK_LINE                         2        2         0          0
-NARRATION_TRUNCATION                      3        3         0          0
+NARRATION_TRUNCATION                      3        0         3          0
 PARTIAL_CAPTURE                          56       56         0          0
-REFUND_NETTED                             7        7         0          0
-ROUNDING_DRIFT                            5        5         0          0
+REFUND_NETTED                             7        0         7          0
+ROUNDING_DRIFT                            5        0         5          0
 TIMING_SPILL                              4        4         0          0
 ------------------------------------------------------------------------
 exceptions with no injected cause                  0                     
@@ -36,4 +36,4 @@ exceptions with no injected cause                  0
   Ground-truth accounting: RECONCILES   (mishandled: 0)
 ========================================================================
 
-  wrote results/B0_dev.json
+  wrote results/B2_dev.json

@@ -187,6 +187,20 @@ class _World:
     def payment(self, payment_id: str) -> PGPayment:
         return next(p for p in self.payments if p.payment_id == payment_id)
 
+    def settlement(self, settlement_id: str) -> Settlement:
+        return next(s for s in self.settlements if s.settlement_id == settlement_id)
+
+    def orphan_booked_at(self, settlement_id: str) -> datetime:
+        """A plausible booking time for a row netted into this batch.
+
+        Orphans must carry realistic timestamps or a date-window filter over
+        the candidate pool is meaningless -- every orphan would sit in every
+        window, and the solver's search space would be the whole book rather
+        than the handful of rows genuinely near the batch.
+        """
+        settled = self.settlement(settlement_id).settled_at
+        return settled - timedelta(hours=self.rng.randint(2, 60))
+
     def replace_payment(self, payment_id: str, **changes) -> None:
         for i, p in enumerate(self.payments):
             if p.payment_id == payment_id:
@@ -392,7 +406,7 @@ def _inject_refund_netted(w: _World, sid: str) -> bool:
             kind="refund",
             payment_id=victim,
             amount_paise=amount,
-            booked_at=BASE_DATE,
+            booked_at=w.orphan_booked_at(sid),
         )
     )
     if not w.shift_bank_line(sid, amount):
@@ -421,7 +435,7 @@ def _inject_chargeback_netted(w: _World, sid: str) -> bool:
                 kind=kind,
                 payment_id=victim if kind == "chargeback" else None,
                 amount_paise=amt,
-                booked_at=BASE_DATE,
+                booked_at=w.orphan_booked_at(sid),
             )
         )
     if not w.shift_bank_line(sid, cb + fee):
@@ -446,7 +460,7 @@ def _inject_adjustment_entry(w: _World, sid: str) -> bool:
             kind=w.rng.choice(["reversal", "platform_fee"]),
             payment_id=None,  # no payment to tie it to at all
             amount_paise=amount,
-            booked_at=BASE_DATE,
+            booked_at=w.orphan_booked_at(sid),
         )
     )
     if not w.shift_bank_line(sid, amount):

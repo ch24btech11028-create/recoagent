@@ -2,7 +2,7 @@
   sources: orders=2000  payments=2000  adjustments=19  settlements=164  bank_lines=164  defects=0
 
 ========================================================================
-RUNG B0   profile=clean   seed=7
+RUNG B2   profile=clean   seed=7
 ========================================================================
 
   FALSE-MATCH RATE         0.00%     <- lead metric
@@ -24,4 +24,4 @@ exceptions with no injected cause                  0
   Ground-truth accounting: RECONCILES   (mishandled: 0)
 ========================================================================
 
-  wrote results/B0_clean.json
+  wrote results/B2_clean.json

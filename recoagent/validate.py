@@ -49,6 +49,34 @@ class Tolerance:
     def strict(cls) -> Tolerance:
         return cls(leg1_paise=0, leg2_paise=0)
 
+    @classmethod
+    def calibrated(cls) -> Tolerance:
+        """Ten paise on Leg 2, and still nothing on Leg 1.
+
+        Chosen against measurement, not intuition -- see
+        `python -m recoagent.eval.tolerance_sweep`. The tempting way to set this
+        is to maximise recall, and that picks the wrong number: Leg 2 recall
+        keeps climbing past 10 paise all the way to Rs 10, and false-match rate
+        stays flat at zero the whole way, so neither headline metric objects.
+
+        Neither can see the damage. On Leg 2 the pairing comes from the UTR
+        join, so the tolerance never governs *which* batch a credit belongs to,
+        only whether its explanation is allowed to be approximate. What the
+        per-class table in that sweep shows is that at 10 paise every
+        ROUNDING_DRIFT closes and nothing else moves; at 50 the solver begins
+        absorbing FX_CONVERSION, and by Rs 10 it is swallowing FEE_TAX_VARIANCE
+        as well. Those are not recovered matches. They are real differences in
+        money reconciled green -- the precise failure this system exists to
+        prevent.
+
+        Ten paise is the largest window that absorbs rounding and only rounding.
+
+        Leg 1 stays at zero deliberately. A capture that differs from its order
+        by any amount is a partial capture, not a rounding artifact, and
+        absorbing it would hide the exact class the leg exists to catch.
+        """
+        return cls(leg1_paise=0, leg2_paise=10)
+
 
 def prove_leg1(order: Order, payment: PGPayment, tol: Tolerance) -> ArithmeticProof:
     """Does the captured amount agree with what the order says was owed?"""
