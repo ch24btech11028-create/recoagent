@@ -851,8 +851,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0014",
       "leg": 2,
-      "reason": "UTR joins setl_0014 but the credit is short by 164 paise against 7 payments and 0 linked adjustments",
-      "residual_paise": -164,
+      "reason": "UTR joins setl_0014 but the credit is short by 243 paise against 7 payments and 0 linked adjustments",
+      "residual_paise": -243,
       "suspected_class": null
     },
     {
@@ -860,8 +860,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0015",
       "leg": 2,
-      "reason": "UTR joins setl_0015 but the credit is short by 3010833 paise against 18 payments and 1 linked adjustments",
-      "residual_paise": -3010833,
+      "reason": "UTR joins setl_0015 but the credit is short by 132299 paise against 18 payments and 1 linked adjustments",
+      "residual_paise": -132299,
       "suspected_class": null
     },
     {
@@ -869,8 +869,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0016",
       "leg": 2,
-      "reason": "UTR joins setl_0016 but the credit is short by 82570 paise against 17 payments and 0 linked adjustments",
-      "residual_paise": -82570,
+      "reason": "UTR joins setl_0016 but the credit is over by 132299 paise against 17 payments and 0 linked adjustments",
+      "residual_paise": 132299,
       "suspected_class": null
     },
     {
@@ -878,8 +878,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0017",
       "leg": 2,
-      "reason": "UTR joins setl_0017 but the credit is over by 82570 paise against 13 payments and 0 linked adjustments",
-      "residual_paise": 82570,
+      "reason": "UTR joins setl_0017 but the credit is short by 33900 paise against 13 payments and 0 linked adjustments",
+      "residual_paise": -33900,
       "suspected_class": null
     },
     {
@@ -887,35 +887,17 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0018",
       "leg": 2,
-      "reason": "UTR joins setl_0018 but the credit is short by 660900 paise against 14 payments and 0 linked adjustments",
-      "residual_paise": -660900,
+      "reason": "UTR joins setl_0018 but the credit is over by 33900 paise against 14 payments and 0 linked adjustments",
+      "residual_paise": 33900,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0019",
+      "entity_id": "bank_0042",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0019",
+      "exception_id": "x2_bank_0042",
       "leg": 2,
-      "reason": "UTR joins setl_0019 but the credit is over by 660900 paise against 17 payments and 0 linked adjustments",
-      "residual_paise": 660900,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0029",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0029",
-      "leg": 2,
-      "reason": "UTR joins setl_0029 but the credit is short by 153400 paise against 8 payments and 0 linked adjustments",
-      "residual_paise": -153400,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0044",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0044",
-      "leg": 2,
-      "reason": "UTR joins setl_0044 but the credit is over by 1380 paise against 16 payments and 1 linked adjustments",
-      "residual_paise": 1380,
+      "reason": "UTR joins setl_0042 but the credit is over by 1618 paise against 15 payments and 0 linked adjustments",
+      "residual_paise": 1618,
       "suspected_class": null
     },
     {
@@ -923,8 +905,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0045",
       "leg": 2,
-      "reason": "UTR joins setl_0045 but the credit is short by 10810450 paise against 12 payments and 0 linked adjustments",
-      "residual_paise": -10810450,
+      "reason": "UTR joins setl_0045 but the credit is over by 579700 paise against 12 payments and 0 linked adjustments",
+      "residual_paise": 579700,
       "suspected_class": null
     },
     {
@@ -932,53 +914,44 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0047",
       "leg": 2,
-      "reason": "UTR joins setl_0047 but the credit is short by 2520 paise against 6 payments and 0 linked adjustments",
-      "residual_paise": -2520,
+      "reason": "UTR joins setl_0047 but the credit is short by 1859 paise against 6 payments and 0 linked adjustments",
+      "residual_paise": -1859,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0049",
+      "entity_id": "bank_0048",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0049",
+      "exception_id": "x2_bank_0048",
       "leg": 2,
-      "reason": "UTR joins setl_0049 but the credit is over by 579700 paise against 18 payments and 0 linked adjustments",
-      "residual_paise": 579700,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0051",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0051",
-      "leg": 2,
-      "reason": "UTR joins setl_0051 but the credit is short by 638600 paise against 18 payments and 0 linked adjustments",
+      "reason": "UTR joins setl_0048 but the credit is short by 638600 paise against 11 payments and 0 linked adjustments",
       "residual_paise": -638600,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0056",
+      "entity_id": "bank_0054",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0056",
+      "exception_id": "x2_bank_0054",
       "leg": 2,
-      "reason": "UTR joins setl_0056 but the credit is short by 89200 paise against 17 payments and 0 linked adjustments",
-      "residual_paise": -89200,
+      "reason": "UTR joins setl_0054 but the credit is short by 13068500 paise against 15 payments and 0 linked adjustments",
+      "residual_paise": -13068500,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0058",
+      "entity_id": "bank_0055",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0058",
+      "exception_id": "x2_bank_0055",
       "leg": 2,
-      "reason": "UTR joins setl_0058 but the credit is short by 147800 paise against 6 payments and 0 linked adjustments",
-      "residual_paise": -147800,
+      "reason": "UTR joins setl_0055 but the credit is over by 13068500 paise against 16 payments and 0 linked adjustments",
+      "residual_paise": 13068500,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0059",
+      "entity_id": "bank_0057",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0059",
+      "exception_id": "x2_bank_0057",
       "leg": 2,
-      "reason": "UTR joins setl_0059 but the credit is over by 147800 paise against 17 payments and 0 linked adjustments",
-      "residual_paise": 147800,
+      "reason": "UTR joins setl_0057 but the credit is short by 708699 paise against 11 payments and 0 linked adjustments",
+      "residual_paise": -708699,
       "suspected_class": null
     },
     {
@@ -986,35 +959,26 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0062",
       "leg": 2,
-      "reason": "UTR joins setl_0062 but the credit is short by 388400 paise against 14 payments and 0 linked adjustments",
-      "residual_paise": -388400,
+      "reason": "UTR joins setl_0062 but the credit is short by 112135 paise against 14 payments and 0 linked adjustments",
+      "residual_paise": -112135,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0065",
+      "entity_id": "bank_0063",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0065",
+      "exception_id": "x2_bank_0063",
       "leg": 2,
-      "reason": "UTR joins setl_0065 but the credit is short by 1964075 paise against 9 payments and 0 linked adjustments",
-      "residual_paise": -1964075,
+      "reason": "UTR joins setl_0063 but the credit is short by 87999 paise against 6 payments and 0 linked adjustments",
+      "residual_paise": -87999,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0067",
+      "entity_id": "bank_0064",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0067",
+      "exception_id": "x2_bank_0064",
       "leg": 2,
-      "reason": "UTR joins setl_0067 but the credit is short by 16037 paise against 15 payments and 0 linked adjustments",
-      "residual_paise": -16037,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0068",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0068",
-      "leg": 2,
-      "reason": "UTR joins setl_0068 but the credit is over by 16037 paise against 15 payments and 0 linked adjustments",
-      "residual_paise": 16037,
+      "reason": "UTR joins setl_0064 but the credit is over by 112135 paise against 7 payments and 1 linked adjustments",
+      "residual_paise": 112135,
       "suspected_class": null
     },
     {
@@ -1022,8 +986,26 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0072",
       "leg": 2,
-      "reason": "UTR joins setl_0072 but the credit is short by 7062 paise against 9 payments and 0 linked adjustments",
-      "residual_paise": -7062,
+      "reason": "UTR joins setl_0072 but the credit is short by 3473 paise against 9 payments and 0 linked adjustments",
+      "residual_paise": -3473,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0080",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0080",
+      "leg": 2,
+      "reason": "UTR joins setl_0080 but the credit is short by 9 paise against 7 payments and 0 linked adjustments",
+      "residual_paise": -9,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0081",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0081",
+      "leg": 2,
+      "reason": "UTR joins setl_0081 but the credit is short by 6958399 paise against 13 payments and 0 linked adjustments",
+      "residual_paise": -6958399,
       "suspected_class": null
     },
     {
@@ -1031,8 +1013,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0084",
       "leg": 2,
-      "reason": "UTR joins setl_0084 but the credit is short by 9 paise against 15 payments and 0 linked adjustments",
-      "residual_paise": -9,
+      "reason": "UTR joins setl_0084 but the credit is over by 288200 paise against 15 payments and 0 linked adjustments",
+      "residual_paise": 288200,
       "suspected_class": null
     },
     {
@@ -1040,8 +1022,17 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0087",
       "leg": 2,
-      "reason": "UTR joins setl_0087 but the credit is over by 288200 paise against 6 payments and 0 linked adjustments",
-      "residual_paise": 288200,
+      "reason": "UTR joins setl_0087 but the credit is short by 1 paise against 6 payments and 0 linked adjustments",
+      "residual_paise": -1,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0089",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0089",
+      "leg": 2,
+      "reason": "UTR joins setl_0089 but the credit is short by 9757799 paise against 14 payments and 1 linked adjustments",
+      "residual_paise": -9757799,
       "suspected_class": null
     },
     {
@@ -1049,8 +1040,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0090",
       "leg": 2,
-      "reason": "UTR joins setl_0090 but the credit is short by 26701 paise against 15 payments and 0 linked adjustments",
-      "residual_paise": -26701,
+      "reason": "UTR joins setl_0090 but the credit is short by 36172 paise against 15 payments and 0 linked adjustments",
+      "residual_paise": -36172,
       "suspected_class": null
     },
     {
@@ -1058,17 +1049,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0091",
       "leg": 2,
-      "reason": "UTR joins setl_0091 but the credit is short by 1 paise against 8 payments and 1 linked adjustments",
-      "residual_paise": -1,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0092",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0092",
-      "leg": 2,
-      "reason": "UTR joins setl_0092 but the credit is short by 24556 paise against 13 payments and 0 linked adjustments",
-      "residual_paise": -24556,
+      "reason": "UTR joins setl_0091 but the credit is over by 9757799 paise against 8 payments and 1 linked adjustments",
+      "residual_paise": 9757799,
       "suspected_class": null
     },
     {
@@ -1090,39 +1072,12 @@
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0096",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0096",
-      "leg": 2,
-      "reason": "UTR joins setl_0096 but the credit is short by 154199 paise against 14 payments and 0 linked adjustments",
-      "residual_paise": -154199,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0099",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0099",
-      "leg": 2,
-      "reason": "UTR joins setl_0099 but the credit is short by 102600 paise against 13 payments and 0 linked adjustments",
-      "residual_paise": -102600,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0100",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0100",
-      "leg": 2,
-      "reason": "UTR joins setl_0100 but the credit is over by 102600 paise against 17 payments and 1 linked adjustments",
-      "residual_paise": 102600,
-      "suspected_class": null
-    },
-    {
       "entity_id": "bank_0104",
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0104",
       "leg": 2,
-      "reason": "UTR joins setl_0104 but the credit is short by 3576 paise against 12 payments and 0 linked adjustments",
-      "residual_paise": -3576,
+      "reason": "UTR joins setl_0104 but the credit is short by 6075 paise against 12 payments and 0 linked adjustments",
+      "residual_paise": -6075,
       "suspected_class": null
     },
     {
@@ -1130,61 +1085,97 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0109",
       "leg": 2,
-      "reason": "UTR joins setl_0109 but the credit is short by 36202 paise against 17 payments and 0 linked adjustments",
-      "residual_paise": -36202,
+      "reason": "UTR joins setl_0109 but the credit is short by 84664 paise against 17 payments and 0 linked adjustments",
+      "residual_paise": -84664,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0117",
+      "entity_id": "bank_0112",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0117",
+      "exception_id": "x2_bank_0112",
       "leg": 2,
-      "reason": "no readable UTR in narration 'NEFT CR-ICIC0000456-RAZORPAY SOFTWARE PVT LTD-58433665'",
+      "reason": "no readable UTR in narration 'UPI/CR/16487087'",
       "residual_paise": null,
       "suspected_class": "NARRATION_TRUNCATION"
     },
     {
-      "entity_id": "bank_0129",
+      "entity_id": "bank_0118",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0129",
+      "exception_id": "x2_bank_0118",
       "leg": 2,
-      "reason": "no readable UTR in narration 'IMPS/363'",
+      "reason": "UTR joins setl_0118 but the credit is short by 107999 paise against 6 payments and 0 linked adjustments",
+      "residual_paise": -107999,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0124",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0124",
+      "leg": 2,
+      "reason": "UTR joins setl_0124 but the credit is short by 151450 paise against 12 payments and 0 linked adjustments",
+      "residual_paise": -151450,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0126",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0126",
+      "leg": 2,
+      "reason": "no readable UTR in narration 'RTGS CR 922'",
       "residual_paise": null,
       "suspected_class": "NARRATION_TRUNCATION"
     },
     {
-      "entity_id": "bank_0137",
+      "entity_id": "bank_0130",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0137",
+      "exception_id": "x2_bank_0130",
       "leg": 2,
-      "reason": "UTR joins setl_0137 but the credit is short by 447500 paise against 18 payments and 0 linked adjustments",
+      "reason": "UTR joins setl_0130 but the credit is short by 108325 paise against 8 payments and 0 linked adjustments",
+      "residual_paise": -108325,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0134",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0134",
+      "leg": 2,
+      "reason": "UTR joins setl_0134 but the credit is short by 12199 paise against 12 payments and 0 linked adjustments",
+      "residual_paise": -12199,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0136",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0136",
+      "leg": 2,
+      "reason": "UTR joins setl_0136 but the credit is short by 447500 paise against 7 payments and 0 linked adjustments",
       "residual_paise": -447500,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0143",
+      "entity_id": "bank_0142",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0143",
+      "exception_id": "x2_bank_0142",
       "leg": 2,
-      "reason": "UTR joins setl_0143 but the credit is short by 3078 paise against 7 payments and 1 linked adjustments",
-      "residual_paise": -3078,
+      "reason": "UTR joins setl_0142 but the credit is short by 144 paise against 10 payments and 0 linked adjustments",
+      "residual_paise": -144,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0156",
+      "entity_id": "bank_0155",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0156",
+      "exception_id": "x2_bank_0155",
       "leg": 2,
-      "reason": "UTR 269660543302 appears on 2 statement lines; refusing to book the same credit twice",
+      "reason": "UTR 843099646710 appears on 2 statement lines; refusing to book the same credit twice",
       "residual_paise": null,
       "suspected_class": "DUPLICATE_UTR"
     },
     {
-      "entity_id": "bank_0156_dup",
+      "entity_id": "bank_0155_dup",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0156_dup",
+      "exception_id": "x2_bank_0155_dup",
       "leg": 2,
-      "reason": "UTR 269660543302 appears on 2 statement lines; refusing to book the same credit twice",
+      "reason": "UTR 843099646710 appears on 2 statement lines; refusing to book the same credit twice",
       "residual_paise": null,
       "suspected_class": "DUPLICATE_UTR"
     },
@@ -1193,8 +1184,17 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0160",
       "leg": 2,
-      "reason": "UTR joins setl_0160 but the credit is short by 37443 paise against 11 payments and 1 linked adjustments",
-      "residual_paise": -37443,
+      "reason": "UTR joins setl_0160 but the credit is short by 12512 paise against 11 payments and 1 linked adjustments",
+      "residual_paise": -12512,
+      "suspected_class": null
+    },
+    {
+      "entity_id": "bank_0166",
+      "entity_kind": "bank_line",
+      "exception_id": "x2_bank_0166",
+      "leg": 2,
+      "reason": "UTR joins setl_0166 but the credit is short by 18725 paise against 10 payments and 0 linked adjustments",
+      "residual_paise": -18725,
       "suspected_class": null
     },
     {
@@ -1207,54 +1207,54 @@
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0071",
+      "entity_id": "setl_0067",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0071",
+      "exception_id": "x2s_setl_0067",
       "leg": 2,
       "reason": "settlement held into reserve balance; no credit expected",
       "residual_paise": null,
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0083",
+      "entity_id": "setl_0079",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0083",
+      "exception_id": "x2s_setl_0079",
       "leg": 2,
       "reason": "settlement held into reserve balance; no credit expected",
       "residual_paise": null,
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0117",
+      "entity_id": "setl_0112",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0117",
+      "exception_id": "x2s_setl_0112",
       "leg": 2,
       "reason": "no bank line matched this settlement",
       "residual_paise": null,
       "suspected_class": null
     },
     {
-      "entity_id": "setl_0128",
+      "entity_id": "setl_0125",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0128",
+      "exception_id": "x2s_setl_0125",
       "leg": 2,
       "reason": "settlement held into reserve balance; no credit expected",
       "residual_paise": null,
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0129",
+      "entity_id": "setl_0126",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0129",
+      "exception_id": "x2s_setl_0126",
       "leg": 2,
       "reason": "no bank line matched this settlement",
       "residual_paise": null,
       "suspected_class": null
     },
     {
-      "entity_id": "setl_0156",
+      "entity_id": "setl_0155",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0156",
+      "exception_id": "x2s_setl_0155",
       "leg": 2,
       "reason": "no bank line matched this settlement",
       "residual_paise": null,
@@ -3334,7 +3334,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "cdc7d9668ee48f60",
+      "input_hash": "2cf45bc9c61b8a6e",
       "left": [
         "order_00143"
       ],
@@ -4114,7 +4114,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "ae8badb0a86422fd",
+      "input_hash": "7e7c87e2bbece85d",
       "left": [
         "order_00199"
       ],
@@ -9934,7 +9934,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "a4c89e3873bea397",
+      "input_hash": "f81d2aae70587438",
       "left": [
         "order_00602"
       ],
@@ -23059,7 +23059,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "f7d6b37d0df113cd",
+      "input_hash": "49db40d23c08df77",
       "left": [
         "order_01523"
       ],
@@ -30049,6 +30049,21 @@
     },
     {
       "confidence": 1.0,
+      "input_hash": "0ba98746db2b0430",
+      "left": [
+        "bank_0019"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0019",
+      "residual_paise": 0,
+      "right": [
+        "setl_0019"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
       "input_hash": "b5c295c99e3ff185",
       "left": [
         "bank_0020"
@@ -30178,6 +30193,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0028"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "8178dade7f32c8ab",
+      "left": [
+        "bank_0029"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0029",
+      "residual_paise": 0,
+      "right": [
+        "setl_0029"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30364,21 +30394,6 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "97f647056799f40d",
-      "left": [
-        "bank_0042"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0042",
-      "residual_paise": 0,
-      "right": [
-        "setl_0042"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
       "input_hash": "a4113f4a11697280",
       "left": [
         "bank_0043"
@@ -30388,6 +30403,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0043"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "62f3a756d8c26fdb",
+      "left": [
+        "bank_0044"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0044",
+      "residual_paise": 0,
+      "right": [
+        "setl_0044"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30409,15 +30439,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "b2a4fc13128293d2",
+      "input_hash": "243ab3053580d34e",
       "left": [
-        "bank_0048"
+        "bank_0049"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0048",
+      "match_id": "m2_bank_0049",
       "residual_paise": 0,
       "right": [
-        "setl_0048"
+        "setl_0049"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30433,6 +30463,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0050"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "9f75c05682f79747",
+      "left": [
+        "bank_0051"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0051",
+      "residual_paise": 0,
+      "right": [
+        "setl_0051"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30469,45 +30514,45 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "54f7f7fc21059e5f",
+      "input_hash": "c7a884abdd1a121d",
       "left": [
-        "bank_0054"
+        "bank_0056"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0054",
+      "match_id": "m2_bank_0056",
       "residual_paise": 0,
       "right": [
-        "setl_0054"
+        "setl_0056"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
     },
     {
       "confidence": 1.0,
-      "input_hash": "cfe219b7d26366f7",
+      "input_hash": "ce8e39708d7b5b6f",
       "left": [
-        "bank_0055"
+        "bank_0058"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0055",
+      "match_id": "m2_bank_0058",
       "residual_paise": 0,
       "right": [
-        "setl_0055"
+        "setl_0058"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
     },
     {
       "confidence": 1.0,
-      "input_hash": "dd58ee50de45de62",
+      "input_hash": "69b6fc417fe63230",
       "left": [
-        "bank_0057"
+        "bank_0059"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0057",
+      "match_id": "m2_bank_0059",
       "residual_paise": 0,
       "right": [
-        "setl_0057"
+        "setl_0059"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30544,30 +30589,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "935e6927f47a7148",
+      "input_hash": "14ba5eeecee26dbc",
       "left": [
-        "bank_0063"
+        "bank_0065"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0063",
+      "match_id": "m2_bank_0065",
       "residual_paise": 0,
       "right": [
-        "setl_0063"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "050898179d1e114c",
-      "left": [
-        "bank_0064"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0064",
-      "residual_paise": 0,
-      "right": [
-        "setl_0064"
+        "setl_0065"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30583,6 +30613,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0066"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "0cf155d470e59112",
+      "left": [
+        "bank_0068"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0068",
+      "residual_paise": 0,
+      "right": [
+        "setl_0068"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30613,6 +30658,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0070"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "ebfd84dfbddf6d2b",
+      "left": [
+        "bank_0071"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0071",
+      "residual_paise": 0,
+      "right": [
+        "setl_0071"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30709,51 +30769,6 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "303df4641071ded4",
-      "left": [
-        "bank_0079"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0079",
-      "residual_paise": 0,
-      "right": [
-        "setl_0079"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "afcb01d25667508b",
-      "left": [
-        "bank_0080"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0080",
-      "residual_paise": 0,
-      "right": [
-        "setl_0080"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "d584c652dc2af406",
-      "left": [
-        "bank_0081"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0081",
-      "residual_paise": 0,
-      "right": [
-        "setl_0081"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
       "input_hash": "9afd8e5d50577180",
       "left": [
         "bank_0082"
@@ -30763,6 +30778,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0082"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "55b1b24cf74ac9ca",
+      "left": [
+        "bank_0083"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0083",
+      "residual_paise": 0,
+      "right": [
+        "setl_0083"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30814,15 +30844,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "03ef020f06955475",
+      "input_hash": "f68dd1b955f30ebe",
       "left": [
-        "bank_0089"
+        "bank_0092"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0089",
+      "match_id": "m2_bank_0092",
       "residual_paise": 0,
       "right": [
-        "setl_0089"
+        "setl_0092"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30838,6 +30868,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0093"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "51a2dc0d91998575",
+      "left": [
+        "bank_0096"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0096",
+      "residual_paise": 0,
+      "right": [
+        "setl_0096"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30868,6 +30913,36 @@
       "residual_paise": 0,
       "right": [
         "setl_0098"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "1c2bc8563fde9c52",
+      "left": [
+        "bank_0099"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0099",
+      "residual_paise": 0,
+      "right": [
+        "setl_0099"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "f14f1454b062e654",
+      "left": [
+        "bank_0100"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0100",
+      "residual_paise": 0,
+      "right": [
+        "setl_0100"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31009,21 +31084,6 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "63fb9e79e6cc96d9",
-      "left": [
-        "bank_0112"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0112",
-      "residual_paise": 0,
-      "right": [
-        "setl_0112"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
       "input_hash": "9a01fc4d634b7c81",
       "left": [
         "bank_0113"
@@ -31084,15 +31144,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "5f635b3e95baadf1",
+      "input_hash": "192b56ea331bc8cd",
       "left": [
-        "bank_0118"
+        "bank_0117"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0118",
+      "match_id": "m2_bank_0117",
       "residual_paise": 0,
       "right": [
-        "setl_0118"
+        "setl_0117"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31174,51 +31234,6 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "a28725f304a4ce8f",
-      "left": [
-        "bank_0124"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0124",
-      "residual_paise": 0,
-      "right": [
-        "setl_0124"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "4de1740687fa0f56",
-      "left": [
-        "bank_0125"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0125",
-      "residual_paise": 0,
-      "right": [
-        "setl_0125"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "5f7f2aae3eebb10b",
-      "left": [
-        "bank_0126"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0126",
-      "residual_paise": 0,
-      "right": [
-        "setl_0126"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
       "input_hash": "68c1869eed6094c8",
       "left": [
         "bank_0127"
@@ -31234,15 +31249,30 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "e01d960972caf904",
+      "input_hash": "4a7dd525c9b50cc5",
       "left": [
-        "bank_0130"
+        "bank_0128"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0130",
+      "match_id": "m2_bank_0128",
       "residual_paise": 0,
       "right": [
-        "setl_0130"
+        "setl_0128"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "b2a22d6a7b385828",
+      "left": [
+        "bank_0129"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0129",
+      "residual_paise": 0,
+      "right": [
+        "setl_0129"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31294,21 +31324,6 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "2209c181a4b60e19",
-      "left": [
-        "bank_0134"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0134",
-      "residual_paise": 0,
-      "right": [
-        "setl_0134"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
       "input_hash": "a78dd2ee1f83c643",
       "left": [
         "bank_0135"
@@ -31324,15 +31339,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "beb7f85c54c6d613",
+      "input_hash": "db005e8904d61483",
       "left": [
-        "bank_0136"
+        "bank_0137"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0136",
+      "match_id": "m2_bank_0137",
       "residual_paise": 0,
       "right": [
-        "setl_0136"
+        "setl_0137"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31399,15 +31414,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "fb6a54d370f6651a",
+      "input_hash": "76096126420f2434",
       "left": [
-        "bank_0142"
+        "bank_0143"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0142",
+      "match_id": "m2_bank_0143",
       "residual_paise": 0,
       "right": [
-        "setl_0142"
+        "setl_0143"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31579,15 +31594,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "c6540e0e27a414c9",
+      "input_hash": "b21808c7d1eae2c7",
       "left": [
-        "bank_0155"
+        "bank_0156"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0155",
+      "match_id": "m2_bank_0156",
       "residual_paise": 0,
       "right": [
-        "setl_0155"
+        "setl_0156"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31711,21 +31726,6 @@
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "3ed9c754eb98f88a",
-      "left": [
-        "bank_0166"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0166",
-      "residual_paise": 0,
-      "right": [
-        "setl_0166"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
     }
   ],
   "rung": "B0",
@@ -31838,6 +31838,6 @@
     "profile": "holdout",
     "seed": 21,
     "unattributed_exceptions": 0,
-    "value_share": 0.726417
+    "value_share": 0.762148
   }
 }

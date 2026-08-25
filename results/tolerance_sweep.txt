@@ -10,11 +10,11 @@ LEG 2 TOLERANCE SWEEP   n=2000  seed=7  profile=dev
      Rs 0.01     90.85%   0.00%        22          0           0
      Rs 0.05     92.07%   0.00%        24          0           0
      Rs 0.10     93.29%   0.00%        26          0           0
-     Rs 0.50     93.90%   0.00%        27          0           0
-     Rs 1.00     93.90%   0.00%        27          0           0
-    Rs 10.00     95.73%   0.00%        30          0           0
-   Rs 100.00     90.85%   0.00%        22         11           0
- Rs 1,000.00     91.46%   0.00%        23         10           0
+     Rs 0.50     93.29%   0.00%        26          0           0
+     Rs 1.00     93.29%   0.00%        26          0           0
+    Rs 10.00     95.12%   0.00%        29          1           0
+   Rs 100.00     94.51%   0.00%        28          5           0
+ Rs 1,000.00     92.07%   0.00%        24          9           0
 ------------------------------------------------------------------------------
 
   Recall keeps rising past 10 paise, so maximising it would argue for a much
@@ -29,12 +29,12 @@ LEG 2 TOLERANCE SWEEP   n=2000  seed=7  profile=dev
 
 DEFECT CLASS RESOLVED        Rs 0.00   Rs 0.10   Rs 0.50  Rs 10.00 Rs 100.00
 ------------------------------------------------------------------------------
-ADJUSTMENT_ENTRY                   4         4         4         4         1
-CHARGEBACK_NETTED                  3         3         3         3         0
-FEE_TAX_VARIANCE                   0         0         0         3         4  <- REAL MONEY, absorbed
-FX_CONVERSION                      0         0         1         1         3  <- REAL MONEY, absorbed
+ADJUSTMENT_ENTRY                   4         4         4         4         2
+CHARGEBACK_NETTED                  3         3         3         2         2
+FEE_TAX_VARIANCE                   0         0         0         2         4  <- REAL MONEY, absorbed
+FX_CONVERSION                      0         0         0         2         3  <- REAL MONEY, absorbed
 NARRATION_TRUNCATION               3         3         3         3         3
-REFUND_NETTED                      7         7         7         7         2
+REFUND_NETTED                      7         7         7         7         5
 ROUNDING_DRIFT                     0         5         5         5         5  <- rounding, legitimate
 TIMING_SPILL                       4         4         4         4         4
 ------------------------------------------------------------------------------

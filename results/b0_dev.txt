@@ -7,7 +7,7 @@ RUNG B0   profile=dev   seed=7
 
   FALSE-MATCH RATE         0.00%     <- lead metric
   Auto-match rate         93.85%
-  Credit value matched    74.36%     (Rs 1,74,22,678.05 of Rs 2,34,30,336.80)
+  Credit value matched    77.89%     (Rs 1,78,11,476.39 of Rs 2,28,68,099.67)
 
 ------------------------------------------------------------------------
 LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC

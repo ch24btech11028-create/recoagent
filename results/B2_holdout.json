@@ -833,35 +833,17 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0014",
       "leg": 2,
-      "reason": "UTR joins setl_0014 but the credit is short by 164 paise against 7 payments and 0 linked adjustments; subset-sum over 9 unlinked rows found no explanation",
-      "residual_paise": -164,
+      "reason": "UTR joins setl_0014 but the credit is short by 243 paise against 7 payments and 0 linked adjustments; subset-sum over 4 unlinked rows found no explanation",
+      "residual_paise": -243,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0018",
+      "entity_id": "bank_0042",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0018",
+      "exception_id": "x2_bank_0042",
       "leg": 2,
-      "reason": "UTR joins setl_0018 but the credit is short by 660900 paise against 14 payments and 0 linked adjustments; subset-sum over 9 unlinked rows found no explanation",
-      "residual_paise": -660900,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0019",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0019",
-      "leg": 2,
-      "reason": "UTR joins setl_0019 but the credit is over by 660900 paise against 17 payments and 0 linked adjustments; subset-sum over 9 unlinked rows found no explanation",
-      "residual_paise": 660900,
-      "suspected_class": null
-    },
-    {
-      "entity_id": "bank_0044",
-      "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0044",
-      "leg": 2,
-      "reason": "UTR joins setl_0044 but the credit is over by 1380 paise against 16 payments and 1 linked adjustments; subset-sum over 13 unlinked rows found no explanation",
-      "residual_paise": 1380,
+      "reason": "UTR joins setl_0042 but the credit is over by 1618 paise against 15 payments and 0 linked adjustments; subset-sum over 8 unlinked rows found no explanation",
+      "residual_paise": 1618,
       "suspected_class": null
     },
     {
@@ -869,8 +851,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0047",
       "leg": 2,
-      "reason": "UTR joins setl_0047 but the credit is short by 2520 paise against 6 payments and 0 linked adjustments; subset-sum over 15 unlinked rows found no explanation",
-      "residual_paise": -2520,
+      "reason": "UTR joins setl_0047 but the credit is short by 1859 paise against 6 payments and 0 linked adjustments; subset-sum over 8 unlinked rows found no explanation",
+      "residual_paise": -1859,
       "suspected_class": null
     },
     {
@@ -878,8 +860,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0072",
       "leg": 2,
-      "reason": "UTR joins setl_0072 but the credit is short by 7062 paise against 9 payments and 0 linked adjustments; subset-sum over 9 unlinked rows found no explanation",
-      "residual_paise": -7062,
+      "reason": "UTR joins setl_0072 but the credit is short by 3473 paise against 9 payments and 0 linked adjustments; subset-sum over 8 unlinked rows found no explanation",
+      "residual_paise": -3473,
       "suspected_class": null
     },
     {
@@ -887,8 +869,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0090",
       "leg": 2,
-      "reason": "UTR joins setl_0090 but the credit is short by 26701 paise against 15 payments and 0 linked adjustments; subset-sum over 5 unlinked rows found no explanation",
-      "residual_paise": -26701,
+      "reason": "UTR joins setl_0090 but the credit is short by 36172 paise against 15 payments and 0 linked adjustments; subset-sum over 11 unlinked rows found no explanation",
+      "residual_paise": -36172,
       "suspected_class": null
     },
     {
@@ -896,8 +878,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0104",
       "leg": 2,
-      "reason": "UTR joins setl_0104 but the credit is short by 3576 paise against 12 payments and 0 linked adjustments; subset-sum over 4 unlinked rows found no explanation",
-      "residual_paise": -3576,
+      "reason": "UTR joins setl_0104 but the credit is short by 6075 paise against 12 payments and 0 linked adjustments; subset-sum over 8 unlinked rows found no explanation",
+      "residual_paise": -6075,
       "suspected_class": null
     },
     {
@@ -905,34 +887,34 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0109",
       "leg": 2,
-      "reason": "UTR joins setl_0109 but the credit is short by 36202 paise against 17 payments and 0 linked adjustments; subset-sum over 3 unlinked rows found no explanation",
-      "residual_paise": -36202,
+      "reason": "UTR joins setl_0109 but the credit is short by 84664 paise against 17 payments and 0 linked adjustments; subset-sum over 8 unlinked rows found no explanation",
+      "residual_paise": -84664,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0143",
+      "entity_id": "bank_0142",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0143",
+      "exception_id": "x2_bank_0142",
       "leg": 2,
-      "reason": "UTR joins setl_0143 but the credit is short by 3078 paise against 7 payments and 1 linked adjustments; subset-sum over 1 unlinked rows found no explanation",
-      "residual_paise": -3078,
+      "reason": "UTR joins setl_0142 but the credit is short by 144 paise against 10 payments and 0 linked adjustments; subset-sum over 7 unlinked rows found no explanation",
+      "residual_paise": -144,
       "suspected_class": null
     },
     {
-      "entity_id": "bank_0156",
+      "entity_id": "bank_0155",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0156",
+      "exception_id": "x2_bank_0155",
       "leg": 2,
-      "reason": "UTR 269660543302 appears on 2 statement lines; refusing to book the same credit twice",
+      "reason": "UTR 843099646710 appears on 2 statement lines; refusing to book the same credit twice",
       "residual_paise": null,
       "suspected_class": "DUPLICATE_UTR"
     },
     {
-      "entity_id": "bank_0156_dup",
+      "entity_id": "bank_0155_dup",
       "entity_kind": "bank_line",
-      "exception_id": "x2_bank_0156_dup",
+      "exception_id": "x2_bank_0155_dup",
       "leg": 2,
-      "reason": "UTR 269660543302 appears on 2 statement lines; refusing to book the same credit twice",
+      "reason": "UTR 843099646710 appears on 2 statement lines; refusing to book the same credit twice",
       "residual_paise": null,
       "suspected_class": "DUPLICATE_UTR"
     },
@@ -941,8 +923,8 @@
       "entity_kind": "bank_line",
       "exception_id": "x2_bank_0160",
       "leg": 2,
-      "reason": "UTR joins setl_0160 but the credit is short by 37443 paise against 11 payments and 1 linked adjustments; subset-sum over 0 unlinked rows found no explanation",
-      "residual_paise": -37443,
+      "reason": "UTR joins setl_0160 but the credit is short by 12512 paise against 11 payments and 1 linked adjustments; subset-sum over 2 unlinked rows found no explanation",
+      "residual_paise": -12512,
       "suspected_class": null
     },
     {
@@ -955,36 +937,36 @@
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0071",
+      "entity_id": "setl_0067",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0071",
+      "exception_id": "x2s_setl_0067",
       "leg": 2,
       "reason": "settlement held into reserve balance; no credit expected",
       "residual_paise": null,
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0083",
+      "entity_id": "setl_0079",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0083",
+      "exception_id": "x2s_setl_0079",
       "leg": 2,
       "reason": "settlement held into reserve balance; no credit expected",
       "residual_paise": null,
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0128",
+      "entity_id": "setl_0125",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0128",
+      "exception_id": "x2s_setl_0125",
       "leg": 2,
       "reason": "settlement held into reserve balance; no credit expected",
       "residual_paise": null,
       "suspected_class": "MISSING_BANK_LINE"
     },
     {
-      "entity_id": "setl_0156",
+      "entity_id": "setl_0155",
       "entity_kind": "settlement",
-      "exception_id": "x2s_setl_0156",
+      "exception_id": "x2s_setl_0155",
       "leg": 2,
       "reason": "no bank line matched this settlement",
       "residual_paise": null,
@@ -3064,7 +3046,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "cdc7d9668ee48f60",
+      "input_hash": "2cf45bc9c61b8a6e",
       "left": [
         "order_00143"
       ],
@@ -3844,7 +3826,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "ae8badb0a86422fd",
+      "input_hash": "7e7c87e2bbece85d",
       "left": [
         "order_00199"
       ],
@@ -9664,7 +9646,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "a4c89e3873bea397",
+      "input_hash": "f81d2aae70587438",
       "left": [
         "order_00602"
       ],
@@ -22789,7 +22771,7 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "f7d6b37d0df113cd",
+      "input_hash": "49db40d23c08df77",
       "left": [
         "order_01523"
       ],
@@ -29808,8 +29790,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "1f13ebe8410f4311",
+      "confidence": 0.75,
+      "input_hash": "601728c698897f74",
       "left": [
         "bank_0015"
       ],
@@ -29819,12 +29801,12 @@
       "right": [
         "setl_0015"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
+      "rule_id": "leg2.t1.spill_pair",
       "tier": "T1"
     },
     {
       "confidence": 0.75,
-      "input_hash": "9c47a91ac6abcff3",
+      "input_hash": "871440806301192a",
       "left": [
         "bank_0016"
       ],
@@ -29839,7 +29821,7 @@
     },
     {
       "confidence": 0.75,
-      "input_hash": "ee41736e126441e8",
+      "input_hash": "987580fa3054a78c",
       "left": [
         "bank_0017"
       ],
@@ -29851,6 +29833,36 @@
       ],
       "rule_id": "leg2.t1.spill_pair",
       "tier": "T1"
+    },
+    {
+      "confidence": 0.75,
+      "input_hash": "8e9285cd4052ceab",
+      "left": [
+        "bank_0018"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0018",
+      "residual_paise": 0,
+      "right": [
+        "setl_0018"
+      ],
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "0ba98746db2b0430",
+      "left": [
+        "bank_0019"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0019",
+      "residual_paise": 0,
+      "right": [
+        "setl_0019"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -29988,8 +30000,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.9,
-      "input_hash": "7b7151ecacdb2dab",
+      "confidence": 1.0,
+      "input_hash": "8178dade7f32c8ab",
       "left": [
         "bank_0029"
       ],
@@ -29999,8 +30011,8 @@
       "right": [
         "setl_0029"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30184,21 +30196,6 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "97f647056799f40d",
-      "left": [
-        "bank_0042"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0042",
-      "residual_paise": 0,
-      "right": [
-        "setl_0042"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
       "input_hash": "a4113f4a11697280",
       "left": [
         "bank_0043"
@@ -30213,8 +30210,23 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.9,
-      "input_hash": "3c4f20b2b4391856",
+      "confidence": 1.0,
+      "input_hash": "62f3a756d8c26fdb",
+      "left": [
+        "bank_0044"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0044",
+      "residual_paise": 0,
+      "right": [
+        "setl_0044"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 0.95,
+      "input_hash": "d3110d2c1c3bf0d4",
       "left": [
         "bank_0045"
       ],
@@ -30243,8 +30255,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "b2a4fc13128293d2",
+      "confidence": 0.95,
+      "input_hash": "f15de3f8a7bb1751",
       "left": [
         "bank_0048"
       ],
@@ -30254,12 +30266,12 @@
       "right": [
         "setl_0048"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "54bf3fd2833b4083",
+      "confidence": 1.0,
+      "input_hash": "243ab3053580d34e",
       "left": [
         "bank_0049"
       ],
@@ -30269,8 +30281,8 @@
       "right": [
         "setl_0049"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30288,8 +30300,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "f8f9fb483b218947",
+      "confidence": 1.0,
+      "input_hash": "9f75c05682f79747",
       "left": [
         "bank_0051"
       ],
@@ -30299,8 +30311,8 @@
       "right": [
         "setl_0051"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30333,8 +30345,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "54f7f7fc21059e5f",
+      "confidence": 0.75,
+      "input_hash": "309bdea80ff6b2b5",
       "left": [
         "bank_0054"
       ],
@@ -30344,12 +30356,12 @@
       "right": [
         "setl_0054"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "cfe219b7d26366f7",
+      "confidence": 0.75,
+      "input_hash": "cab7c9dc9a7b523f",
       "left": [
         "bank_0055"
       ],
@@ -30359,12 +30371,12 @@
       "right": [
         "setl_0055"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
-      "confidence": 0.9,
-      "input_hash": "6fd7b92bfd425bbd",
+      "confidence": 1.0,
+      "input_hash": "c7a884abdd1a121d",
       "left": [
         "bank_0056"
       ],
@@ -30374,12 +30386,12 @@
       "right": [
         "setl_0056"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "dd58ee50de45de62",
+      "confidence": 0.9,
+      "input_hash": "4f86ac45b8131896",
       "left": [
         "bank_0057"
       ],
@@ -30389,12 +30401,12 @@
       "right": [
         "setl_0057"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
-      "confidence": 0.75,
-      "input_hash": "45392fa72ffb103d",
+      "confidence": 1.0,
+      "input_hash": "ce8e39708d7b5b6f",
       "left": [
         "bank_0058"
       ],
@@ -30404,12 +30416,12 @@
       "right": [
         "setl_0058"
       ],
-      "rule_id": "leg2.t1.spill_pair",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
-      "confidence": 0.75,
-      "input_hash": "7cb2420e5d993835",
+      "confidence": 1.0,
+      "input_hash": "69b6fc417fe63230",
       "left": [
         "bank_0059"
       ],
@@ -30419,8 +30431,8 @@
       "right": [
         "setl_0059"
       ],
-      "rule_id": "leg2.t1.spill_pair",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30453,8 +30465,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.9,
-      "input_hash": "b902b198063185c7",
+      "confidence": 0.75,
+      "input_hash": "8c0b5e97fcb8db70",
       "left": [
         "bank_0062"
       ],
@@ -30464,12 +30476,12 @@
       "right": [
         "setl_0062"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
+      "rule_id": "leg2.t1.spill_pair",
       "tier": "T1"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "935e6927f47a7148",
+      "confidence": 0.9,
+      "input_hash": "d939045f01507e9d",
       "left": [
         "bank_0063"
       ],
@@ -30479,12 +30491,12 @@
       "right": [
         "setl_0063"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "050898179d1e114c",
+      "confidence": 0.75,
+      "input_hash": "2bf2b16a4351747e",
       "left": [
         "bank_0064"
       ],
@@ -30494,12 +30506,12 @@
       "right": [
         "setl_0064"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "247c54b5cba6d620",
+      "confidence": 1.0,
+      "input_hash": "14ba5eeecee26dbc",
       "left": [
         "bank_0065"
       ],
@@ -30509,8 +30521,8 @@
       "right": [
         "setl_0065"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30528,23 +30540,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.75,
-      "input_hash": "e92a81b604d3e3bd",
-      "left": [
-        "bank_0067"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0067",
-      "residual_paise": 0,
-      "right": [
-        "setl_0067"
-      ],
-      "rule_id": "leg2.t1.spill_pair",
-      "tier": "T1"
-    },
-    {
-      "confidence": 0.75,
-      "input_hash": "05a2d605f45f8a88",
+      "confidence": 1.0,
+      "input_hash": "0cf155d470e59112",
       "left": [
         "bank_0068"
       ],
@@ -30554,8 +30551,8 @@
       "right": [
         "setl_0068"
       ],
-      "rule_id": "leg2.t1.spill_pair",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30583,6 +30580,21 @@
       "residual_paise": 0,
       "right": [
         "setl_0070"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "ebfd84dfbddf6d2b",
+      "left": [
+        "bank_0071"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0071",
+      "residual_paise": 0,
+      "right": [
+        "setl_0071"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -30679,28 +30691,13 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "303df4641071ded4",
-      "left": [
-        "bank_0079"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0079",
-      "residual_paise": 0,
-      "right": [
-        "setl_0079"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "afcb01d25667508b",
+      "input_hash": "230e9573070b3457",
       "left": [
         "bank_0080"
       ],
       "leg": 2,
       "match_id": "m2_bank_0080",
-      "residual_paise": 0,
+      "residual_paise": -9,
       "right": [
         "setl_0080"
       ],
@@ -30708,8 +30705,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "d584c652dc2af406",
+      "confidence": 0.95,
+      "input_hash": "1f524619d486516f",
       "left": [
         "bank_0081"
       ],
@@ -30719,8 +30716,8 @@
       "right": [
         "setl_0081"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -30739,18 +30736,33 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "2ed4c5c062b581fc",
+      "input_hash": "55b1b24cf74ac9ca",
+      "left": [
+        "bank_0083"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0083",
+      "residual_paise": 0,
+      "right": [
+        "setl_0083"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 0.95,
+      "input_hash": "0181c616491ebcf0",
       "left": [
         "bank_0084"
       ],
       "leg": 2,
       "match_id": "m2_bank_0084",
-      "residual_paise": -9,
+      "residual_paise": 0,
       "right": [
         "setl_0084"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -30783,19 +30795,19 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "5afb8f3e2bcf4b0c",
+      "confidence": 1.0,
+      "input_hash": "a23de68b94a61c39",
       "left": [
         "bank_0087"
       ],
       "leg": 2,
       "match_id": "m2_bank_0087",
-      "residual_paise": 0,
+      "residual_paise": -1,
       "right": [
         "setl_0087"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30813,8 +30825,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "03ef020f06955475",
+      "confidence": 0.75,
+      "input_hash": "66b3772ed59ea3d9",
       "left": [
         "bank_0089"
       ],
@@ -30824,27 +30836,27 @@
       "right": [
         "setl_0089"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "248e1a094aca77f0",
+      "confidence": 0.75,
+      "input_hash": "54fb91edff59500d",
       "left": [
         "bank_0091"
       ],
       "leg": 2,
       "match_id": "m2_bank_0091",
-      "residual_paise": -1,
+      "residual_paise": 0,
       "right": [
         "setl_0091"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.spill_pair",
+      "tier": "T1"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "1e69580607825eae",
+      "confidence": 1.0,
+      "input_hash": "f68dd1b955f30ebe",
       "left": [
         "bank_0092"
       ],
@@ -30854,8 +30866,8 @@
       "right": [
         "setl_0092"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30903,8 +30915,8 @@
       "tier": "T1"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "ef6a8fecd144acce",
+      "confidence": 1.0,
+      "input_hash": "51a2dc0d91998575",
       "left": [
         "bank_0096"
       ],
@@ -30914,8 +30926,8 @@
       "right": [
         "setl_0096"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -30948,8 +30960,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.75,
-      "input_hash": "f348d6ad791d1e91",
+      "confidence": 1.0,
+      "input_hash": "1c2bc8563fde9c52",
       "left": [
         "bank_0099"
       ],
@@ -30959,12 +30971,12 @@
       "right": [
         "setl_0099"
       ],
-      "rule_id": "leg2.t1.spill_pair",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
-      "confidence": 0.75,
-      "input_hash": "92a5182c3e43e2d2",
+      "confidence": 1.0,
+      "input_hash": "f14f1454b062e654",
       "left": [
         "bank_0100"
       ],
@@ -30974,8 +30986,8 @@
       "right": [
         "setl_0100"
       ],
-      "rule_id": "leg2.t1.spill_pair",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -31113,8 +31125,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "63fb9e79e6cc96d9",
+      "confidence": 0.8,
+      "input_hash": "39c4af2307fab7f0",
       "left": [
         "bank_0112"
       ],
@@ -31124,8 +31136,8 @@
       "right": [
         "setl_0112"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.amount_window",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -31188,8 +31200,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.8,
-      "input_hash": "0f04caafeb6a2ebc",
+      "confidence": 1.0,
+      "input_hash": "192b56ea331bc8cd",
       "left": [
         "bank_0117"
       ],
@@ -31199,12 +31211,12 @@
       "right": [
         "setl_0117"
       ],
-      "rule_id": "leg2.t1.amount_window",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "5f635b3e95baadf1",
+      "confidence": 0.9,
+      "input_hash": "3e5f6d5e00b0c1bd",
       "left": [
         "bank_0118"
       ],
@@ -31214,8 +31226,8 @@
       "right": [
         "setl_0118"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -31293,8 +31305,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "a28725f304a4ce8f",
+      "confidence": 0.9,
+      "input_hash": "84fb6cab834b1484",
       "left": [
         "bank_0124"
       ],
@@ -31304,27 +31316,12 @@
       "right": [
         "setl_0124"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "4de1740687fa0f56",
-      "left": [
-        "bank_0125"
-      ],
-      "leg": 2,
-      "match_id": "m2_bank_0125",
-      "residual_paise": 0,
-      "right": [
-        "setl_0125"
-      ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
-    },
-    {
-      "confidence": 1.0,
-      "input_hash": "5f7f2aae3eebb10b",
+      "confidence": 0.8,
+      "input_hash": "a1d8a2d4d2d1904e",
       "left": [
         "bank_0126"
       ],
@@ -31334,8 +31331,8 @@
       "right": [
         "setl_0126"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.amount_window",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -31353,8 +31350,23 @@
       "tier": "T0"
     },
     {
-      "confidence": 0.8,
-      "input_hash": "85c01a80afab8c4d",
+      "confidence": 1.0,
+      "input_hash": "4a7dd525c9b50cc5",
+      "left": [
+        "bank_0128"
+      ],
+      "leg": 2,
+      "match_id": "m2_bank_0128",
+      "residual_paise": 0,
+      "right": [
+        "setl_0128"
+      ],
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
+    },
+    {
+      "confidence": 1.0,
+      "input_hash": "b2a22d6a7b385828",
       "left": [
         "bank_0129"
       ],
@@ -31364,12 +31376,12 @@
       "right": [
         "setl_0129"
       ],
-      "rule_id": "leg2.t1.amount_window",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "e01d960972caf904",
+      "confidence": 0.9,
+      "input_hash": "db06eb80d7183594",
       "left": [
         "bank_0130"
       ],
@@ -31379,8 +31391,8 @@
       "right": [
         "setl_0130"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -31428,8 +31440,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "2209c181a4b60e19",
+      "confidence": 0.95,
+      "input_hash": "08b4bc27cf90eccc",
       "left": [
         "bank_0134"
       ],
@@ -31439,8 +31451,8 @@
       "right": [
         "setl_0134"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
       "confidence": 1.0,
@@ -31458,8 +31470,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "beb7f85c54c6d613",
+      "confidence": 0.95,
+      "input_hash": "861bfa9609aa29ed",
       "left": [
         "bank_0136"
       ],
@@ -31469,12 +31481,12 @@
       "right": [
         "setl_0136"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     },
     {
-      "confidence": 0.95,
-      "input_hash": "dcd825891f5c63b6",
+      "confidence": 1.0,
+      "input_hash": "db005e8904d61483",
       "left": [
         "bank_0137"
       ],
@@ -31484,8 +31496,8 @@
       "right": [
         "setl_0137"
       ],
-      "rule_id": "leg2.t1.ssmp_residual",
-      "tier": "T1"
+      "rule_id": "leg2.t0.exact_utr",
+      "tier": "T0"
     },
     {
       "confidence": 1.0,
@@ -31549,15 +31561,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "fb6a54d370f6651a",
+      "input_hash": "76096126420f2434",
       "left": [
-        "bank_0142"
+        "bank_0143"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0142",
+      "match_id": "m2_bank_0143",
       "residual_paise": 0,
       "right": [
-        "setl_0142"
+        "setl_0143"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31729,15 +31741,15 @@
     },
     {
       "confidence": 1.0,
-      "input_hash": "c6540e0e27a414c9",
+      "input_hash": "b21808c7d1eae2c7",
       "left": [
-        "bank_0155"
+        "bank_0156"
       ],
       "leg": 2,
-      "match_id": "m2_bank_0155",
+      "match_id": "m2_bank_0156",
       "residual_paise": 0,
       "right": [
-        "setl_0155"
+        "setl_0156"
       ],
       "rule_id": "leg2.t0.exact_utr",
       "tier": "T0"
@@ -31863,8 +31875,8 @@
       "tier": "T0"
     },
     {
-      "confidence": 1.0,
-      "input_hash": "3ed9c754eb98f88a",
+      "confidence": 0.95,
+      "input_hash": "8d6cc76ae1419952",
       "left": [
         "bank_0166"
       ],
@@ -31874,8 +31886,8 @@
       "right": [
         "setl_0166"
       ],
-      "rule_id": "leg2.t0.exact_utr",
-      "tier": "T0"
+      "rule_id": "leg2.t1.ssmp_residual",
+      "tier": "T1"
     }
   ],
   "rung": "B2",
@@ -31960,13 +31972,13 @@
       },
       {
         "defect": "TIMING_SPILL",
-        "flagged": 1,
+        "flagged": 0,
         "injected": 6,
         "mishandled": 0,
-        "resolved": 5
+        "resolved": 6
       }
     ],
-    "auto_match_rate": 0.951479,
+    "auto_match_rate": 0.952403,
     "false_match_rate": 0.0,
     "fully_reconciles": true,
     "legs": {
@@ -31978,16 +31990,16 @@
         "true_matches": 1908
       },
       "2": {
-        "attempted": 151,
-        "exceptions": 13,
+        "attempted": 153,
+        "exceptions": 11,
         "false_matches": 0,
         "population": 164,
-        "true_matches": 151
+        "true_matches": 153
       }
     },
     "profile": "holdout",
     "seed": 21,
     "unattributed_exceptions": 0,
-    "value_share": 0.935397
+    "value_share": 0.938869
   }
 }

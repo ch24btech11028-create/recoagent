@@ -19,11 +19,11 @@ below. Whole batch runs in **0.15s**, single-threaded.
 | | B0 dev | B0 held-out | **B2 dev** | **B2 held-out** | clean (control) |
 |---|---:|---:|---:|---:|---:|
 | **False-match rate** | **0.00%** | **0.00%** | **0.00%** | **0.00%** | **0.00%** |
-| Auto-match rate | 93.85% | 93.85% | 95.24% | 95.15% | 100.00% |
-| Credit value matched | 74.36% | 72.64% | 92.67% | 93.54% | 100.00% |
+| Auto-match rate | 93.85% | 93.85% | 95.24% | 95.24% | 100.00% |
+| Credit value matched | 77.89% | 76.21% | 92.88% | 93.89% | 100.00% |
 | Leg 1 recall (order → payment) | 95.40% | 95.40% | 95.40% | 95.40% | 100.00% |
-| Leg 2 recall (credit → batch) | 75.00% | 75.00% | **93.29%** | **92.07%** | 100.00% |
-| Leg 2 exceptions | 41 | 41 | 11 | 13 | 0 |
+| Leg 2 recall (credit → batch) | 75.00% | 75.00% | **93.29%** | **93.29%** | 100.00% |
+| Leg 2 exceptions | 41 | 41 | 11 | 11 | 0 |
 | Defects mishandled | 0 | 0 | 0 | 0 | 0 |
 
 **Read the first row first.** A reconciliation engine that matches everything
@@ -58,69 +58,62 @@ report does not carry — and that territory is deliberately narrow: 7 defects o
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
 
-### B3 — the LLM exception tier, measured
+### B3 — the LLM exception tier, measured honestly
 
-Run against **nvidia/nemotron-3-super-120b-a12b** via NVIDIA NIM. Full detail
-in [`results/B3_nemotron.txt`](results/B3_nemotron.txt).
+Run against **nvidia/nemotron-3-ultra-550b-a55b** via NVIDIA NIM, under the
+citation contract. Full detail in
+[`results/B3_citation_contract.txt`](results/B3_citation_contract.txt).
 
 | | dev | held-out |
 |---|---:|---:|
-| Cases attempted | 7 | 11 |
-| Resolved | 4 | 7 |
-| **Rejected by the gate** | **0** | **0** |
-| Declined by the model | 3 | 4 |
-| Leg 2 recall | 93.29% → **95.73%** | 92.07% → **96.34%** |
-| Credit value matched | 92.67% → **95.32%** | 93.54% → **98.36%** |
+| Cases attempted | 7 | 9 |
+| **Resolved (source-backed)** | **0** | **0** |
+| Needs approval (AI-supported explanation) | 5 | 7 |
+| Rejected by the gate | 0 | 0 |
+| Declined by the model | 1 | 0 |
+| Malformed reply | 1 | 2 |
+| Leg 2 recall | 93.29% → **93.29%** | 93.29% → **93.29%** |
 | **False-match rate** | **0.00%** | **0.00%** |
-| Cost | $0.00 (free tier) | $0.00 |
-| Wall clock | 379s | 434s |
 
-**Read these as directional, not conclusive: n is 7 and 11.** Held-out scored
-*higher* than dev (63.6% vs 57.1%), which is the opposite of overfitting, but
-at this sample size that is not a finding.
+**B3 reconciles nothing, and that is the correct result.** Every explanation it
+produced rests on a rate the model chose — a claimed MDR, a claimed FX slip —
+and nothing in the sources confirms those rates. The system computes the money
+from the claim and the arithmetic closes, but a closed sum on an unconfirmed
+premise is a hypothesis, so all twelve are held as *AI-supported explanations
+awaiting approval* rather than booked as reconciled.
 
-The model never proposed a confident wrong answer. On every case it could not
-explain it declined, which is the behaviour you want — and it means the live
-runs never exercised the gate's rejection path. That path is covered
-separately: 7 scripted proposals at 0.97 confidence, all refused, false-match
-rate unmoved.
+What the tier actually delivers: twelve bare residuals become twelve worked
+explanations — *"the residual equals exactly 12.5% of total fee+tax on this
+batch"* — which is the analysis a human would otherwise do by hand. Useful.
+Not a reconciliation. With an authoritative rate source (a gateway repricing
+notice, a bank FX advice) wired into `RateBook`, the same claims would verify
+and book outright; that is the top item on the roadmap.
 
-**What "resolved" does and does not mean.** It means the arithmetic closed and
-the credit matched the correct settlement. It does *not* verify the model's
-stated reason is the true cause. A proposal can close the sum for the wrong
-reason; the pairing still comes from the UTR join so this cannot create a false
-match, but it can create a misleading audit note. Explanation accuracy against
-the injected defect class is not yet measured, and until it is, the reason text
-in the audit trail is a lead for a human rather than a finding.
+**An earlier design reported 95.73% recall here, and that number was wrong.**
+The proposer could state amounts, so "there was an adjustment of exactly the
+residual" closed the arithmetic every time — a reviewer found it, we reproduced
+it (7 of 7 cases resolved on a fabricated number), and the fix is that the
+proposer can now only cite evidence: an existing row by id, or a rule whose
+money the code recomputes. The old runs are quarantined in
+[`results/void/`](results/void/) with a note, because the before-and-after is
+the most instructive thing in this repository. The attack is a permanent test.
 
-**One evidence-design bug, found by the model.** The first run resolved only
-2 of 7, with every decline reasoning that `fee_paise` equalled
-`fee_at_schedule_paise`, so no repricing was visible. The model was right: the
-packet exposed a per-payment schedule comparison that can never differ under
-this generator, which reads as positive evidence of *no* variance. Replacing it
-with the aggregate a human analyst computes first — the residual as a share of
-the fee base — took dev from 2/7 to 4/7. Both runs are kept
-([v1](results/B3_nemotron_dev_v1.txt), [v2](results/B3_nemotron.txt)) so the
-change is visible rather than quietly folded in.
+**19% of model calls returned unparseable output** (3 of 16), one opening with
+"Let me analyze this reco…" — a reasoning model leaking preamble where JSON was
+required. This endpoint's native tool calling is broken, which is why the JSON
+path exists at all; the rate is reported rather than smoothed away.
 
-**The endpoint's tool calling is broken**, which is worth stating because it is
-the kind of thing that produces confident nonsense downstream: asked to call a
-function, the model returns `tool_calls: None` and writes malformed pseudo-JSON
-into the content. The proposer uses plain JSON mode and validates with the same
-strict parser the Anthropic path uses.
-
-**B3's territory is small on purpose: 7 of 129 defects on dev.**
-`TIMING_SPILL` was moved *into* the deterministic solver rather than left for
-the model, because a T+2 spill is mechanically detectable and handing it over
-would have let the model take credit for arithmetic. The control that makes the
-lift attributable: running B3 with `NullProposer` reproduces B2 **exactly**.
+**The control still holds:** running B3 with `NullProposer` reproduces B2
+exactly, so whatever the tier contributes is the model's and not plumbing's.
 
 **Why dev and held-out track each other.** By construction: the two mixes hold
 each leg's *total* defect rate constant and invert the composition
 (`PARTIAL_CAPTURE` 56→32, `DUPLICATE_PAYMENT` 36→60, `REFUND_NETTED` 7→3,
 `FEE_TAX_VARIANCE` 4→7). Identical totals keep the comparison fair; the
 per-class tables in `results/*.txt` are where the distributions actually
-differ, and Leg 2 recall does drop 1.2 points on the held-out mix.
+differ; after the repricing remodel the two mixes happen to land on the same
+Leg 2 recall, which the per-class tables show is coincidence rather than
+identical behaviour.
 
 ### Status
 
