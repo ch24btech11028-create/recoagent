@@ -66,6 +66,7 @@ def measure(profile: str, runs: int, model: str, workers: int, n_orders: int) ->
             {
                 "run": i,
                 "resolved": report.resolved,
+                "needs_approval": report.needs_approval,
                 "attempted": report.attempted,
                 "rejected": report.rejected,
                 "refused": report.refused,
@@ -113,6 +114,8 @@ def render(data: dict) -> str:
         f"   mean {sum(resolved) / len(resolved):.1f}",
         f"  Leg 2 recall   min/max     {min(recalls):.2%} / {max(recalls):.2%}"
         f"   (B2 baseline {data['b2_recall']:.2%})",
+        "",
+        f"  needs approval (claimed rate) {sum(r.get('needs_approval', 0) for r in runs)}",
         "",
         f"  FALSE-MATCH RATE, every run  {max(fmrs):.2%}"
         f"   {'INVARIANT' if max(fmrs) == 0 else 'BROKEN'}",

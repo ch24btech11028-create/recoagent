@@ -102,7 +102,8 @@ class CaseOutcome:
     entity_id: str
     settlement_id: str
     residual_paise: Paise
-    outcome: str  # resolved | rejected | refused | failed | low_confidence
+    outcome: str  # resolved | needs_approval | rejected | unverifiable
+    #                | refused | failed | low_confidence
     attempts: int = 0
     model_confidence: float | None = None
     detail: str = ""
@@ -137,6 +138,12 @@ class AgentReport:
     @property
     def rejected(self) -> int:
         return self._count("rejected")
+
+    @property
+    def needs_approval(self) -> int:
+        """Arithmetic closed, but on a rate the model chose rather than one any
+        source confirms. Deliberately not counted as resolved."""
+        return self._count("needs_approval")
 
     @property
     def unverifiable(self) -> int:

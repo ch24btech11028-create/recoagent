@@ -1,0 +1,21 @@
+>>> dev: B2 leg2 recall 93.29%, 11 open
+########## B3 dev (citation contract) ##########
+  attempted 7
+  resolved (source-backed) 0
+  needs approval           5
+  rejected by gate         0
+  cited unverifiable       0
+  declined                 1
+  failed                   1
+  provenance: 0/0 accepted explanations cited applicable evidence
+  Leg2 recall 93.29% -> 93.29%   FMR 0.00%   mishandled 0
+  tokens 26,452/39,832  204s
+    bank_0034    failed          malformed: Expecting value: line 1 column 42 (char 41)
+    bank_0058    needs_approval  The residual of -2,696 paise matches exactly the additional fee 
+    bank_0064    needs_approval  The residual of -642 paise equals 0.6085% of the gross amount (1
+    bank_0106    needs_approval  The residual of -593 paise matches exactly the extra fee+GST tha
+    bank_0113    refused         The residual of -520 paise (₹5.20) cannot be explained by the av
+    bank_0143    needs_approval  The residual of -404 paise equals -0.5017% of the sole internati
+    bank_0153    needs_approval  The residual of +1,983 paise equals 2.55% of the sole internatio
+
+>>> holdout: B2 leg2 recall 93.29%, 11 open

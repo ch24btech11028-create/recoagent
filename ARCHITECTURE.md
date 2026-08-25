@@ -218,11 +218,16 @@ inflated the model's apparent contribution.
 ## Not built yet
 
 - **B1** — Splink / Fellegi-Sunter probabilistic linkage on Leg 1
-- **B3** — the LLM exception agent, its tool surface, and the repair loop.
-  The seam is already in place and tested: `prove_leg2(hypothesised=...)` takes
-  proposed rows, and `test_a_lying_solver_cannot_book_a_match` verifies that a
-  confident, well-formed, wrong proposal is rejected by the gate. Nothing about
-  that changes when the proposer becomes a model.
+- **An authoritative rate source.** Fee-variance and FX claims rest on a rate the
+  model chooses. Code computes the money from it either way, but nothing
+  confirms the rate itself, so those close as *needs approval* rather than
+  reconciled. `RateBook` is the hook a real gateway repricing notice or bank FX
+  advice would fill, turning the same claims into facts.
+- **Provenance accuracy at scale.** `AgentReport.provenance()` checks whether an
+  accepted explanation cited the right evidence, which the main scorer cannot
+  see: it grades a B3 match on its bank-line → settlement pairing, and that
+  pairing comes from the UTR join rather than from the model. So a wrong
+  explanation can still report a perfect false-match rate.
 - **BenchRec** — external validation on real labelled data. Until this lands,
   every number in the README is self-generated, and the independence and
   accounting checks are what stand in for external validity.

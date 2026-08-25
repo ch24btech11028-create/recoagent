@@ -1,0 +1,25 @@
+  run: dev, 2,000 orders, leg-2 recall 93.29%, 107 open items
+  asking 34 questions of nvidia/nemotron-3-ultra-550b-a55b with 6 workers
+
+========================================================================
+SETTLEMENT Q&A
+========================================================================
+
+  WRONG-ANSWER RATE      0.00%   <- lead metric
+  coverage              91.18%   (31 of 34 answered)
+  accuracy             100.00%   (correct out of all questions)
+
+  HALLUCINATED               0   (answered a question the factsheet cannot support)
+
+  correct 34   wrong 0   declined 3   call failed 0
+  tokens 16,237 in / 9,174 out   77s
+
+------------------------------------------------------------------------
+  WHAT IT GOT WRONG, DECLINED, OR FAILED
+------------------------------------------------------------------------
+    nothing
+------------------------------------------------------------------------
+  A wrong answer is worse than a declined one: the operator acts on the
+  number either way. That is why the wrong-answer rate leads and why
+  declining is scored as a cost, not a failure.
+========================================================================

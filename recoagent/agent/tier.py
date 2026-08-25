@@ -41,7 +41,7 @@ from ..schemas import (
 )
 from ..validate import Tolerance, prove_leg2
 from . import evidence
-from .citations import resolve
+from .citations import RateBook, resolve
 from .contracts import AgentReport, CaseOutcome, Hypothesis, ProposerError, Refusal, Usage
 from .proposer import Proposer
 
@@ -89,6 +89,7 @@ def recover_with_agent(
     min_confidence: float = MIN_CONFIDENCE,
     max_workers: int = DEFAULT_MAX_WORKERS,
     proposer_factory: Callable[[], Proposer] | None = None,
+    rate_book: RateBook | None = None,
 ) -> AgentReport:
     """Attempt the residuals no deterministic tier could close. Mutates `result`.
 
@@ -153,6 +154,7 @@ def recover_with_agent(
             proposer=_proposer_for_thread(),
             max_attempts=max_attempts,
             min_confidence=min_confidence,
+            rate_book=rate_book,
         )
 
     if max_workers > 1 and cases:
@@ -191,6 +193,7 @@ def _run_case(
     proposer: Proposer,
     max_attempts: int,
     min_confidence: float,
+    rate_book: RateBook | None = None,
 ) -> tuple[CaseOutcome, MatchRecord | None, ReconException | None]:
     """One exception, start to finish. Pure with respect to shared state.
 
@@ -247,7 +250,9 @@ def _run_case(
         # Citations become money here, computed from the source rows and the fee
         # schedule. The proposer supplied no amounts, so it cannot manufacture a
         # number that makes its own total add up.
-        resolution = resolve(sources, settlement, list(proposal.citations), fees)
+        resolution = resolve(
+            sources, settlement, list(proposal.citations), fees, rate_book
+        )
         if not resolution.ok:
             case.outcome = "unverifiable"
             case.detail = "; ".join(resolution.errors)[:200]
@@ -288,6 +293,28 @@ def _run_case(
             )
             continue
 
+        # A rate the model chose is a hypothesis, however well the arithmetic
+        # closes around it. Booking it as reconciled would mean the ledger says
+        # "settled" on the strength of a number nobody confirmed. It goes to a
+        # human with the working attached instead.
+        if not resolution.fully_verified:
+            case.outcome = "needs_approval"
+            case.cited_ids = resolution.cited_ids
+            case.detail = (
+                f"{proposal.reason} | arithmetic closes, but: "
+                + "; ".join(resolution.unverified_reasons)[:180]
+            )
+            escalated = replace(
+                exc,
+                reason=(
+                    f"{exc.reason}; AI-supported explanation needs approval: "
+                    f"{proposal.reason[:100]}"
+                ),
+                suspected_class=exc.suspected_class,
+                escalated_from_tier=TIER,
+            )
+            return case, None, escalated
+
         match = MatchRecord(
             match_id=f"m2_{line.bank_line_id}",
             leg=2,
@@ -326,13 +353,21 @@ def render_report(
     lines.append(f"{'AGENT TIER (T2)':<34}{'CASES':>9}{'':>29}")
     lines.append("-" * w)
     lines.append(f"  {'attempted':<32}{report.attempted:>9}")
-    lines.append(f"  {'resolved':<32}{report.resolved:>9}")
+    lines.append(
+        f"  {'resolved (source-backed)':<32}{report.resolved:>9}"
+        "   <- fully verified"
+    )
+    lines.append(
+        f"  {'needs approval':<32}{report.needs_approval:>9}"
+        "   <- closes on a claimed rate"
+    )
     lines.append(
         f"  {'rejected by the gate':<32}{report.rejected:>9}"
         "   <- confident but wrong"
     )
     lines.append(f"  {'declined by the model':<32}{report.refused:>9}")
     lines.append(f"  {'below confidence floor':<32}{report.low_confidence:>9}")
+    lines.append(f"  {'cited unverifiable evidence':<32}{report.unverifiable:>9}")
     lines.append(f"  {'proposer failed':<32}{report.failed:>9}")
     lines.append("")
     lines.append(f"  {'resolution rate':<32}{report.resolution_rate:>8.1%}")

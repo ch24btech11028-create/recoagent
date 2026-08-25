@@ -28,7 +28,7 @@ nothing resolvable is a hypothesis for a human, not a match.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from ..money import FeeSchedule, Paise, bps_of
 from ..schemas import PGAdjustment, Settlement, SourceBundle
@@ -66,6 +66,29 @@ Citation = CitedAdjustment | FeeVarianceClaim | FxClaim
 
 
 @dataclass(frozen=True)
+class RateBook:
+    """Authoritative rates, when the merchant actually has them.
+
+    A repricing notice from the gateway, or the bank's FX advice. Without one,
+    a claimed rate is the model's guess -- reasonable, checkable against the
+    arithmetic, but not a fact anyone can point at.
+    """
+
+    #: method -> the set of MDR rates known to have applied in this period.
+    mdr_bps: dict[str, set[int]] = field(default_factory=dict)
+    #: payment_id -> the conversion slip the bank advised, as a % of gross.
+    fx_pct: dict[str, float] = field(default_factory=dict)
+    fx_tolerance_pct: float = 0.01
+
+    def confirms_mdr(self, method: str, bps: int) -> bool:
+        return bps in self.mdr_bps.get(method, set())
+
+    def confirms_fx(self, payment_id: str, pct: float) -> bool:
+        known = self.fx_pct.get(payment_id)
+        return known is not None and abs(known - pct) <= self.fx_tolerance_pct
+
+
+@dataclass(frozen=True)
 class ResolvedRow:
     """One citation, turned into money by code rather than by the model."""
 
@@ -73,12 +96,27 @@ class ResolvedRow:
     cited_ids: tuple[str, ...]
     amount_paise: Paise
     derivation: str
+    #: True when the row rests entirely on data that already existed. False when
+    #: a parameter came from the model -- a claimed MDR or FX rate. The
+    #: arithmetic is computed by code either way, but an unverified rate is a
+    #: hypothesis: plausible, self-consistent, and nobody has confirmed it. The
+    #: tier books those as needing approval rather than as reconciled.
+    verified: bool = True
 
 
 @dataclass(frozen=True)
 class Resolution:
     rows: tuple[ResolvedRow, ...]
     errors: tuple[str, ...]
+
+    @property
+    def fully_verified(self) -> bool:
+        """Every row rests on data that existed before the model was asked."""
+        return bool(self.rows) and all(r.verified for r in self.rows)
+
+    @property
+    def unverified_reasons(self) -> tuple[str, ...]:
+        return tuple(r.derivation for r in self.rows if not r.verified)
 
     @property
     def ok(self) -> bool:
@@ -101,6 +139,7 @@ def resolve(
     settlement: Settlement,
     citations: list[Citation],
     fees: FeeSchedule | None = None,
+    rate_book: RateBook | None = None,
 ) -> Resolution:
     """Turn citations into rows, or into the reasons they could not be trusted."""
     fees = fees or FeeSchedule.default()
@@ -153,13 +192,21 @@ def resolve(
                     fee = bps_of(p.gross_paise, c.actual_mdr_bps)
                     charged = fee + bps_of(fee, fees.gst_bps)
                     delta += (p.fee_paise + p.tax_paise) - charged
+                method = targets[0].method
+                confirmed = bool(
+                    rate_book and rate_book.confirms_mdr(method, c.actual_mdr_bps)
+                )
                 rows.append(ResolvedRow(
                     source="fee_variance",
                     cited_ids=tuple(p.payment_id for p in targets),
                     amount_paise=delta,
+                    verified=confirmed,
                     derivation=(
-                        f"{len(targets)} payments repriced at {c.actual_mdr_bps} bps "
-                        f"+ {fees.gst_bps} bps GST, recomputed from the schedule"
+                        f"{len(targets)} {method} payments repriced at "
+                        f"{c.actual_mdr_bps} bps + {fees.gst_bps} bps GST, "
+                        + ("confirmed by the rate book"
+                           if confirmed else
+                           "rate claimed by the model and not independently confirmed")
                     ),
                 ))
 
@@ -186,13 +233,21 @@ def resolve(
             # which made a positive rate produce a positive amount against a
             # negative residual -- the two could never meet.
             amount = round(p.gross_paise * c.actual_rate_pct_of_gross / 100)
+            confirmed = bool(
+                rate_book
+                and rate_book.confirms_fx(p.payment_id, c.actual_rate_pct_of_gross)
+            )
             rows.append(ResolvedRow(
                 source="fx",
                 cited_ids=(p.payment_id,),
                 amount_paise=amount,
+                verified=confirmed,
                 derivation=(
                     f"{c.actual_rate_pct_of_gross:+.4f}% of {p.payment_id} gross "
-                    f"({p.gross_paise} paise), recomputed"
+                    f"({p.gross_paise} paise), "
+                    + ("confirmed by the rate book"
+                       if confirmed else
+                       "rate claimed by the model and not independently confirmed")
                 ),
             ))
 
