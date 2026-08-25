@@ -53,7 +53,7 @@ report does not carry — and that territory is deliberately narrow: 7 defects o
 | `REFUND_NETTED`, `CHARGEBACK_NETTED`, `ADJUSTMENT_ENTRY` | flagged | **resolved** |
 | `ROUNDING_DRIFT` | flagged | **resolved** |
 | `NARRATION_TRUNCATION` | flagged | **resolved** |
-| `TIMING_SPILL` | flagged | **resolved** (4/4 dev, 5/6 held-out) |
+| `TIMING_SPILL` | flagged | **resolved** (4/4 dev, 6/6 held-out) |
 | `FEE_TAX_VARIANCE`, `FX_CONVERSION` | flagged | flagged → B3 |
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
@@ -129,7 +129,7 @@ differ, and Leg 2 recall does drop 1.2 points on the held-out mix.
 | **B0** | exact join | exact UTR | **built, measured** |
 | B1 | + Splink (Fellegi-Sunter) | — | not built |
 | **B2** | *(unchanged)* | + SSMP, tolerance, spill pairing | **built, measured** |
-| **B3** | *(unchanged)* | + LLM exception tier | **built, measured** |
+| **B3** | *(unchanged)* | + LLM exception tier | **built, measured (n=7/11, reported as a range)** |
 
 The two legs are independent — Splink only touches Leg 1, SSMP only Leg 2 — so
 the ladder is really two ladders over shared inputs, and rungs can be built out

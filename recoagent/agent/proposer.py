@@ -23,7 +23,8 @@ from __future__ import annotations
 import json
 from typing import Callable, Protocol
 
-from .contracts import Hypothesis, Proposal, ProposedRow, ProposerError, Refusal, Usage
+from .citations import CitedAdjustment, FeeVarianceClaim, FxClaim
+from .contracts import Hypothesis, Proposal, ProposerError, Refusal, Usage
 from .evidence import EvidencePacket
 
 DEFAULT_MODEL = "claude-opus-5"
@@ -40,8 +41,20 @@ The residual is `bank_credit.amount_paise` minus the re-derived total of the \
 batch. A negative residual means less money arrived than the rows account for; \
 a positive residual means more arrived.
 
-Propose a set of rows whose amounts sum to exactly the residual. Sign matters: \
-a deduction is negative. All amounts are integer paise.
+You cannot state an amount. You can only cite evidence, and the system computes \
+the money from it:
+
+- {"type": "adjustment", "adjustment_id": "..."} -- an unlinked row that belongs \
+to this batch. It must appear in nearby_unlinked_rows. The amount comes from that \
+row, not from you.
+- {"type": "fee_variance", "payment_ids": [...], "actual_mdr_bps": 240} -- these \
+payments were charged at a different MDR than reported. The system recomputes the \
+variance from the fee schedule.
+- {"type": "fx", "payment_id": "...", "rate_pct_of_gross": -1.6} -- an \
+international payment converted at a rate the report does not carry.
+
+Cite evidence that exists. A citation the system cannot resolve is rejected \
+outright; it is not rounded into a partial answer.
 
 Two explanations are common and neither can be found by arithmetic search alone:
 
@@ -71,31 +84,27 @@ PROPOSE_TOOL = {
         "the residual exactly. This is a proposal, not a decision: it is checked "
         "against the ledger and discarded if it does not close."
     ),
-    "strict": True,
     "input_schema": {
         "type": "object",
-        "additionalProperties": False,
         "properties": {
-            "rows": {
+            "citations": {
                 "type": "array",
+                "description": (
+                    "Evidence that already exists. You cannot state an amount; the "
+                    "system computes every rupee from what you cite."
+                ),
                 "items": {
                     "type": "object",
-                    "additionalProperties": False,
                     "properties": {
-                        "label": {
-                            "type": "string",
-                            "description": "Short name, e.g. 'MDR repricing on 6 card payments'.",
-                        },
-                        "amount_paise": {
-                            "type": "integer",
-                            "description": "Signed integer paise. Deductions are negative.",
-                        },
-                        "rationale": {
-                            "type": "string",
-                            "description": "Why this row exists and how the amount was derived.",
-                        },
+                        "type": {"type": "string", "enum": ["adjustment", "fee_variance", "fx"]},
+                        "adjustment_id": {"type": "string"},
+                        "payment_ids": {"type": "array", "items": {"type": "string"}},
+                        "actual_mdr_bps": {"type": "integer"},
+                        "payment_id": {"type": "string"},
+                        "rate_pct_of_gross": {"type": "number"},
+                        "rationale": {"type": "string"},
                     },
-                    "required": ["label", "amount_paise", "rationale"],
+                    "required": ["type"],
                 },
             },
             "reason": {
@@ -107,7 +116,7 @@ PROPOSE_TOOL = {
                 "description": "0.0 to 1.0. Honest, not optimistic.",
             },
         },
-        "required": ["rows", "reason", "confidence"],
+        "required": ["citations", "reason", "confidence"],
     },
 }
 
@@ -257,26 +266,43 @@ def _parse_tool_call(name: str, payload: dict) -> Proposal:
     if name != "propose_hypothesis":
         raise ValueError(f"unknown tool {name!r}")
 
-    rows = payload["rows"]
-    if not isinstance(rows, list) or not rows:
-        raise ValueError("propose_hypothesis returned no rows")
+    cites = payload.get("citations")
+    if not isinstance(cites, list) or not cites:
+        raise ValueError("propose_hypothesis returned no citations")
 
-    parsed = tuple(
-        ProposedRow(
-            label=str(r["label"]),
-            # int() rather than a cast: a float amount is a malformed answer in
-            # a system where every amount is integer paise, and it should be
-            # rejected here rather than silently truncated into the ledger.
-            amount_paise=_strict_int(r["amount_paise"]),
-            rationale=str(r["rationale"]),
-        )
-        for r in rows
-    )
+    parsed: list = []
+    for c in cites:
+        kind = c.get("type")
+        if kind == "adjustment":
+            parsed.append(CitedAdjustment(
+                adjustment_id=str(c["adjustment_id"]),
+                rationale=str(c.get("rationale", "")),
+            ))
+        elif kind == "fee_variance":
+            ids = c.get("payment_ids")
+            if not isinstance(ids, list) or not ids:
+                raise ValueError("fee_variance cited no payment_ids")
+            parsed.append(FeeVarianceClaim(
+                payment_ids=tuple(str(i) for i in ids),
+                actual_mdr_bps=_strict_int(c["actual_mdr_bps"]),
+                rationale=str(c.get("rationale", "")),
+            ))
+        elif kind == "fx":
+            parsed.append(FxClaim(
+                payment_id=str(c["payment_id"]),
+                actual_rate_pct_of_gross=float(c["rate_pct_of_gross"]),
+                rationale=str(c.get("rationale", "")),
+            ))
+        else:
+            raise ValueError(f"unknown citation type {kind!r}")
+
     confidence = float(payload["confidence"])
     if not 0.0 <= confidence <= 1.0:
         raise ValueError(f"confidence {confidence} out of range")
 
-    return Hypothesis(rows=parsed, reason=str(payload["reason"]), confidence=confidence)
+    return Hypothesis(
+        citations=tuple(parsed), reason=str(payload["reason"]), confidence=confidence
+    )
 
 
 def _strict_int(value) -> int:

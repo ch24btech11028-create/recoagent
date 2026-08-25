@@ -46,7 +46,8 @@ rather than assume it away.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from bisect import bisect_left, bisect_right
 from itertools import combinations
 from math import comb
 
@@ -149,6 +150,44 @@ def _closes(total: Paise, target: Paise, tolerance: Paise) -> bool:
     return abs(total - target) <= tolerance
 
 
+def prune(
+    values: list[Paise], target: Paise, tolerance: Paise
+) -> tuple[list[Paise], list[int]]:
+    """Drop rows that cannot participate in any closing subset.
+
+    Sound, not heuristic: a row survives if its magnitude could still be
+    cancelled back to the target by every opposite-signed row in the pool
+    combined. Nothing that could contribute is ever removed, so completeness --
+    and therefore the uniqueness check the gate depends on -- is preserved.
+
+    This matters more than it sounds. The candidate pool is drawn from a date
+    window, so it grows with the size of the book while the search over it is
+    cubic. At 20,000 orders that was 11.4 million subset sums and 80% of total
+    runtime; the rows being enumerated were overwhelmingly ones no arithmetic
+    could ever have used.
+    """
+    if not values:
+        return [], []
+    opposite = sum(abs(v) for v in values if (v > 0) != (target > 0))
+    ceiling = abs(target) + tolerance + opposite
+    kept: list[Paise] = []
+    index: list[int] = []
+    for i, v in enumerate(values):
+        if abs(v) <= ceiling:
+            kept.append(v)
+            index.append(i)
+    return kept, index
+
+
+def _in_range(
+    order: list[tuple[Paise, int]], low: Paise, high: Paise
+) -> list[tuple[Paise, int]]:
+    """Every (amount, original index) with amount in [low, high]. O(log n + hits)."""
+    lo = bisect_left(order, (low, -1))
+    hi = bisect_right(order, (high, 1 << 62))
+    return order[lo:hi]
+
+
 def enumerate_closing_subsets(
     values: list[Paise],
     target: Paise,
@@ -156,38 +195,74 @@ def enumerate_closing_subsets(
     max_size: int = DEFAULT_MAX_SIZE,
     budget: int = ENUMERATION_BUDGET,
 ) -> SearchResult:
-    """Find every subset of size 1..max_size summing to within tolerance of target.
+    """Every subset of size 1..max_size summing to within tolerance of target.
 
-    Complete for the bounded size, which is what makes the uniqueness check
-    meaningful. Returns `exhaustive=False` if the search space exceeded the
-    budget, in which case the caller must treat any result as unconfirmed.
+    Indexed rather than enumerated. Sorting the pool once turns "is there a row
+    that completes this partial sum" into a binary search, so the work drops a
+    whole power for each subset size: singles become a lookup, pairs a scan, and
+    triples a scan over pairs. Enumerating triples directly is cubic in the pool,
+    and the pool grows with the size of the book -- at 50,000 orders that was
+    eight and a half minutes, nearly all of it spent summing combinations that
+    the first element had already ruled out.
+
+    Still complete for the bounded size. Completeness is not a nicety here: the
+    gate accepts a subset only when it is the *only* one that closes, so a search
+    that missed a competing explanation would turn an ambiguous residual into a
+    confident wrong match.
     """
-    n = len(values)
+    pool, back = prune(values, target, tolerance)
+    n = len(pool)
     max_size = min(max_size, n)
     if n == 0 or max_size <= 0:
-        return SearchResult((), True, 0, "enumerate")
+        return SearchResult((), True, 0, "indexed")
 
-    space = sum(comb(n, k) for k in range(1, max_size + 1))
-    if space > budget:
-        return meet_in_middle(values, target, tolerance, max_size, budget)
-
-    found: list[Subset] = []
+    order = sorted((v, i) for i, v in enumerate(pool))
+    found: dict[tuple[int, ...], Subset] = {}
     examined = 0
-    for size in range(1, max_size + 1):
-        for idx in combinations(range(n), size):
-            examined += 1
-            total = sum(values[i] for i in idx)
-            if _closes(total, target, tolerance):
-                found.append(
-                    Subset(
-                        indices=idx,
-                        total=total,
-                        target=target,
-                        values=tuple(values[i] for i in idx),
-                    )
-                )
 
-    return SearchResult(tuple(found), True, examined, "enumerate")
+    def record(idx_local: tuple[int, ...], total: Paise) -> None:
+        key = tuple(sorted(back[i] for i in idx_local))
+        if key not in found:
+            found[key] = Subset(
+                indices=key,
+                total=total,
+                target=target,
+                values=tuple(pool[i] for i in sorted(idx_local)),
+            )
+
+    # size 1
+    for v, i in _in_range(order, target - tolerance, target + tolerance):
+        examined += 1
+        record((i,), v)
+
+    # size 2: fix one row, look up the complement
+    if max_size >= 2:
+        for a_val, a_idx in order:
+            need = target - a_val
+            for b_val, b_idx in _in_range(order, need - tolerance, need + tolerance):
+                if b_idx <= a_idx:
+                    continue
+                examined += 1
+                record((a_idx, b_idx), a_val + b_val)
+
+    # size 3: fix two rows, look up the third
+    if max_size >= 3:
+        for ai in range(n):
+            a_val = pool[ai]
+            for bi in range(ai + 1, n):
+                partial = a_val + pool[bi]
+                need = target - partial
+                for c_val, c_idx in _in_range(order, need - tolerance, need + tolerance):
+                    if c_idx <= bi:
+                        continue
+                    examined += 1
+                    record((ai, bi, c_idx), partial + c_val)
+                if examined > budget:
+                    return SearchResult(
+                        tuple(found.values()), False, examined, "indexed"
+                    )
+
+    return SearchResult(tuple(found.values()), True, examined, "indexed")
 
 
 def meet_in_middle(

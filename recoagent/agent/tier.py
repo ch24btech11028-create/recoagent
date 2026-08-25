@@ -41,6 +41,7 @@ from ..schemas import (
 )
 from ..validate import Tolerance, prove_leg2
 from . import evidence
+from .citations import resolve
 from .contracts import AgentReport, CaseOutcome, Hypothesis, ProposerError, Refusal, Usage
 from .proposer import Proposer
 
@@ -243,31 +244,47 @@ def _run_case(
             )
             break
 
+        # Citations become money here, computed from the source rows and the fee
+        # schedule. The proposer supplied no amounts, so it cannot manufacture a
+        # number that makes its own total add up.
+        resolution = resolve(sources, settlement, list(proposal.citations), fees)
+        if not resolution.ok:
+            case.outcome = "unverifiable"
+            case.detail = "; ".join(resolution.errors)[:200]
+            feedback = (
+                f"Attempt {attempt} cited evidence that could not be verified: "
+                + "; ".join(resolution.errors)[:300]
+                + " Cite only adjustment_ids that appear in the unlinked rows for "
+                "this batch, or name payments and a rate and let the system compute "
+                "the variance. If no such evidence exists, decline."
+            )
+            continue
+
         inferred = [
             PGAdjustment(
-                adjustment_id=f"inferred:llm:{line.bank_line_id}:{attempt}:{i}",
+                adjustment_id=f"cited:{'+'.join(row.cited_ids)}",
                 settlement_id=None,  # type: ignore[arg-type]
-                kind="llm_hypothesis",
+                kind=row.source,
                 payment_id=None,
                 amount_paise=row.amount_paise,
                 booked_at=settlement.settled_at,
             )
-            for i, row in enumerate(proposal.rows)
+            for row in resolution.rows
         ]
         proof = prove_leg2(line, settlement, members, linked, tol, hypothesised=inferred)
 
         if not proof.closes:
             case.outcome = "rejected"
             case.detail = (
-                f"proposal of {proposal.total_paise} paise left "
+                f"cited evidence worth {resolution.total_paise} paise left "
                 f"{proof.residual_paise} paise unexplained"
             )
             feedback = (
-                f"Attempt {attempt} proposed rows totalling {proposal.total_paise} "
-                f"paise. Checked against the ledger, {proof.residual_paise} paise "
-                "remain unexplained. The rows must sum to exactly the residual. If "
-                "you cannot account for the difference, decline instead of "
-                "adjusting the numbers to fit."
+                f"Attempt {attempt} cited evidence totalling "
+                f"{resolution.total_paise} paise. Checked against the ledger, "
+                f"{proof.residual_paise} paise remain unexplained. Cite different "
+                "or additional evidence, or decline -- you cannot state an amount "
+                "directly, only point at rows that exist."
             )
             continue
 
@@ -281,8 +298,10 @@ def _run_case(
             confidence=min(proposal.confidence, CONF_T2_CAP),
             proof=proof,
             input_hash=stable_hash(line, settlement, *members, *linked, *inferred),
+            hypothesised_ids=resolution.cited_ids,
             created_at=_now(),
         )
+        case.cited_ids = resolution.cited_ids
         case.outcome = "resolved"
         case.detail = proposal.reason
         return case, match, None

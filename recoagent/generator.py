@@ -32,7 +32,7 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 
 from .defects import DefectClass
-from .money import FeeSchedule, Paise
+from .money import FeeSchedule, Paise, bps_of
 from .schemas import (
     BankLine,
     GroundTruth,
@@ -46,6 +46,9 @@ from .schemas import (
 )
 
 BASE_DATE = datetime(2026, 7, 1, 9, 0, 0)
+
+#: How many days of trading a batch covers.
+SPAN_DAYS = 20
 
 BANK_NARRATION_TEMPLATES = (
     "NEFT CR-{ifsc}-RAZORPAY SOFTWARE PVT LTD-{utr}",
@@ -153,6 +156,15 @@ class GeneratorConfig:
     seed: int = 7
     batch_size_min: int = 6
     batch_size_max: int = 18
+    #: Settlements per day. Leave None for the fixed small-batch default, which
+    #: is a stress case rather than a realistic one: it holds batch size constant
+    #: as volume grows, so a 20,000-order book produces 78 payouts a day. Real
+    #: gateways settle on a T+2 cycle -- roughly one payout a day -- and a
+    #: merchant doing ten times the volume gets batches ten times bigger, not ten
+    #: times as many. Set this (2.0 is typical) to model that instead. It matters
+    #: for more than realism: the solver's candidate pool is drawn from a date
+    #: window, so settlement density drives its search space directly.
+    settlements_per_day: float | None = None
     linked_adjustment_rate: float = 0.10  # clean, correctly-linked adjustments
     mix: DefectMix = None  # type: ignore[assignment]
     fees: FeeSchedule = None  # type: ignore[assignment]
@@ -285,7 +297,7 @@ def _build_clean(w: _World, cfg: GeneratorConfig) -> None:
     for i in range(cfg.n_orders):
         oid = f"order_{i:05d}"
         created = BASE_DATE + timedelta(
-            days=rng.randint(0, 20), minutes=rng.randint(0, 1439)
+            days=rng.randint(0, SPAN_DAYS), minutes=rng.randint(0, 1439)
         )
         amount = _order_amount(rng)
         w.orders.append(
@@ -322,8 +334,16 @@ def _build_clean(w: _World, cfg: GeneratorConfig) -> None:
     ordered = sorted(w.payments, key=lambda p: p.captured_at)
     idx = 0
     batch_no = 0
+
+    if cfg.settlements_per_day:
+        target = max(1, round(SPAN_DAYS * cfg.settlements_per_day))
+        per_batch = max(1, len(ordered) // target)
+        size_lo, size_hi = max(1, int(per_batch * 0.7)), max(2, int(per_batch * 1.3))
+    else:
+        size_lo, size_hi = cfg.batch_size_min, cfg.batch_size_max
+
     while idx < len(ordered):
-        size = rng.randint(cfg.batch_size_min, cfg.batch_size_max)
+        size = rng.randint(size_lo, size_hi)
         chunk = ordered[idx : idx + size]
         idx += size
         if not chunk:
@@ -475,25 +495,46 @@ def _inject_adjustment_entry(w: _World, sid: str) -> bool:
 
 
 def _inject_fee_tax_variance(w: _World, sid: str) -> bool:
+    """A mid-cycle repricing: one method's MDR changed, and the report is stale.
+
+    Applied as a uniform rate change across every payment of one fee-bearing
+    method in the batch, because that is what a repricing is. An earlier version
+    added an arbitrary extra to half the charged payments, which no rate could
+    reproduce -- so the defect had no coherent explanation and the LLM tier was
+    being asked to find one that did not exist. It kept declining with "fees
+    match the schedule", which was the correct read of a badly modelled defect.
+    """
     members = w.members.get(sid, [])
     if not members or not w.claim(sid):
         return False
-    # The gateway repriced mid-cycle: the deduction that actually happened used
-    # a different MDR than the settlement report shows.
-    charged = [p for p in (w.payment(m) for m in members) if w.fees.mdr_for(p.method) > 0]
-    if not charged:
+
+    by_method: dict[str, list] = {}
+    for pid in members:
+        p = w.payment(pid)
+        if w.fees.mdr_for(p.method) > 0:
+            by_method.setdefault(p.method, []).append(p)
+    if not by_method:
         return False
+
+    method = max(by_method, key=lambda m: len(by_method[m]))
+    targets = by_method[method]
+    scheduled_bps = w.fees.mdr_for(method)
+    actual_bps = scheduled_bps + w.rng.choice([25, 40, 50, 75])
+
     delta = 0
-    for p in charged[: max(1, len(charged) // 2)]:
-        extra = max(100, p.fee_paise // 5)
-        delta -= extra
+    for p in targets:
+        fee = bps_of(p.gross_paise, actual_bps)
+        charged = fee + bps_of(fee, w.fees.gst_bps)
+        delta += (p.fee_paise + p.tax_paise) - charged
     if delta == 0 or not w.shift_bank_line(sid, delta):
         return False
+
     w.record(
         DefectClass.FEE_TAX_VARIANCE,
         "settlement",
         sid,
-        f"actual MDR deduction exceeded the reported schedule by {-delta} paise",
+        f"{method} repriced {scheduled_bps}->{actual_bps} bps across "
+        f"{len(targets)} payments; report still shows the old rate",
     )
     return True
 

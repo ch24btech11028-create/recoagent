@@ -167,11 +167,22 @@ one, and it would make the LLM tier look far more valuable than it is.
 
 ## The agent tier (B3)
 
-Built, tested, and unmeasured — no API key on this machine, so no number in this
-repository comes from a language model.
+Built, tested, and measured against live models — see `results/B3_*.txt`. The
+numbers are directional, not conclusive: n is 7 on dev and 11 held out, and
+three repeat runs resolved 2, 3 and 4 of 7, so the tier is reported as a range
+rather than a point estimate.
 
-The design is one asymmetry. A proposer returns a `Hypothesis`: rows it believes
-explain a residual, a reason, and a confidence. It cannot return a match, cannot
+The design is one asymmetry, and the first version of it was unsound. A proposer
+used to return rows *with amounts*, so it could name the residual itself --
+"there was an adjustment of exactly this much" closed the arithmetic every time,
+7 of 7 cases, with the false-match rate still reading 0.00%. The gate was
+checking that the model's number made the model's own total add up.
+
+A proposer now returns **citations**: an unlinked row by id, or a rule to apply
+to named payments. `recoagent/agent/citations.py` computes every rupee from the
+source rows and the fee schedule. A citation that does not resolve is rejected
+outright rather than partially credited, and accepted matches record the source
+ids in `hypothesised_ids` so the audit trail names what the total rests on. It cannot return a match, cannot
 name a settlement, and cannot mark anything resolved. `validate.prove_leg2` sums
 its rows on exactly the same footing as rows a human reported and discards
 anything that does not close. A rejection earns one retry with the residual fed

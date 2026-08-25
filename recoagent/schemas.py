@@ -121,11 +121,39 @@ class SourceBundle:
     settlements: tuple[Settlement, ...]
     bank_lines: tuple[BankLine, ...]
 
+    def __post_init__(self) -> None:
+        # Built once, lazily, and cached on the frozen instance. Every tier asks
+        # "which payments are in this batch" once per settlement, and a linear
+        # scan per question makes the whole pipeline quadratic in book size --
+        # measured at 4.5x time for 2x orders before this existed.
+        payments: dict[str, list[PGPayment]] = {}
+        for p in self.payments:
+            if p.settlement_id is not None:
+                payments.setdefault(p.settlement_id, []).append(p)
+        adjustments: dict[str, list[PGAdjustment]] = {}
+        for a in self.adjustments:
+            if a.settlement_id is not None:
+                adjustments.setdefault(a.settlement_id, []).append(a)
+        object.__setattr__(self, "_by_settlement", {
+            k: tuple(v) for k, v in payments.items()
+        })
+        object.__setattr__(self, "_adj_by_settlement", {
+            k: tuple(v) for k, v in adjustments.items()
+        })
+        object.__setattr__(self, "_unlinked", tuple(
+            a for a in self.adjustments if a.settlement_id is None
+        ))
+
     def payments_by_settlement(self, settlement_id: str) -> tuple[PGPayment, ...]:
-        return tuple(p for p in self.payments if p.settlement_id == settlement_id)
+        return self._by_settlement.get(settlement_id, ())  # type: ignore[attr-defined]
 
     def adjustments_by_settlement(self, settlement_id: str) -> tuple[PGAdjustment, ...]:
-        return tuple(a for a in self.adjustments if a.settlement_id == settlement_id)
+        return self._adj_by_settlement.get(settlement_id, ())  # type: ignore[attr-defined]
+
+    @property
+    def unlinked_adjustments(self) -> tuple[PGAdjustment, ...]:
+        """Rows the gateway netted but linked to no batch. The solver's haystack."""
+        return self._unlinked  # type: ignore[attr-defined]
 
     @property
     def counts(self) -> dict[str, int]:

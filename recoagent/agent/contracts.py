@@ -19,30 +19,31 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from ..money import Paise
-
-
-@dataclass(frozen=True)
-class ProposedRow:
-    """One row a proposer believes was netted into a batch but not linked to it."""
-
-    label: str
-    amount_paise: Paise
-    rationale: str
+from .citations import Citation
 
 
 @dataclass(frozen=True)
 class Hypothesis:
-    """An explanation for a residual, offered for checking -- never a verdict."""
+    """An explanation for a residual: citations, never amounts.
 
-    rows: tuple[ProposedRow, ...]
+    The proposer used to return `(label, amount_paise)` pairs and the tier turned
+    them into ledger rows. Because the proposer chose the amount it could always
+    choose the residual, so "there was an adjustment of exactly this much" closed
+    the arithmetic every time -- 7 of 7 cases, with the false-match rate still
+    reporting 0.00%. The gate was checking that the model's number made the
+    model's total add up.
+
+    Now the proposer can only point at evidence. `recoagent.agent.citations`
+    turns each pointer into money using the source rows and the fee schedule, so
+    every rupee in a B3 match is computed by code from data that already
+    existed.
+    """
+
+    citations: tuple[Citation, ...]
     reason: str
     #: The proposer's own confidence. Recorded in the audit trail, but never
     #: trusted as a match confidence on its own -- see CONF_T2_CAP in `tier`.
     confidence: float
-
-    @property
-    def total_paise(self) -> Paise:
-        return sum(r.amount_paise for r in self.rows)
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,8 @@ class CaseOutcome:
     model_confidence: float | None = None
     detail: str = ""
     usage: Usage = field(default_factory=Usage)
+    #: Source ids the accepted explanation rests on. Empty unless resolved.
+    cited_ids: tuple[str, ...] = ()
 
 
 @dataclass
@@ -136,6 +139,16 @@ class AgentReport:
         return self._count("rejected")
 
     @property
+    def unverifiable(self) -> int:
+        """Cited evidence that does not exist, or does not belong to this batch.
+
+        Distinct from `rejected`, which is a citation set that resolved cleanly
+        and still did not close. This counts proposals that never earned an
+        arithmetic check at all.
+        """
+        return self._count("unverifiable")
+
+    @property
     def refused(self) -> int:
         return self._count("refused")
 
@@ -150,6 +163,27 @@ class AgentReport:
     @property
     def resolution_rate(self) -> float:
         return self.resolved / self.attempted if self.attempted else 0.0
+
+    def provenance(self, truth_ids_for: dict[str, set[str]]) -> tuple[int, int]:
+        """How often an accepted explanation cited the *right* evidence.
+
+        Returns (correct, checked). The scorer's false-match rate cannot see
+        this: a B3 match is graded on its bank-line -> settlement pairing, and
+        that pairing comes from the UTR join rather than from the model. So an
+        explanation can name the wrong rows, close the arithmetic, and still
+        report a perfect false-match rate. This is the metric that notices.
+        """
+        correct = checked = 0
+        for c in self.cases:
+            if c.outcome != "resolved":
+                continue
+            expected = truth_ids_for.get(c.entity_id)
+            if expected is None:
+                continue
+            checked += 1
+            if set(c.cited_ids) & expected:
+                correct += 1
+        return correct, checked
 
     def cost_per_resolved(self, input_per_mtok: float, output_per_mtok: float) -> float:
         if not self.resolved:

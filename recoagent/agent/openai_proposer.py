@@ -62,17 +62,19 @@ JSON_CONTRACT = """
 
 Reply with a single JSON object and nothing else. No prose, no markdown fence.
 
-To explain the residual:
+To explain the residual, cite evidence. You cannot state an amount:
 {"action": "propose",
- "rows": [{"label": "...", "amount_paise": -123456, "rationale": "..."}],
+ "citations": [{"type": "adjustment", "adjustment_id": "adj_orphan_setl_0114"},
+               {"type": "fee_variance", "payment_ids": ["pay_00012"], "actual_mdr_bps": 240},
+               {"type": "fx", "payment_id": "pay_00099", "rate_pct_of_gross": -1.6}],
  "reason": "...",
  "confidence": 0.0}
 
 To decline:
 {"action": "decline", "reason": "..."}
 
-amount_paise must be a whole integer. Deductions are negative. The rows must \
-sum to exactly the residual."""
+Cite only ids that appear in the evidence you were given. A citation the system \
+cannot resolve is rejected outright."""
 
 _JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
 

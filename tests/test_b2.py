@@ -43,7 +43,7 @@ def test_b2_beats_b0_where_it_claims_to():
 
 @pytest.mark.parametrize(
     "mix, seed, expected_spill_resolved",
-    [(DefectMix.dev(), 7, 4), (DefectMix.holdout(), 21, 5)],
+    [(DefectMix.dev(), 7, 4), (DefectMix.holdout(), 21, 6)],
     ids=["dev", "holdout"],
 )
 def test_the_solver_closes_exactly_the_classes_it_claims(
@@ -59,9 +59,10 @@ def test_the_solver_closes_exactly_the_classes_it_claims(
     Seed and batch size match `results/B2_*.json` deliberately. An earlier
     version ran both profiles at seed 7 -- a configuration nobody publishes --
     and passed while the README's unqualified "TIMING_SPILL: resolved" was
-    already false on the held-out run, where the solver closes 5 of 6. A
-    claim-pinning test that does not use the published configuration protects
-    nothing.
+    already false on the held-out run. Modelling a repricing as a uniform rate
+    change later freed up the settlements spill pairing needed, taking held-out
+    from 5 of 6 to 6 of 6; the number moved because the data changed, and a
+    pinned number is how you find that out rather than discovering it in a demo.
     """
     _, _, b2 = _both(mix, n=2000, seed=seed)
     by_class = {a.defect: a for a in b2.accounting}

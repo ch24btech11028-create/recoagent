@@ -144,8 +144,9 @@ def test_the_agent_investigates_then_proposes(case):
         json.dumps({"tool": "check_hypothesis",
                     "args": {"rows": [{"amount_paise": ctx.residual_paise}]}}),
         json.dumps({"action": "propose",
-                    "rows": [{"label": "found", "amount_paise": ctx.residual_paise,
-                              "rationale": "checked"}],
+                    "citations": [{"type": "adjustment",
+                                   "adjustment_id": "adj_whatever",
+                                   "rationale": "checked"}],
                     "reason": "verified with check_hypothesis", "confidence": 0.9}),
     ]
     p = _proposer(case, turns)
