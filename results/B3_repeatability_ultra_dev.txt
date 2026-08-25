@@ -1,0 +1,41 @@
+>>> dev: 3 runs of nvidia/nemotron-3-ultra-550b-a55b
+    run 1/3: resolved 4/7  FMR 0.00%  mishandled 0  272s
+    run 2/3: resolved 3/7  FMR 0.00%  mishandled 0  284s
+    run 3/3: resolved 2/7  FMR 0.00%  mishandled 0  226s
+
+========================================================================
+REPEATABILITY  profile=dev  runs=3
+model=nvidia/nemotron-3-ultra-550b-a55b
+========================================================================
+
+  cases per run              7
+  resolved       min/max     2 / 4   mean 3.0
+  Leg 2 recall   min/max     94.51% / 95.73%   (B2 baseline 93.29%)
+
+  FALSE-MATCH RATE, every run  0.00%   INVARIANT
+  defects mishandled, worst    0
+
+------------------------------------------------------------------------
+  PER-CASE VERDICT STABILITY
+------------------------------------------------------------------------
+    bank_0006      resolved       100% of runs   {'resolved': 3}
+    bank_0031      resolved       100% of runs   {'resolved': 3}
+    bank_0034      refused        100% of runs   {'refused': 3}
+    bank_0058      refused         67% of runs   {'refused': 2, 'failed': 1}   <- flips
+    bank_0106      resolved        33% of runs   {'resolved': 1, 'refused': 1, 'failed': 1}   <- flips
+    bank_0113      refused         67% of runs   {'refused': 2, 'failed': 1}   <- flips
+    bank_0162      resolved        67% of runs   {'resolved': 2, 'failed': 1}   <- flips
+------------------------------------------------------------------------
+  cases with an unstable verdict: 4/7
+
+  The verdict column is expected to move; the false-match line is not.
+  A model that reaches different conclusions on identical input is a
+  reason to publish a range rather than a point estimate -- and a reason
+  the gate is arithmetic rather than a confidence threshold.
+========================================================================
+
+NOTE added after the run: this render did not separate a `failed` outcome
+(transport/parse failure) from the model changing its verdict. Both showed as
+"flips", which overstates model instability. The renderer now splits them; a
+re-run will report the two separately. The invariant line is unaffected --
+false-match rate was 0.00% on every run regardless.

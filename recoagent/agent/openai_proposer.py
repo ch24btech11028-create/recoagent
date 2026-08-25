@@ -43,6 +43,9 @@ EXTRA_BODY_PRESETS: dict[str, dict] = {
     "nvidia/nemotron-3-super-120b-a12b": {
         "chat_template_kwargs": {"enable_thinking": True}
     },
+    "nvidia/nemotron-3-ultra-550b-a55b": {
+        "chat_template_kwargs": {"enable_thinking": True}
+    },
     "deepseek-ai/deepseek-v4-flash-0731": {
         "chat_template_kwargs": {"thinking": True, "reasoning_effort": "high"}
     },

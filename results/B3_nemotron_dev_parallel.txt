@@ -1,0 +1,15 @@
+>>> nemotron/dev: starting, 6 workers
+########## nemotron / dev ##########
+  attempted 7 | resolved 5 | rejected 0 | declined 2 | failed 0
+  Leg2 recall 93.29% -> 96.34%   exceptions 11 -> 6
+  value 92.67% -> 96.70%   FMR 0.00%   mishandled 0
+  tokens 25,109/22,884  7 calls  WALL 125s
+    bank_0006    resolved      conf=0.96 n=1  Residual equals ~1.6006% of the gross amount of the sole i
+    bank_0031    resolved      conf=0.85 n=1  The residual matches the gross adjustment needed for the s
+    bank_0034    refused       conf= -   n=1  All payment fees match the published MDR schedule exactly,
+    bank_0058    resolved      conf=0.92 n=1  The residual matches the pattern of a mid‑cycle MDR repric
+    bank_0106    refused       conf= -   n=1  No evidence of mid-cycle fee repricing (all fees match sch
+    bank_0113    resolved      conf=0.96 n=1  Residual matches a clean fraction of the MDR-bearing gross
+    bank_0162    resolved      conf=0.95 n=1  Residual equals ~2.7342% of the gross of the sole internat
+
+>>> nemotron/holdout: starting, 6 workers
