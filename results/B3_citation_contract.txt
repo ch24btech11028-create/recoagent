@@ -19,3 +19,61 @@
     bank_0153    needs_approval  The residual of +1,983 paise equals 2.55% of the sole internatio
 
 >>> holdout: B2 leg2 recall 93.29%, 11 open
+########## B3 holdout (citation contract) ##########
+  attempted 9
+  resolved (source-backed) 0
+  needs approval           7
+  rejected by gate         0
+  cited unverifiable       0
+  declined                 0
+  failed                   2
+  provenance: 0/0 accepted explanations cited applicable evidence
+  Leg2 recall 93.29% -> 93.29%   FMR 0.00%   mishandled 0
+  tokens 34,424/41,044  262s
+    bank_0014    needs_approval  The residual of -243 paise equals exactly 25% of the total fee+t
+    bank_0042    needs_approval  The residual of +1,618 paise equals 0.4345% of the gross_paise (
+    bank_0047    needs_approval  The residual of -1,859 paise equals exactly 12.5% of the total f
+    bank_0072    needs_approval  The single MDR-bearing payment in this batch (pay_01970, card_in
+    bank_0090    needs_approval  The residual of -36,172 paise matches a mid-cycle repricing wher
+    bank_0104    failed          malformed: Expecting value: line 1 column 42 (char 41)
+    bank_0109    needs_approval  The residual of -84,664 paise matches exactly the extra fee+GST 
+    bank_0142    needs_approval  The residual of -144 paise equals 0.2257% of the international p
+    bank_0160    failed          malformed: no JSON object in response: 'Let me analyze this reco
+
+ALL-DONE
+
+────────────────────────────────────────────────────────────────────────
+SUMMARY -- both profiles, nvidia/nemotron-3-ultra-550b-a55b
+
+                     dev    held-out    total
+  attempted            7           9       16
+  resolved             0           0        0
+  needs approval       5           7       12
+  rejected by gate     0           0        0
+  cited unverifiable   0           0        0
+  declined             1           0        1
+  MALFORMED REPLY      1           2        3   (19% of calls)
+
+  Leg 2 recall    93.29% -> 93.29%   on both profiles: unchanged
+  false-match rate         0.00%
+  defects mishandled           0
+
+Read the resolved line first. Under the citation contract B3 reconciles
+nothing, because every explanation it produced rests on a rate the model chose
+and nothing confirms. All twelve are held as AI-supported explanations awaiting
+approval. The 95.73% recall reported before this contract existed was inflated
+by the amount-inventing flaw; those files are in results/void/.
+
+What the tier actually delivers: twelve bare residuals turned into twelve
+explanations with the arithmetic worked out -- "the residual equals exactly
+12.5% of total fee+tax on this batch" -- which is what an analyst would have
+spent the morning deriving. It is not a reconciliation, and the report no
+longer says it is.
+
+The malformed rate is a real cost and is not smoothed away. One reply began
+"Let me analyze this reco..." -- a reasoning model leaking preamble instead of
+emitting JSON. Native tool calling would avoid this and is broken on this
+endpoint; a host with working structured output should cut it to near zero.
+
+Provenance shows 0/0 because provenance is only measurable over accepted
+matches, and there are none. It becomes meaningful once a RateBook exists.
