@@ -75,8 +75,11 @@ def run_b2(sources: SourceBundle, tol: Tolerance | None = None) -> ReconResult:
 
 def run_b3(
     sources: SourceBundle,
-    proposer,
+    proposer=None,
     tol: Tolerance | None = None,
+    *,
+    max_workers: int = 1,
+    proposer_factory=None,
 ) -> tuple[ReconResult, "AgentReport"]:
     """B2 plus the LLM exception tier.
 
@@ -89,7 +92,10 @@ def run_b3(
 
     tol = tol or Tolerance.calibrated()
     result = _compose(sources, tol, "B3", with_leg2_t1=True)
-    report = recover_with_agent(sources, tol, result, proposer)
+    report = recover_with_agent(
+        sources, tol, result, proposer,
+        max_workers=max_workers, proposer_factory=proposer_factory,
+    )
     return result, report
 
 

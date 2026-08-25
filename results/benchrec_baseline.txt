@@ -1,0 +1,25 @@
+========================================================================
+BenchRec -- the LLM baseline shipped inside the dataset
+ICAIF 2023, CC BY 4.0. Scored against BenchRec_cash_v1.0_solution.csv.
+========================================================================
+
+  population                  32,048
+  attempted (coverage)        20,800   64.90%
+  correct                     19,802
+  WRONG MATCHES                  998
+
+  match precision             95.20%
+  WRONG-MATCH RATE             4.80%
+  overall accuracy            61.79%
+
+  its reported confidence vs what actually happened:
+    conf 0.9-1.0   actual  95.2%   n=20,800
+
+  Read the wrong-match rate, not the accuracy. Every one of those is
+  money filed against the wrong entry, and the matcher reported high
+  confidence on all of them -- the failure mode RecoAgent's arithmetic
+  gate exists to make structurally impossible.
+
+  NOT a RecoAgent result. Different problem shape: 1:1 allocation-key
+  prediction by text similarity, not N:1 subset matching over a batch.
+========================================================================

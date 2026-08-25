@@ -324,3 +324,94 @@ def test_parse_reads_a_refusal():
 def test_parse_rejects_an_unknown_tool():
     with pytest.raises(ValueError):
         _parse_tool_call("book_the_match", {"settlement_id": "setl_0001"})
+
+
+# ── concurrency ──────────────────────────────────────────────────────────
+
+
+def test_parallel_and_serial_produce_identical_output():
+    """Concurrency must be an execution detail, never a semantic one.
+
+    Cases finish in whatever order the endpoint returns them, so if results
+    were applied as they arrived, the exception queue and the audit log would
+    reshuffle between runs and the determinism guarantee would quietly die.
+    """
+    from recoagent.pipeline import run_b2
+
+    def snapshot(result):
+        return (
+            [(m.match_id, m.right_ids, round(m.confidence, 6)) for m in
+             sorted(result.matches, key=lambda m: m.match_id)],
+            [(e.exception_id, e.reason) for e in result.exceptions],
+        )
+
+    batch = _batch(n=1500, seed=7)
+
+    serial = run_b2(batch.sources)
+    recover_with_agent(
+        batch.sources, Tolerance.calibrated(), serial,
+        ScriptedProposer(lambda p: _hypothesis(p.residual_paise)),
+    )
+
+    parallel = run_b2(batch.sources)
+    report = recover_with_agent(
+        batch.sources, Tolerance.calibrated(), parallel,
+        max_workers=8,
+        proposer_factory=lambda: ScriptedProposer(
+            lambda p: _hypothesis(p.residual_paise)
+        ),
+    )
+
+    assert report.resolved > 0
+    assert snapshot(serial) == snapshot(parallel)
+
+
+def test_exception_order_survives_concurrency():
+    from recoagent.pipeline import run_b2
+
+    batch = _batch(n=1500, seed=7)
+    serial = run_b2(batch.sources)
+    recover_with_agent(
+        batch.sources, Tolerance.calibrated(), serial,
+        ScriptedProposer(lambda p: Refusal("no")),
+    )
+    parallel = run_b2(batch.sources)
+    recover_with_agent(
+        batch.sources, Tolerance.calibrated(), parallel,
+        max_workers=8, proposer_factory=lambda: ScriptedProposer(lambda p: Refusal("no")),
+    )
+    assert [e.exception_id for e in serial.exceptions] == \
+           [e.exception_id for e in parallel.exceptions]
+
+
+def test_concurrency_without_a_factory_is_refused():
+    """A proposer that investigates holds per-case state; sharing it would let
+    two cases scribble over each other's context."""
+    from recoagent.pipeline import run_b2
+
+    batch = _batch(n=800, seed=7)
+    with pytest.raises(ValueError, match="proposer_factory"):
+        recover_with_agent(
+            batch.sources, Tolerance.calibrated(), run_b2(batch.sources),
+            ScriptedProposer(lambda p: _hypothesis(p.residual_paise)),
+            max_workers=8,
+        )
+
+
+def test_each_worker_gets_its_own_proposer():
+    from recoagent.pipeline import run_b2
+
+    built = []
+
+    def factory():
+        p = ScriptedProposer(lambda pk: _hypothesis(pk.residual_paise))
+        built.append(p)
+        return p
+
+    batch = _batch(n=1500, seed=7)
+    recover_with_agent(
+        batch.sources, Tolerance.calibrated(), run_b2(batch.sources),
+        max_workers=4, proposer_factory=factory,
+    )
+    # One per worker thread, not one per case.
+    assert 1 <= len(built) <= 4

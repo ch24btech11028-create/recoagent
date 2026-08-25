@@ -27,6 +27,8 @@ MATCHER_MODULES = [
     ROOT / "agent" / "evidence.py",
     ROOT / "agent" / "proposer.py",
     ROOT / "agent" / "tier.py",
+    ROOT / "agent" / "tools.py",
+    ROOT / "agent" / "agentic.py",
 ]
 
 FORBIDDEN = "generator"

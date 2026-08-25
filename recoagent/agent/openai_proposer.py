@@ -25,7 +25,9 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import re
+import time
 
 from .contracts import Proposal, ProposerError, Usage
 from .evidence import EvidencePacket
@@ -33,6 +35,22 @@ from .proposer import SYSTEM_PROMPT, _parse_tool_call
 
 DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
+
+#: Reasoning toggles are not standardised across OpenAI-compatible hosts -- each
+#: model family names them differently in `chat_template_kwargs`. Presets keep
+#: that mess in one place instead of spreading it through call sites.
+EXTRA_BODY_PRESETS: dict[str, dict] = {
+    "nvidia/nemotron-3-super-120b-a12b": {
+        "chat_template_kwargs": {"enable_thinking": True}
+    },
+    "deepseek-ai/deepseek-v4-flash-0731": {
+        "chat_template_kwargs": {"thinking": True, "reasoning_effort": "high"}
+    },
+}
+
+
+def preset_for(model: str) -> dict | None:
+    return EXTRA_BODY_PRESETS.get(model)
 
 #: Appended to the shared system prompt. The response contract has to be stated
 #: explicitly because there is no schema enforcement on this path -- the model
@@ -76,6 +94,18 @@ def _extract_json(text: str) -> dict:
     return json.loads(match.group(0))
 
 
+#: Names rather than classes: the SDK exception hierarchy differs across
+#: versions and hosts, and a proposer must never crash on an unexpected one.
+_RETRYABLE = ("RateLimitError", "APITimeoutError", "APIConnectionError", "InternalServerError")
+
+
+def _is_retryable(exc: Exception) -> bool:
+    if type(exc).__name__ in _RETRYABLE:
+        return True
+    status = getattr(exc, "status_code", None)
+    return status == 429 or (isinstance(status, int) and status >= 500)
+
+
 class OpenAICompatibleProposer:
     """Calls an OpenAI-compatible chat endpoint once per attempt.
 
@@ -93,8 +123,9 @@ class OpenAICompatibleProposer:
         api_key_env: str = "NVIDIA_API_KEY",
         max_tokens: int = 8000,
         temperature: float = 0.0,
-        timeout: float = 120.0,
-        enable_thinking: bool = True,
+        timeout: float = 240.0,
+        extra_body: dict | None = None,
+        max_retries: int = 3,
     ) -> None:
         if client is None:
             from openai import OpenAI  # lazy: the core stays dependency-free
@@ -110,7 +141,11 @@ class OpenAICompatibleProposer:
         self._model = model
         self._max_tokens = max_tokens
         self._temperature = temperature
-        self._enable_thinking = enable_thinking
+        # Explicit wins; otherwise fall back to the preset for this model, and
+        # to nothing at all for a host we have no preset for. Sending another
+        # family's reasoning flags is worse than sending none.
+        self._extra_body = extra_body if extra_body is not None else preset_for(model)
+        self._max_retries = max_retries
 
     @property
     def label(self) -> str:
@@ -118,26 +153,42 @@ class OpenAICompatibleProposer:
 
     def propose(self, packet: EvidencePacket) -> tuple[Proposal, Usage]:
         usage = Usage()
-        extra: dict = {}
-        if self._enable_thinking:
-            extra["chat_template_kwargs"] = {"enable_thinking": True}
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT + JSON_CONTRACT},
+            {
+                "role": "user",
+                "content": json.dumps(packet.to_dict(), indent=2, sort_keys=True),
+            },
+        ]
 
-        try:
-            response = self._client.chat.completions.create(
-                model=self._model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT + JSON_CONTRACT},
-                    {
-                        "role": "user",
-                        "content": json.dumps(packet.to_dict(), indent=2, sort_keys=True),
-                    },
-                ],
-                max_tokens=self._max_tokens,
-                temperature=self._temperature,
-                extra_body=extra or None,
-            )
-        except Exception as exc:  # the SDK raises a wide family; all are the same to us
-            return ProposerError("transport", f"{type(exc).__name__}: {exc}"), usage
+        # Running cases concurrently is what makes a shared free endpoint push
+        # back, so the retry lives here rather than in the tier: rate limiting
+        # is a property of the transport, and a 429 is not a failed case.
+        last: Exception | None = None
+        response = None
+        for attempt in range(self._max_retries + 1):
+            try:
+                response = self._client.chat.completions.create(
+                    model=self._model,
+                    messages=messages,
+                    max_tokens=self._max_tokens,
+                    temperature=self._temperature,
+                    extra_body=self._extra_body,
+                )
+                break
+            except Exception as exc:
+                last = exc
+                if attempt == self._max_retries or not _is_retryable(exc):
+                    return (
+                        ProposerError("transport", f"{type(exc).__name__}: {exc}"),
+                        usage,
+                    )
+                # Jittered backoff: without the jitter, eight workers that hit
+                # the limit together would retry together and hit it again.
+                time.sleep(min(2 ** attempt, 20) + random.uniform(0, 1.5))
+
+        if response is None:
+            return ProposerError("transport", f"exhausted retries: {last}"), usage
 
         if response.usage:
             usage.add(response.usage.prompt_tokens, response.usage.completion_tokens)
