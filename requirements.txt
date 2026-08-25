@@ -1,19 +1,18 @@
-# Core — stdlib-first by design; the deterministic tiers have no heavy deps.
-pandas>=2.2
-numpy>=1.26
+# The deterministic core (rungs B0 and B2) needs NOTHING from this file.
+# It runs on a clean Python 3.11+ using only the standard library:
+#
+#   python3 -m recoagent.run --n 2000 --seed 7 --rung B2
+#
+# That is verified, not asserted -- tests/test_no_dependencies.py runs the full
+# pipeline with every third-party package blocked at the import hook.
+#
+# Everything below is for the B3 agent tier and for development. Both LLM SDKs
+# are imported lazily inside their proposer, so installing neither still leaves
+# B0 and B2 working.
 
-# Leg 1 probabilistic linkage baseline (Fellegi-Sunter). MIT licensed.
-splink>=4.0
-duckdb>=1.0
+# --- B3 agent tier: install ONE of these, matching the endpoint you use ---
+anthropic>=0.40      # AnthropicProposer          -> api.anthropic.com
+openai>=1.40         # OpenAICompatibleProposer   -> NVIDIA NIM, vLLM, any OpenAI-protocol host
 
-# LLM exception agent (Tier 2)
-anthropic>=0.40
-# Optional: any OpenAI-compatible endpoint (NVIDIA NIM, vLLM, ...) for the B3 tier
-openai>=1.40
-pydantic>=2.7
-
-# CLI / reporting
-rich>=13.7
-
-# Dev
+# --- development ---
 pytest>=8.0
