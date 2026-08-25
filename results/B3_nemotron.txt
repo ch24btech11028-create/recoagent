@@ -1,0 +1,48 @@
+B3 measurement -- nvidia/nemotron-3-super-120b-a12b via NVIDIA NIM
+2000 orders. dev = seed 7, held-out = seed 21 + inverted defect mix.
+Evidence packet v2 (see results/B3_nemotron_dev_v1.txt for the v1 run).
+
+                        dev      held-out
+  cases attempted         7            11
+  resolved                4             7
+  REJECTED BY GATE        0             0
+  declined by model       3             4
+  proposer failed         0             0
+  resolution rate     57.1%         63.6%
+
+  Leg 2 recall     93.29% -> 95.73%   92.07% -> 96.34%
+  Leg 2 exceptions     11 -> 7            13 -> 6
+  credit value     92.67% -> 95.32%   93.54% -> 98.36%
+  FALSE-MATCH RATE   0.00%              0.00%
+  mishandled              0                  0
+
+  tokens        25,109 in / 25,827 out   39,925 in / 25,736 out
+  wall clock              379s               434s   (~35s per case)
+  cost                   $0.00              $0.00   (NIM free tier)
+
+By true defect class:
+  dev      resolved: FX_CONVERSION 3/3, FEE_TAX_VARIANCE 1/4
+           declined: FEE_TAX_VARIANCE 3
+  held-out resolved: FX_CONVERSION 2/2, FEE_TAX_VARIANCE 5/7
+           declined: FEE_TAX_VARIANCE 2, TIMING_SPILL 1 (the spill T1c refused)
+
+Notes, in order of how much they should temper the numbers:
+
+1. n is 7 and 11. These are directional, not statistically meaningful.
+2. The gate rejected nothing in either run. The model declined instead of
+   guessing on every case it could not explain, which is the behaviour you
+   want but means the live runs did not exercise the rejection path. That
+   path is covered by test_a_confident_wrong_proposal_is_rejected, where 7
+   proposals at 0.97 confidence were all refused.
+3. "Resolved" means the arithmetic closed and the credit was matched to the
+   correct settlement. It does NOT verify the model's stated *reason* is the
+   true cause. A proposal can close the sum for the wrong reason; the pairing
+   still comes from the UTR join, so this cannot create a false match, but it
+   can create a misleading audit note. Measuring explanation accuracy against
+   the injected class is not yet implemented.
+4. Held-out scored higher than dev (63.6% vs 57.1%), which is the opposite of
+   overfitting -- but see point 1.
+5. Tool calling is broken on this endpoint: asked to call a function the model
+   returns tool_calls=None and writes malformed pseudo-JSON into content.
+   The proposer uses plain JSON mode and validates with the same strict parser
+   as the Anthropic path.

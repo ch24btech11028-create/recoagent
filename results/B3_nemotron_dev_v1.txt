@@ -1,0 +1,14 @@
+B3 measurement v1 -- nvidia/nemotron-3-super-120b-a12b via NVIDIA NIM
+2000 orders, seed 7, dev mix. Recorded BEFORE the evidence-packet fix.
+
+attempted 7 | resolved 2 | rejected 0 | declined 5 | failed 0
+resolution rate 28.6% | 26,269 in / 13,868 out tokens | 196s wall clock
+
+Leg 2 recall 93.29% -> 94.51%   exceptions 11 -> 9
+credit value 92.67% -> 94.65%   false-match rate 0.00%   mishandled 0
+
+All 5 declines were FEE_TAX_VARIANCE, every one reasoning that
+`fee_paise equals fee_at_schedule_paise`, so no repricing was visible.
+The model was right: the evidence packet exposed a per-payment schedule
+comparison that can never differ under this generator, which reads as
+positive evidence of no variance. Kept as the honest before-number.

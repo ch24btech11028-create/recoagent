@@ -8,6 +8,8 @@ duckdb>=1.0
 
 # LLM exception agent (Tier 2)
 anthropic>=0.40
+# Optional: any OpenAI-compatible endpoint (NVIDIA NIM, vLLM, ...) for the B3 tier
+openai>=1.40
 pydantic>=2.7
 
 # CLI / reporting

@@ -15,11 +15,12 @@ from .contracts import (
     Refusal,
     Usage,
 )
+from .openai_proposer import OpenAICompatibleProposer
 from .proposer import AnthropicProposer, NullProposer, Proposer, ScriptedProposer
 from .tier import recover_with_agent, render_report
 
 __all__ = [
     "AgentReport", "CaseOutcome", "Hypothesis", "Proposal", "ProposedRow",
     "ProposerError", "Refusal", "Usage", "AnthropicProposer", "NullProposer",
-    "Proposer", "ScriptedProposer", "recover_with_agent", "render_report",
+    "OpenAICompatibleProposer", "Proposer", "ScriptedProposer", "recover_with_agent", "render_report",
 ]

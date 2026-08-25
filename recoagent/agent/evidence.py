@@ -29,6 +29,7 @@ CONTEXT_WINDOW = timedelta(days=7)
 
 @dataclass(frozen=True)
 class EvidencePacket:
+    derived_signals: dict[str, Any]
     bank_credit: dict[str, Any]
     settlement: dict[str, Any]
     residual_paise: Paise
@@ -63,7 +64,42 @@ def build(
         and abs(a.booked_at - settlement.settled_at) <= CONTEXT_WINDOW
     ]
 
+    # Aggregates a human analyst computes first. A mid-cycle repricing never
+    # shows up as a per-row difference -- the report carries the old rate on
+    # every row -- so the only detectable signature is the residual expressed
+    # as a share of the fee base. An earlier version exposed a per-payment
+    # `fee_at_schedule_paise` instead, which always equalled the reported fee
+    # and so read as positive evidence that no repricing had occurred.
+    charged = [p for p in members if fees.mdr_for(p.method) > 0]
+    fee_base = sum(p.gross_paise for p in charged)
+    fee_total = sum(p.fee_paise + p.tax_paise for p in charged)
+    international = [p for p in members if p.currency != "INR" or p.fx_rate is not None]
+
+    def _pct(part: int, whole: int) -> float | None:
+        return round(part / whole * 100, 4) if whole else None
+
+    derived = {
+        "payments_in_batch": len(members),
+        "mdr_bearing_payments": len(charged),
+        "mdr_bearing_gross_paise": fee_base,
+        "total_fee_plus_tax_paise": fee_total,
+        "residual_as_pct_of_fee_base": _pct(abs(residual_paise), fee_base),
+        "residual_as_pct_of_total_fee": _pct(abs(residual_paise), fee_total),
+        "international_payments": [
+            {"payment_id": p.payment_id, "gross_paise": p.gross_paise,
+             "currency": p.currency, "fx_rate": p.fx_rate,
+             "residual_as_pct_of_this_gross": _pct(abs(residual_paise), p.gross_paise)}
+            for p in international
+        ],
+        "note": (
+            "A mid-cycle repricing shows as the residual being a clean fraction "
+            "of the fee base or of total fee charged. An FX slip shows as the "
+            "residual being a small fraction of one international payment's gross."
+        ),
+    }
+
     return EvidencePacket(
+        derived_signals=derived,
         bank_credit={
             "bank_line_id": line.bank_line_id,
             "value_date": line.value_date.isoformat(),
@@ -90,11 +126,6 @@ def build(
                 "net_paise": p.net_paise,
                 "captured_at": p.captured_at.isoformat(),
                 "status": p.status,
-                # The fee the published schedule would have charged, so a
-                # repricing is visible as a difference rather than something the
-                # proposer has to recompute and be trusted about.
-                "fee_at_schedule_paise": fees.fee_and_tax(p.gross_paise, p.method)[0],
-                "tax_at_schedule_paise": fees.fee_and_tax(p.gross_paise, p.method)[1],
             }
             for p in members
         ],

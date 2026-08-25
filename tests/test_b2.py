@@ -42,17 +42,28 @@ def test_b2_beats_b0_where_it_claims_to():
 
 
 @pytest.mark.parametrize(
-    "mix", [DefectMix.dev(), DefectMix.holdout()], ids=["dev", "holdout"]
+    "mix, seed, expected_spill_resolved",
+    [(DefectMix.dev(), 7, 4), (DefectMix.holdout(), 21, 5)],
+    ids=["dev", "holdout"],
 )
-def test_the_solver_closes_exactly_the_classes_it_claims(mix):
-    """The tier's docstring promises four classes and disclaims the rest.
+def test_the_solver_closes_exactly_the_classes_it_claims(
+    mix, seed, expected_spill_resolved
+):
+    """Pins the exact claims the README publishes, on the runs it publishes them from.
 
     That claim matters more than usual: the case for adding an LLM at B3 rests
     entirely on what is left over needing a *reason* rather than an amount. If
-    the solver silently starts closing FX or timing spills, the B3 argument is
-    gone and this test should be the thing that says so.
+    the solver silently starts closing FX, the B3 argument is gone and this
+    test should be the thing that says so.
+
+    Seed and batch size match `results/B2_*.json` deliberately. An earlier
+    version ran both profiles at seed 7 -- a configuration nobody publishes --
+    and passed while the README's unqualified "TIMING_SPILL: resolved" was
+    already false on the held-out run, where the solver closes 5 of 6. A
+    claim-pinning test that does not use the published configuration protects
+    nothing.
     """
-    _, _, b2 = _both(mix)
+    _, _, b2 = _both(mix, n=2000, seed=seed)
     by_class = {a.defect: a for a in b2.accounting}
 
     for cls in (
@@ -60,9 +71,18 @@ def test_the_solver_closes_exactly_the_classes_it_claims(mix):
         DefectClass.CHARGEBACK_NETTED,
         DefectClass.ADJUSTMENT_ENTRY,
         DefectClass.ROUNDING_DRIFT,
-        DefectClass.TIMING_SPILL,
     ):
         assert by_class[cls].resolved == by_class[cls].injected, cls
+
+    # Spill pairing is not exhaustive: it needs a short batch, a long batch, and
+    # exactly one member payment whose net equals the gap. When two candidates
+    # tie, or the counterpart batch carries its own defect, the pair is refused
+    # rather than guessed -- so one spill survives to the exception queue on the
+    # held-out mix. The exact number is pinned so the README cannot drift from it.
+    spill = by_class[DefectClass.TIMING_SPILL]
+    assert spill.resolved == expected_spill_resolved, spill
+    assert spill.resolved + spill.flagged == spill.injected
+    assert spill.mishandled == 0
 
     # What is left needs a *reason* rather than a sum -- a repricing, an FX
     # rate -- or must stay refused on principle. This is the territory B3 has

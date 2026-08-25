@@ -53,53 +53,67 @@ report does not carry — and that territory is deliberately narrow: 7 defects o
 | `REFUND_NETTED`, `CHARGEBACK_NETTED`, `ADJUSTMENT_ENTRY` | flagged | **resolved** |
 | `ROUNDING_DRIFT` | flagged | **resolved** |
 | `NARRATION_TRUNCATION` | flagged | **resolved** |
-| `TIMING_SPILL` | flagged | **resolved** |
+| `TIMING_SPILL` | flagged | **resolved** (4/4 dev, 5/6 held-out) |
 | `FEE_TAX_VARIANCE`, `FX_CONVERSION` | flagged | flagged → B3 |
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
 
-### B3 — the LLM exception tier
+### B3 — the LLM exception tier, measured
 
-**Built and tested; deliberately unmeasured.** There is no API key on this
-machine, so no number in this repository comes from a language model. When one
-is available, `run_b3(sources, AnthropicProposer())` produces the lift and the
-cost per exception resolved. Until then B3's status here is *plumbing verified,
-performance unknown* — and that is what it will say.
+Run against **nvidia/nemotron-3-super-120b-a12b** via NVIDIA NIM. Full detail
+in [`results/B3_nemotron.txt`](results/B3_nemotron.txt).
 
-What is verified is the part that matters:
+| | dev | held-out |
+|---|---:|---:|
+| Cases attempted | 7 | 11 |
+| Resolved | 4 | 7 |
+| **Rejected by the gate** | **0** | **0** |
+| Declined by the model | 3 | 4 |
+| Leg 2 recall | 93.29% → **95.73%** | 92.07% → **96.34%** |
+| Credit value matched | 92.67% → **95.32%** | 93.54% → **98.36%** |
+| **False-match rate** | **0.00%** | **0.00%** |
+| Cost | $0.00 (free tier) | $0.00 |
+| Wall clock | 379s | 434s |
 
-```
-7 confident, specific, wrong proposals at 0.97 confidence
-  → 7 rejected by the arithmetic gate
-  → false-match rate 0.00%, defects mishandled 0
-```
+**Read these as directional, not conclusive: n is 7 and 11.** Held-out scored
+*higher* than dev (63.6% vs 57.1%), which is the opposite of overfitting, but
+at this sample size that is not a finding.
 
-The model never writes a match. It returns a set of rows it believes explain a
-residual; `prove_leg2` sums them on exactly the same footing as rows a human
-reported, and discards anything that does not close. A rejected proposal earns
-one retry with the remaining residual fed back, then the item goes to a human
-with the reason attached. That asymmetry is a response to a measured failure,
-not a stylistic preference: FinBalance found a 26–41 point gap between the
-balance sheet a model *reports* and the one produced by replaying its own
-entries through a ledger.
+The model never proposed a confident wrong answer. On every case it could not
+explain it declined, which is the behaviour you want — and it means the live
+runs never exercised the gate's rejection path. That path is covered
+separately: 7 scripted proposals at 0.97 confidence, all refused, false-match
+rate unmoved.
 
-Two further rules keep the audit trail honest. Self-reported confidence is
-**recorded but capped** at 0.70 for match confidence — an LLM's stated
-confidence is evidence about the model, not about the match. And inferred rows
-are written as `inferred:llm:*`, so nothing in the ledger can make a hypothesis
-look like a row someone reported.
+**What "resolved" does and does not mean.** It means the arithmetic closed and
+the credit matched the correct settlement. It does *not* verify the model's
+stated reason is the true cause. A proposal can close the sum for the wrong
+reason; the pairing still comes from the UTR join so this cannot create a false
+match, but it can create a misleading audit note. Explanation accuracy against
+the injected defect class is not yet measured, and until it is, the reason text
+in the audit trail is a lead for a human rather than a finding.
 
-**B3's territory is small on purpose: 7 exceptions of 129 defects on dev.**
+**One evidence-design bug, found by the model.** The first run resolved only
+2 of 7, with every decline reasoning that `fee_paise` equalled
+`fee_at_schedule_paise`, so no repricing was visible. The model was right: the
+packet exposed a per-payment schedule comparison that can never differ under
+this generator, which reads as positive evidence of *no* variance. Replacing it
+with the aggregate a human analyst computes first — the residual as a share of
+the fee base — took dev from 2/7 to 4/7. Both runs are kept
+([v1](results/B3_nemotron_dev_v1.txt), [v2](results/B3_nemotron.txt)) so the
+change is visible rather than quietly folded in.
+
+**The endpoint's tool calling is broken**, which is worth stating because it is
+the kind of thing that produces confident nonsense downstream: asked to call a
+function, the model returns `tool_calls: None` and writes malformed pseudo-JSON
+into the content. The proposer uses plain JSON mode and validates with the same
+strict parser the Anthropic path uses.
+
+**B3's territory is small on purpose: 7 of 129 defects on dev.**
 `TIMING_SPILL` was moved *into* the deterministic solver rather than left for
 the model, because a T+2 spill is mechanically detectable and handing it over
-would have let the model take credit for arithmetic. What reaches B3 is only
-what genuinely needs a reason — a mid-cycle repricing, an FX rate the report
-does not carry.
-
-The control that makes any future lift attributable: running B3 with
-`NullProposer` reproduces B2 **exactly** — same matches, same exceptions, same
-value share. Any improvement measured later belongs to the model, not to
-plumbing.
+would have let the model take credit for arithmetic. The control that makes the
+lift attributable: running B3 with `NullProposer` reproduces B2 **exactly**.
 
 **Why dev and held-out track each other.** By construction: the two mixes hold
 each leg's *total* defect rate constant and invert the composition
@@ -115,7 +129,7 @@ differ, and Leg 2 recall does drop 1.2 points on the held-out mix.
 | **B0** | exact join | exact UTR | **built, measured** |
 | B1 | + Splink (Fellegi-Sunter) | — | not built |
 | **B2** | *(unchanged)* | + SSMP, tolerance, spill pairing | **built, measured** |
-| **B3** | *(unchanged)* | + LLM exception tier | **built, not measured** |
+| **B3** | *(unchanged)* | + LLM exception tier | **built, measured** |
 
 The two legs are independent — Splink only touches Leg 1, SSMP only Leg 2 — so
 the ladder is really two ladders over shared inputs, and rungs can be built out
