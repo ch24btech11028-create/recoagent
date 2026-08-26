@@ -30,6 +30,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from .env import require_key
+
 DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 
 #: Reasoning toggles by model family. Absent means "send nothing", which is the
@@ -124,12 +126,7 @@ class OpenAICompatibleChat:
         if client is None:
             from openai import OpenAI
 
-            key = os.environ.get(api_key_env)
-            if not key:
-                raise RuntimeError(
-                    f"{api_key_env} is not set. Export it in your shell; do not "
-                    "pass the key as a literal."
-                )
+            key = require_key(api_key_env)
             client = OpenAI(base_url=base_url, api_key=key, timeout=timeout)
         self._client = client
         self._model = model

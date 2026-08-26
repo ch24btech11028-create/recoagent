@@ -29,6 +29,7 @@ import random
 import re
 import time
 
+from ..env import require_key
 from .contracts import Proposal, ProposerError, Usage
 from .evidence import EvidencePacket
 from .proposer import SYSTEM_PROMPT, _parse_tool_call
@@ -135,12 +136,7 @@ class OpenAICompatibleProposer:
         if client is None:
             from openai import OpenAI  # lazy: the core stays dependency-free
 
-            api_key = os.environ.get(api_key_env)
-            if not api_key:
-                raise RuntimeError(
-                    f"{api_key_env} is not set. Export it in your shell rather "
-                    "than passing the key as a literal."
-                )
+            api_key = require_key(api_key_env)
             client = OpenAI(base_url=base_url, api_key=api_key, timeout=timeout)
         self._client = client
         self._model = model
