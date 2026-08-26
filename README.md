@@ -96,11 +96,42 @@ decides whether a cited rate turns out to be on file after all. A rate that is
 confirmed books as `resolved`; one nobody issued still closes as
 `needs_approval`, however well the arithmetic works out.
 
-**The previous B3 measurement is void and is not quoted here.** It was measured
-when fee and FX cases still reached the model, so its denominators describe a
-tier that no longer sees them. It is quarantined in
-[`results/void/`](results/void/) with a note. B3 needs re-measuring against what
-is actually left to it, and that number is not yet in this repository.
+**And on the published books, there is nothing left for it to do.**
+
+```bash
+python3 -m recoagent.eval.b3 --profile dev
+```
+
+| | dev | held-out |
+|---|---:|---:|
+| Residual-bearing leg-2 items reaching B3 | **0** | **0** |
+| Cases attempted | 0 | 0 |
+| Leg 2 recall | 97.56% → 97.56% | 98.78% → 98.78% |
+
+The agent tier is never invoked, because every residual the cheaper tiers can
+account for, they now account for. That is the strongest form of the argument
+this repository makes, and it cost the tier its job: measured against the real
+book, the honest resolution rate of the LLM is not a number at all — there is no
+denominator. Full reports in [`results/B3_dev.txt`](results/B3_dev.txt) and
+[`results/B3_holdout.txt`](results/B3_holdout.txt).
+
+Where it still has work is the book whose paperwork never arrived:
+
+```bash
+python3 -m recoagent.eval.b3 --profile dev --no-paperwork
+```
+
+That run needs an API key and **is not yet measured** — the number is not in this
+repository, and the previous one is void: it was taken when fee and FX cases
+still reached the model, so its denominators describe a tier that no longer sees
+them. It is quarantined in [`results/void/`](results/void/) with a note.
+
+Until then, note what B3 has already earned its place by surviving: a proposer
+that cites a row which does not exist, one that refuses, and a dead endpoint all
+leave the false-match rate at 0.00% and the book unchanged. Those are tests, not
+claims — `tests/test_b3_eval.py` runs the whole command against scripted
+proposers, so the paths that only matter when a model answers are exercised
+without a key.
 
 **An earlier design reported 95.73% recall here, and that number was wrong.**
 The proposer could state amounts, so "there was an adjustment of exactly the
@@ -159,6 +190,10 @@ python3 -m recoagent.ui
 The live console: change the run and watch the numbers move, open an exception
 to see every tier that touched it, and ask the settlement agent in English. It
 binds to loopback and needs no key — Q&A is disabled and everything else works.
+
+```bash
+python3 -m recoagent.eval.b3 --profile dev
+```
 
 ```bash
 python3 -m recoagent.eval.benchrec --data data/benchrec
