@@ -44,6 +44,11 @@ class Question:
     #: everything is answerable, which is exactly the blind spot that makes a
     #: confident wrong number reach an operator.
     expects_decline: bool = False
+    #: False for a question typed by an operator at runtime. There is no ground
+    #: truth for those, so they are answered but never scored -- folding them
+    #: into the wrong-answer rate would let an unmeasurable question move a
+    #: measured number.
+    graded: bool = True
 
 
 def build(batch: LabelledBatch, result: ReconResult, limit_per_kind: int = 4) -> list[Question]:

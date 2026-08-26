@@ -61,6 +61,10 @@ class Answer:
     confidence: float | None = None
     basis: str = ""
     detail: str = ""
+    #: False when the question had no ground truth to check against. Such an
+    #: answer is shown to the operator with its factsheet attached and is
+    #: excluded from every rate this module reports.
+    graded: bool = True
     usage: Usage = field(default_factory=Usage)
 
 
@@ -72,21 +76,26 @@ class QAReport:
 
     @property
     def total(self) -> int:
-        return len(self.answers)
+        return len(self.scored)
+
+    @property
+    def scored(self) -> list[Answer]:
+        """Only answers with a ground truth behind them. Every rate uses these."""
+        return [a for a in self.answers if a.graded]
 
     @property
     def attempted(self) -> int:
-        return sum(1 for a in self.answers if not a.declined and not a.failed)
+        return sum(1 for a in self.scored if not a.declined and not a.failed)
 
     @property
     def correct(self) -> int:
         """Includes correctly declining an unanswerable question."""
-        return sum(1 for a in self.answers if a.correct)
+        return sum(1 for a in self.scored if a.correct)
 
     @property
     def correct_answers(self) -> int:
         """Correct among questions it actually answered. Excludes right declines."""
-        return sum(1 for a in self.answers if a.correct and not a.declined)
+        return sum(1 for a in self.scored if a.correct and not a.declined)
 
     @property
     def wrong(self) -> int:
@@ -97,16 +106,16 @@ class QAReport:
 
     @property
     def declined(self) -> int:
-        return sum(1 for a in self.answers if a.declined)
+        return sum(1 for a in self.scored if a.declined)
 
     @property
     def hallucinated(self) -> int:
         """Answered a question the factsheet cannot support. The worst outcome."""
-        return sum(1 for a in self.answers if a.detail.startswith("HALLUCINATED"))
+        return sum(1 for a in self.scored if a.detail.startswith("HALLUCINATED"))
 
     @property
     def failed(self) -> int:
-        return sum(1 for a in self.answers if a.failed)
+        return sum(1 for a in self.scored if a.failed)
 
     @property
     def wrong_answer_rate(self) -> float:
@@ -252,6 +261,12 @@ def ask(
         ans.detail = (
             f"HALLUCINATED {ans.given!r} -- the factsheet does not contain this"
         )
+        return ans
+    if not question.graded:
+        # No ground truth exists for this one. Say so rather than reporting a
+        # `correct` of False, which reads as "the agent got it wrong".
+        ans.graded = False
+        ans.detail = "ungraded: asked live, no ground truth to check against"
         return ans
     ans.correct = is_correct(question, ans.given, tolerance_paise)
     if not ans.correct:
