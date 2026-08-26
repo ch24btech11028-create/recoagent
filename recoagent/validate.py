@@ -18,8 +18,8 @@ whose arithmetic this module then checks.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
-from typing import Iterable
 
 from .money import Paise
 from .schemas import (
@@ -96,6 +96,7 @@ def prove_leg2(
     tol: Tolerance,
     *,
     hypothesised: Iterable[PGAdjustment] = (),
+    repriced: Mapping[str, Paise] | None = None,
 ) -> ArithmeticProof:
     """Re-derive the batch total from its rows and check it against the credit.
 
@@ -103,12 +104,19 @@ def prove_leg2(
     but which are not linked to this settlement in the source data. They are
     summed on exactly the same footing as linked rows and subjected to exactly
     the same check -- a hypothesis that does not close is simply rejected.
+
+    `repriced` replaces a payment's net where a rate notice says the gateway
+    charged something other than the schedule. The corrected figure is computed
+    by code from the notice and the payment's own gross; nothing may put an
+    amount in here that it chose. As with `hypothesised`, the correction earns
+    nothing by being applied -- it still has to close.
     """
     members = list(members)
     linked = list(adjustments)
     extra = list(hypothesised)
 
-    payments_net = sum(p.net_paise for p in members)
+    repriced = dict(repriced or {})
+    payments_net = sum(repriced.get(p.payment_id, p.net_paise) for p in members)
     adj_net = sum(a.amount_paise for a in linked)
     hyp_net = sum(a.amount_paise for a in extra)
 
@@ -119,6 +127,9 @@ def prove_leg2(
     )
     if extra:
         expression += f" + {len(extra)} hypothesised adjustments"
+    touched = sum(1 for p in members if p.payment_id in repriced)
+    if touched:
+        expression += f" ({touched} payments re-derived at a noticed rate)"
 
     return ArithmeticProof(
         expression=expression,

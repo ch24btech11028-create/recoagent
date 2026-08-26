@@ -85,6 +85,50 @@ class PGAdjustment:
 
 
 @dataclass(frozen=True)
+class RateNotice:
+    """A gateway repricing notice: from this date, this method costs this much.
+
+    The fourth source, and the reason it exists: without it a fee variance can
+    only ever be a hypothesis. The report shows the old rate, the bank credited
+    the new one, and nothing in the book says which is right -- so a model
+    explaining the gap is choosing a number, however plausibly. A notice is the
+    merchant's own copy of what the gateway told them, and it turns the same
+    explanation into something a code path can check.
+
+    `effective_from` is inclusive and `effective_to` is exclusive, so two
+    consecutive notices for one method never both apply to the same day.
+    """
+
+    notice_id: str
+    method: str
+    mdr_bps: int
+    effective_from: datetime
+    effective_to: datetime | None  # None = still in force
+    reference: str = ""
+
+    def covers(self, when: datetime, method: str) -> bool:
+        if method != self.method or when < self.effective_from:
+            return False
+        return self.effective_to is None or when < self.effective_to
+
+
+@dataclass(frozen=True)
+class FxAdvice:
+    """The bank's conversion advice for one international payment.
+
+    Names the payment and what the conversion actually cost, as a percentage of
+    the gross. The gateway report carries the rate it expected; this carries the
+    rate the money moved at.
+    """
+
+    advice_id: str
+    payment_id: str
+    rate_pct_of_gross: float
+    advised_at: datetime
+    reference: str = ""
+
+
+@dataclass(frozen=True)
 class Settlement:
     """The batch header the gateway reports: N payments consolidated into one payout."""
 
@@ -120,6 +164,10 @@ class SourceBundle:
     adjustments: tuple[PGAdjustment, ...]
     settlements: tuple[Settlement, ...]
     bank_lines: tuple[BankLine, ...]
+    #: The fourth source. Defaulted so a book without any notices -- every
+    #: fixture written before they existed -- is still a valid book.
+    rate_notices: tuple[RateNotice, ...] = ()
+    fx_advices: tuple[FxAdvice, ...] = ()
 
     def __post_init__(self) -> None:
         # Built once, lazily, and cached on the frozen instance. Every tier asks
@@ -143,12 +191,38 @@ class SourceBundle:
         object.__setattr__(self, "_unlinked", tuple(
             a for a in self.adjustments if a.settlement_id is None
         ))
+        advices: dict[str, FxAdvice] = {}
+        for advice in self.fx_advices:
+            # First advice wins. A second one for the same payment is a
+            # contradiction, and `fx_advice_for` reports it rather than picking.
+            advices.setdefault(advice.payment_id, advice)
+        object.__setattr__(self, "_fx_by_payment", advices)
+        object.__setattr__(self, "_fx_duplicated", frozenset(
+            a.payment_id for a in self.fx_advices
+            if sum(1 for b in self.fx_advices if b.payment_id == a.payment_id) > 1
+        ))
 
     def payments_by_settlement(self, settlement_id: str) -> tuple[PGPayment, ...]:
         return self._by_settlement.get(settlement_id, ())  # type: ignore[attr-defined]
 
     def adjustments_by_settlement(self, settlement_id: str) -> tuple[PGAdjustment, ...]:
         return self._adj_by_settlement.get(settlement_id, ())  # type: ignore[attr-defined]
+
+    def notices_covering(self, when: datetime, method: str) -> tuple[RateNotice, ...]:
+        """Every notice in force for this method on this date.
+
+        Returns all of them, not the best one. Two notices covering the same day
+        is a contradiction in the merchant's own paperwork, and the caller has to
+        decide to refuse -- picking one here would hide the ambiguity at exactly
+        the point it matters.
+        """
+        return tuple(n for n in self.rate_notices if n.covers(when, method))
+
+    def fx_advice_for(self, payment_id: str) -> FxAdvice | None:
+        """The advice for this payment, or None if there is none or more than one."""
+        if payment_id in self._fx_duplicated:  # type: ignore[attr-defined]
+            return None
+        return self._fx_by_payment.get(payment_id)  # type: ignore[attr-defined]
 
     @property
     def unlinked_adjustments(self) -> tuple[PGAdjustment, ...]:
@@ -163,6 +237,8 @@ class SourceBundle:
             "adjustments": len(self.adjustments),
             "settlements": len(self.settlements),
             "bank_lines": len(self.bank_lines),
+            "rate_notices": len(self.rate_notices),
+            "fx_advices": len(self.fx_advices),
         }
 
 

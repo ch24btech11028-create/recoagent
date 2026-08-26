@@ -35,12 +35,14 @@ from .defects import DefectClass
 from .money import FeeSchedule, Paise, bps_of
 from .schemas import (
     BankLine,
+    FxAdvice,
     GroundTruth,
     InjectedDefect,
     LabelledBatch,
     Order,
     PGAdjustment,
     PGPayment,
+    RateNotice,
     Settlement,
     SourceBundle,
 )
@@ -193,6 +195,21 @@ class _World:
         self.leg2: dict[str, str] = {}
         self.defects: list[InjectedDefect] = []
         self.claimed: set[str] = set()  # entities already carrying a defect
+        self.rate_notices: list[RateNotice] = []
+        self.fx_advices: list[FxAdvice] = []
+        #: method -> the repriced rate, decided once per book. A repricing
+        #: changes one method's MDR uniformly, so every batch carrying that
+        #: method moves to the same number and one notice explains all of them.
+        #: Deciding it per settlement instead would need overlapping notices,
+        #: and two notices in force on one day is a contradiction, not a book.
+        self.repricing: dict[str, int] = {}
+        #: How many entities the class currently being injected is meant to
+        #: touch. A repricing is one event that lands on several batches, so it
+        #: needs the class's budget rather than a per-settlement decision.
+        self.target_count: int = 0
+        #: (method, new bps, old bps, reserved settlement ids). Filled when the
+        #: repricing reserves its window; spent by `_finalise_repricing`.
+        self.pending_repricing: tuple[str, int, int, tuple[str, ...]] | None = None
 
     # -- helpers ---------------------------------------------------------
 
@@ -498,45 +515,135 @@ def _inject_fee_tax_variance(w: _World, sid: str) -> bool:
     """A mid-cycle repricing: one method's MDR changed, and the report is stale.
 
     Applied as a uniform rate change across every payment of one fee-bearing
-    method in the batch, because that is what a repricing is. An earlier version
-    added an arbitrary extra to half the charged payments, which no rate could
-    reproduce -- so the defect had no coherent explanation and the LLM tier was
-    being asked to find one that did not exist. It kept declining with "fees
-    match the schedule", which was the correct read of a badly modelled defect.
+    method, because that is what a repricing is. An earlier version added an
+    arbitrary extra to half the charged payments, which no rate could reproduce
+    -- so the defect had no coherent explanation and the LLM tier was being
+    asked to find one that did not exist. It kept declining with "fees match the
+    schedule", which was the correct read of a badly modelled defect.
+
+    **A repricing has an effective date, and it does not respect batch
+    boundaries.** So this is one event rather than N independent ones: it fires
+    once per book, takes effect near the end of the period, and charges the new
+    rate on every batch settled from then on while the report keeps quoting the
+    old one.
+
+    It runs in two phases, and both halves are load-bearing.
+
+    *Here*, it only reserves: pick the method, pick the window, claim those
+    batches so nothing else lands on them. Reserving early matters because a
+    batch carrying both a repricing and a spill can be closed by neither tier on
+    its own account of it -- letting the two overlap cost half the spill
+    resolutions on the dev mix.
+
+    *Later*, `_finalise_repricing` computes the money. Deferring that matters
+    because a partial capture claims an **order**, not a settlement, so it can
+    still rewrite a payment sitting inside a reserved batch. Pricing the batch
+    before that happens leaves it carrying a shift that no rate reproduces --
+    which is the same incoherence in a new place, and it is what made the first
+    version of this tier overshoot.
     """
+    if w.repricing or w.pending_repricing is not None:
+        return False  # one repricing per book
+
     members = w.members.get(sid, [])
-    if not members or not w.claim(sid):
+    if not members:
+        return False
+    fee_bearing = {
+        w.payment(pid).method
+        for pid in members
+        if w.fees.mdr_for(w.payment(pid).method) > 0
+    }
+    if not fee_bearing:
+        return False
+    method = sorted(fee_bearing)[0]
+
+    # Walk back from the most recent batch, stopping at the first one carrying
+    # this method that is already taken. The notice opens at the earliest batch
+    # chosen, so it covers every later batch on the method; the window must not
+    # reach past one that was not repriced, or the file would hold a rate the
+    # book does not honour. Batches without the method are unaffected either
+    # way, so the walk passes over them.
+    ordered = sorted(w.settlements, key=lambda s: s.settled_at, reverse=True)
+    chosen: list[str] = []
+    for settlement in ordered:
+        if len(chosen) >= max(1, w.target_count):
+            break
+        if not any(
+            w.payment(pid).method == method
+            for pid in w.members.get(settlement.settlement_id, [])
+        ):
+            continue
+        if not w.claim(settlement.settlement_id):
+            break
+        chosen.append(settlement.settlement_id)
+    if not chosen:
         return False
 
-    by_method: dict[str, list] = {}
-    for pid in members:
-        p = w.payment(pid)
-        if w.fees.mdr_for(p.method) > 0:
-            by_method.setdefault(p.method, []).append(p)
-    if not by_method:
-        return False
-
-    method = max(by_method, key=lambda m: len(by_method[m]))
-    targets = by_method[method]
     scheduled_bps = w.fees.mdr_for(method)
-    actual_bps = scheduled_bps + w.rng.choice([25, 40, 50, 75])
-
-    delta = 0
-    for p in targets:
-        fee = bps_of(p.gross_paise, actual_bps)
-        charged = fee + bps_of(fee, w.fees.gst_bps)
-        delta += (p.fee_paise + p.tax_paise) - charged
-    if delta == 0 or not w.shift_bank_line(sid, delta):
-        return False
-
-    w.record(
-        DefectClass.FEE_TAX_VARIANCE,
-        "settlement",
-        sid,
-        f"{method} repriced {scheduled_bps}->{actual_bps} bps across "
-        f"{len(targets)} payments; report still shows the old rate",
+    w.pending_repricing = (
+        method,
+        scheduled_bps + w.rng.choice([25, 40, 50, 75]),
+        scheduled_bps,
+        tuple(chosen),
     )
     return True
+
+
+def _finalise_repricing(w: _World) -> None:
+    """Price the reserved batches, once every other defect has settled.
+
+    Nothing above this point knows what a payment finally nets -- a partial
+    capture can rewrite one at any time -- so the delta is computed here, from
+    the rows as they will actually be published.
+    """
+    if w.pending_repricing is None:
+        return
+    method, actual_bps, scheduled_bps, chosen = w.pending_repricing
+
+    settlements = [w.settlement(sid) for sid in chosen]
+    effective = min(s.settled_at for s in settlements)
+
+    affected = 0
+    for settlement in sorted(settlements, key=lambda s: s.settled_at):
+        targets = [
+            w.payment(pid)
+            for pid in w.members.get(settlement.settlement_id, [])
+            if w.payment(pid).method == method
+        ]
+        if not targets:
+            continue
+        delta = 0
+        for p in targets:
+            fee = bps_of(p.gross_paise, actual_bps)
+            charged = fee + bps_of(fee, w.fees.gst_bps)
+            delta += (p.fee_paise + p.tax_paise) - charged
+        if delta == 0 or not w.shift_bank_line(settlement.settlement_id, delta):
+            continue
+        w.record(
+            DefectClass.FEE_TAX_VARIANCE,
+            "settlement",
+            settlement.settlement_id,
+            f"{method} repriced {scheduled_bps}->{actual_bps} bps from "
+            f"{effective.date()} across {len(targets)} payments; "
+            "report still shows the old rate",
+        )
+        affected += 1
+
+    if not affected:
+        return
+
+    w.repricing[method] = actual_bps
+    # The merchant genuinely receives one of these. It is the difference between
+    # "the residual is consistent with a 240bps rate" -- true of any rate that
+    # closes the arithmetic -- and "the gateway said 240bps".
+    w.rate_notices.append(RateNotice(
+        notice_id=f"notice_{len(w.rate_notices):04d}",
+        method=method,
+        mdr_bps=actual_bps,
+        effective_from=effective,
+        effective_to=None,
+        reference=f"repricing for {method}",
+    ))
 
 
 def _inject_rounding_drift(w: _World, sid: str) -> bool:
@@ -654,15 +761,38 @@ def _inject_fx_conversion(w: _World, sid: str) -> bool:
     pid = w.rng.choice(members)
     p = w.payment(pid)
     rate = round(w.rng.uniform(82.5, 89.5), 4)
-    # The bank converted at a rate slightly off the one implied by the report.
-    slip = int(p.gross_paise * w.rng.uniform(0.004, 0.02))
-    w.replace_payment(
-        pid, method="card_international", currency="USD", fx_rate=rate
-    )
+
+    # Reclassifying the payment as international changes what the *report* says
+    # it netted, because the method carries a different MDR. That is not the
+    # defect -- it is bookkeeping, and the bank credited it correctly. So the
+    # bank line moves with it, and only the conversion slip is left as a
+    # genuine disagreement.
+    #
+    # Not doing this was a real bug: the fee change and the slip moved the two
+    # sides in opposite directions and partly cancelled, so the residual an
+    # operator saw was neither the slip nor anything else nameable, and the
+    # advice quoting the slip overshot every time it was applied.
+    before = p.fee_paise + p.tax_paise
     fee, tax = w.fees.fee_and_tax(p.gross_paise, "card_international")
-    w.replace_payment(pid, fee_paise=fee, tax_paise=tax)
-    if not w.shift_bank_line(sid, -slip):
+    w.replace_payment(
+        pid, method="card_international", currency="USD", fx_rate=rate,
+        fee_paise=fee, tax_paise=tax,
+    )
+    fee_delta = (fee + tax) - before
+
+    # The bank converted at a rate slightly off the one implied by the report.
+    # Chosen in whole paise so the advice quotes a share of gross that divides
+    # back exactly; the gate runs at zero tolerance on this leg.
+    slip = int(p.gross_paise * w.rng.uniform(0.004, 0.02))
+    if not w.shift_bank_line(sid, -(fee_delta + slip)):
         return False
+    w.fx_advices.append(FxAdvice(
+        advice_id=f"fxadv_{len(w.fx_advices):04d}",
+        payment_id=pid,
+        rate_pct_of_gross=slip / p.gross_paise * 100,
+        advised_at=w.settlement(sid).settled_at,
+        reference=f"conversion advice for {pid}",
+    ))
     w.record(
         DefectClass.FX_CONVERSION,
         "settlement",
@@ -764,6 +894,7 @@ def _apply_defects(w: _World, mix: DefectMix) -> None:
 
         candidates = [c for c in pool if c not in w.claimed]
         w.rng.shuffle(candidates)
+        w.target_count = target_count
 
         injected = 0
         for candidate in candidates:
@@ -771,6 +902,82 @@ def _apply_defects(w: _World, mix: DefectMix) -> None:
                 break
             if injector(w, candidate):
                 injected += 1
+
+    # The repricing reserved its batches above and is priced now, when every
+    # payment in them has stopped moving.
+    _finalise_repricing(w)
+
+
+
+def _file_decoy_paperwork(w: _World, cfg: "GeneratorConfig") -> None:
+    """Fill the drawer with notices that do not apply.
+
+    A book containing exactly one repricing notice tests nothing: the only
+    notice present must be the right one, so "find the applicable rate" is
+    "read the single row". Real merchant paperwork is a drawer of circulars,
+    most of which are about something else, and the work is knowing which one
+    bears on the batch in front of you.
+
+    Three kinds, all of them genuinely inapplicable rather than merely wrong:
+
+    - **Other methods.** A card repricing says nothing about a UPI batch.
+    - **Superseded.** The same method, priced differently, in a window that
+      closed before the live notice opened. `effective_to` is exclusive, so
+      these never overlap the real one -- an overlap would be a contradiction
+      in the merchant's own records, and that is a refusal case for the tier
+      rather than a defect for the generator to inject.
+    - **Advices for other payments.** International payments that converted
+      exactly as reported still generate paperwork.
+
+    The counts scale with the real notices, so a book with no fee variance in
+    it still carries a plausible drawer.
+    """
+    methods = sorted(w.fees.mdr_bps)
+    repriced = {n.method for n in w.rate_notices}
+    horizon = BASE_DATE
+
+    # Superseded notices for methods that were genuinely repriced.
+    for notice in list(w.rate_notices):
+        for step in range(1, w.rng.randint(2, 4)):
+            closes = notice.effective_from - timedelta(days=step * 30)
+            w.rate_notices.append(RateNotice(
+                notice_id=f"notice_{len(w.rate_notices):04d}",
+                method=notice.method,
+                mdr_bps=max(1, notice.mdr_bps - w.rng.choice([10, 20, 35, 60])),
+                effective_from=closes - timedelta(days=30),
+                effective_to=closes,
+                reference=f"superseded schedule for {notice.method}",
+            ))
+
+    # Notices about methods nothing happened to.
+    quiet = [m for m in methods if m not in repriced] or methods
+    for _ in range(w.rng.randint(2, 5)):
+        method = w.rng.choice(quiet)
+        starts = horizon - timedelta(days=w.rng.randint(20, 200))
+        w.rate_notices.append(RateNotice(
+            notice_id=f"notice_{len(w.rate_notices):04d}",
+            method=method,
+            mdr_bps=w.fees.mdr_for(method) or w.rng.choice([150, 200, 250]),
+            effective_from=starts,
+            effective_to=starts + timedelta(days=w.rng.randint(5, 25)),
+            reference=f"rate circular for {method}",
+        ))
+
+    # Advices for international payments that behaved.
+    advised = {a.payment_id for a in w.fx_advices}
+    others = [
+        p for p in w.payments
+        if p.payment_id not in advised and p.method == "card_international"
+    ]
+    w.rng.shuffle(others)
+    for p in others[: w.rng.randint(1, 4)]:
+        w.fx_advices.append(FxAdvice(
+            advice_id=f"fxadv_{len(w.fx_advices):04d}",
+            payment_id=p.payment_id,
+            rate_pct_of_gross=0.0,
+            advised_at=BASE_DATE,
+            reference=f"conversion advice for {p.payment_id} (no slip)",
+        ))
 
 
 def generate(cfg: GeneratorConfig | None = None) -> LabelledBatch:
@@ -782,12 +989,16 @@ def generate(cfg: GeneratorConfig | None = None) -> LabelledBatch:
     _build_clean(w, cfg)
     _apply_defects(w, cfg.mix)
 
+    _file_decoy_paperwork(w, cfg)
+
     sources = SourceBundle(
         orders=tuple(w.orders),
         payments=tuple(sorted(w.payments, key=lambda p: p.payment_id)),
         adjustments=tuple(sorted(w.adjustments, key=lambda a: a.adjustment_id)),
         settlements=tuple(w.settlements),
         bank_lines=tuple(sorted(w.bank_lines, key=lambda b: b.bank_line_id)),
+        rate_notices=tuple(sorted(w.rate_notices, key=lambda n: n.notice_id)),
+        fx_advices=tuple(sorted(w.fx_advices, key=lambda a: a.advice_id)),
     )
     truth = GroundTruth(
         leg1=dict(w.leg1),

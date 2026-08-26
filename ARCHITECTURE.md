@@ -7,6 +7,11 @@ the gateway's settlement report, and their bank statement. Reconciling them is
 not one matching pass across three sources. It is two independent legs with
 different cardinalities, different failure modes, and different algorithms.
 
+A fourth source is not a file that disagrees but the paperwork that settles a
+disagreement: gateway repricing notices and bank FX advices. It is what turns
+"the residual is consistent with a 240bps rate" — true of any rate that closes
+the arithmetic — into "the gateway said 240bps". See *The fourth source* below.
+
 **Leg 1 — order ↔ payment, 1:1.** A record-linkage problem. Join on
 `payment_id`/`order_id`, then check the captured amount against what the order
 said was owed.
@@ -271,3 +276,54 @@ is recorded as one rather than glossed.
   asserted rather than measured against a real settlement file. Real drift
   would move both the class and the tolerance together.
 - The uniqueness guard's end-to-end coverage gap, above.
+
+
+---
+
+## The fourth source: paperwork
+
+The three files are the ones that disagree. The fourth is the one that says who
+is right.
+
+A fee variance leaves a residual that any number of rates would explain. Asked
+to account for it, a model picks one, the arithmetic closes, and the result is a
+hypothesis wearing the clothes of a proof — which is why the citation contract
+closes those as `needs_approval` rather than `resolved`. The missing ingredient
+was never reasoning. It was a document.
+
+`RateNotice` and `FxAdvice` are that document. A notice says a method's MDR
+changed on a date; an advice says what one payment's conversion actually cost.
+`legs/repricing.py` reads the notice in force for a method on a settlement date,
+re-derives the fee from the payment's own gross, and hands the corrected figure
+to the same gate as everything else. It earns nothing by being applied — it
+still has to close.
+
+**Three rules keep it from becoming a rubber stamp.**
+
+*Nothing here chooses a number.* Every rate comes from a notice; every amount is
+computed from it. The tier has no way to express "the rate must have been X".
+
+*Two notices in force is a refusal.* A method priced twice on one day is a
+contradiction in the merchant's own file. Taking the newer one would be the
+guess the rest of the system exists to avoid, so the batch goes to the queue
+with the conflicting notice ids named.
+
+*The drawer is full of circulars that do not apply.* The generator files
+superseded schedules, notices for other methods, and advices for payments that
+converted exactly as reported. A book containing exactly one notice would test
+reading the only row present, not deciding which row bears on the batch.
+
+### What this cost the agent tier, on purpose
+
+Every fee and FX defect on both published profiles now closes deterministically.
+That work used to be B3's, and taking it away was the point: a lookup and two
+multiplications should not cost a network call, and a tier that cannot replay
+identically should not be doing arithmetic that can. The same call was already
+made for `TIMING_SPILL`.
+
+What is left to B3 is the case where the paperwork is missing — a gap with no
+document behind it, where a hypothesis genuinely is the best thing available.
+`RateBook`, built by `legs.repricing.rate_book` from the same reading the
+deterministic tier uses, decides whether a cited rate turns out to be on file
+after all. One reading of what a notice means, shared by both tiers: the agent
+never interprets a document, it cites one.

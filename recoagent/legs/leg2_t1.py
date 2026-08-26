@@ -46,9 +46,10 @@ from ..schemas import (
     stable_hash,
 )
 from ..validate import Tolerance, prove_leg2
-from . import ssmp
+from . import repricing, ssmp
 
 TIER = "T1"
+RULE_RATE_NOTICE = "leg2.t1.rate_notice"
 RULE_AMOUNT_WINDOW = "leg2.t1.amount_window"
 RULE_SSMP_RESIDUAL = "leg2.t1.ssmp_residual"
 
@@ -139,12 +140,68 @@ def recover(sources: SourceBundle, tol: Tolerance, result: ReconResult) -> None:
                 continue
 
             settlement = settlement_by_id[settlement_id]
+            members = sources.payments_by_settlement(settlement_id)
+            linked = sources.adjustments_by_settlement(settlement_id)
+
+            # ── T1a: the merchant's own paperwork, before any search ────
+            # A rate notice or an FX advice explains the gap outright, and
+            # reading a document beats searching for a subset that imitates
+            # one. Tried first so the solver is never handed a residual that
+            # was never a mystery.
+            correction = repricing.corrections(sources, settlement)
+            if correction.refusal:
+                survivors.append(replace(
+                    exc,
+                    reason=f"{exc.reason}; {correction.refusal}",
+                    escalated_from_tier=TIER,
+                ))
+                continue
+            if correction.applies:
+                proof = prove_leg2(
+                    line, settlement, members, linked, tol,
+                    repriced=correction.nets,
+                )
+                if proof.closes:
+                    result.matches.append(
+                        MatchRecord(
+                            match_id=f"m2_{line.bank_line_id}",
+                            leg=2,
+                            tier=TIER,
+                            rule_id=RULE_RATE_NOTICE,
+                            left_ids=(line.bank_line_id,),
+                            right_ids=(settlement.settlement_id,),
+                            confidence=CONF_AMOUNT_WINDOW,
+                            proof=proof,
+                            input_hash=stable_hash(
+                                line, settlement, *members, *linked
+                            ),
+                            created_at=_now(),
+                        )
+                    )
+                    claimed.add(settlement.settlement_id)
+                    continue
+                # It did not close. The notice still applies, so carry the
+                # corrected residual forward -- the remaining gap is a
+                # different problem and the next tier should see it as such.
+
             pool = _orphan_pool(sources, settlement.settled_at)
             values = [a.amount_paise for a in pool]
 
             search = ssmp.enumerate_closing_subsets(
                 values, exc.residual_paise, tol.leg2_paise
             )
+
+            # A solution is only usable if it names rows that exist. The gate
+            # rejects a subset that does not add up; it must also reject one
+            # that points outside the pool, and reject it the same way -- by
+            # declining, not by raising. A solver returning garbage indices is
+            # the same class of event as a model returning a fabricated row.
+            in_range = tuple(
+                sol for sol in search.solutions
+                if all(0 <= i < len(pool) for i in sol.indices)
+            )
+            if len(in_range) != len(search.solutions):
+                search = replace(search, solutions=in_range)
 
             if not search.actionable:
                 survivors.append(
@@ -188,8 +245,6 @@ def recover(sources: SourceBundle, tol: Tolerance, result: ReconResult) -> None:
                     )
                 )
                 continue
-            members = sources.payments_by_settlement(settlement_id)
-            linked = sources.adjustments_by_settlement(settlement_id)
             proof = prove_leg2(
                 line, settlement, members, linked, tol, hypothesised=hypothesised
             )

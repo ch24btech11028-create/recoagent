@@ -40,6 +40,7 @@ MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean":
 TIER_OF_RULE = {
     "leg1.t0.exact_order_id": "T0",
     "leg2.t0.exact_utr": "T0",
+    "leg2.t1.rate_notice": "T1",
     "leg2.t1.amount_window": "T1",
     "leg2.t1.ssmp_residual": "T1",
     "leg2.t1.spill_pair": "T1",
@@ -49,6 +50,7 @@ TIER_OF_RULE = {
 RULE_LABEL = {
     "leg1.t0.exact_order_id": "exact order id",
     "leg2.t0.exact_utr": "exact UTR",
+    "leg2.t1.rate_notice": "gateway repricing notice, fees re-derived",
     "leg2.t1.amount_window": "amount + date window",
     "leg2.t1.ssmp_residual": "subset-sum over unlinked rows",
     "leg2.t1.spill_pair": "cross-batch cutoff spill",

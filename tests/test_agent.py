@@ -9,6 +9,9 @@ arithmetic that either closes or does not.
 
 import pytest
 
+from dataclasses import replace
+from datetime import timedelta
+
 from recoagent.agent import (
     CitedAdjustment,
     FeeVarianceClaim,
@@ -24,12 +27,26 @@ from recoagent.agent import (
 from recoagent.agent.proposer import _parse_tool_call
 from recoagent.eval.scorer import score
 from recoagent.generator import DefectMix, GeneratorConfig, generate
+from recoagent.money import FeeSchedule
 from recoagent.pipeline import run_b2, run_b3
 from recoagent.validate import Tolerance
 
 
-def _batch(n=1500, seed=7):
-    return generate(GeneratorConfig(n_orders=n, seed=seed, mix=DefectMix.dev()))
+def _batch(n=1500, seed=7, paperwork=False):
+    """By default, a book whose rate notices never arrived.
+
+    With the paperwork present the deterministic tier closes fee and FX
+    variances itself, so the agent tier has nothing to propose -- that is the
+    whole point of `legs/repricing.py`. The territory the agent still owns is
+    the case where no document explains the gap, so these tests run without one
+    unless a test is specifically about verifying a citation against a rate book.
+    """
+    batch = generate(GeneratorConfig(n_orders=n, seed=seed, mix=DefectMix.dev()))
+    if paperwork:
+        return batch
+    return replace(batch, sources=replace(
+        batch.sources, rate_notices=(), fx_advices=()
+    ))
 
 
 def _first_target(batch):
@@ -605,3 +622,108 @@ def test_each_worker_gets_its_own_proposer():
     )
     # One per worker thread, not one per case.
     assert 1 <= len(built) <= 4
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The rate book, built from the book's own paperwork rather than from the claim
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _repriced_batch(sources, notice):
+    """A settlement inside the notice's window, and one of its payments on that method."""
+    for settlement in sorted(sources.settlements, key=lambda s: s.settled_at):
+        if not notice.covers(settlement.settled_at, notice.method):
+            continue
+        for payment in sources.payments_by_settlement(settlement.settlement_id):
+            if payment.method == notice.method:
+                return settlement, payment
+    raise AssertionError("no batch inside the notice window; the test would prove nothing")
+
+
+def test_the_production_rate_book_comes_from_the_sources():
+    """The P0 the whole citation contract was waiting on.
+
+    `RateBook` existed and `resolve()` consulted it, but nothing outside the
+    tests ever populated it -- so in production every fee and FX explanation was
+    unverified by construction and closed as `needs_approval`. It is now built
+    by `legs.repricing.rate_book` from the notices and advices in the book, and
+    `run_b3` passes it in.
+    """
+    from recoagent.legs.repricing import rate_book
+
+    batch = _batch(paperwork=True)
+    live = [n for n in batch.sources.rate_notices if n.effective_to is None]
+    assert live, "no live notice in this book; the test would prove nothing"
+
+    when = max(s.settled_at for s in batch.sources.settlements)
+    book = rate_book(batch.sources, when)
+
+    for notice in live:
+        assert book.confirms_mdr(notice.method, notice.mdr_bps)
+        # A rate nobody issued is not confirmed just because it is close.
+        assert not book.confirms_mdr(notice.method, notice.mdr_bps + 1)
+
+
+def test_a_cited_rate_that_is_on_file_resolves():
+    """Verified means a document says so, and the row books as reconciled."""
+    from recoagent.agent.citations import FeeVarianceClaim, resolve
+    from recoagent.legs.repricing import rate_book
+
+    batch = _batch(paperwork=True)
+    sources = batch.sources
+    notice = next(n for n in sources.rate_notices if n.effective_to is None)
+    # A batch inside the notice's window. One settled before it takes effect is
+    # correctly *not* covered, which is the neighbouring test.
+    settlement, payment = _repriced_batch(sources, notice)
+    book = rate_book(sources, settlement.settled_at)
+
+    claim = FeeVarianceClaim(
+        payment_ids=(payment.payment_id,),
+        actual_mdr_bps=notice.mdr_bps,
+        rationale="the gateway's repricing notice",
+    )
+    out = resolve(sources, settlement, [claim], FeeSchedule.default(), book)
+    assert out.ok, out.errors
+    assert out.fully_verified, out.unverified_reasons
+
+
+def test_a_cited_rate_nobody_issued_still_needs_approval():
+    """The control. Without this, `verified` would just mean `well-formed`."""
+    from recoagent.agent.citations import FeeVarianceClaim, resolve
+    from recoagent.legs.repricing import rate_book
+
+    batch = _batch(paperwork=True)
+    sources = batch.sources
+    notice = next(n for n in sources.rate_notices if n.effective_to is None)
+    settlement, payment = _repriced_batch(sources, notice)
+    book = rate_book(sources, settlement.settled_at)
+
+    invented = FeeVarianceClaim(
+        payment_ids=(payment.payment_id,),
+        actual_mdr_bps=notice.mdr_bps + 37,   # plausible, self-consistent, unissued
+        rationale="a rate that closes the arithmetic",
+    )
+    out = resolve(sources, settlement, [invented], FeeSchedule.default(), book)
+    assert out.ok, out.errors
+    assert not out.fully_verified
+    assert out.unverified_reasons
+
+
+def test_an_expired_notice_does_not_verify_a_claim():
+    """Paperwork that has been superseded is not paperwork."""
+    from recoagent.legs.repricing import rate_book
+
+    batch = _batch(paperwork=True)
+    sources = batch.sources
+    expired = [n for n in sources.rate_notices if n.effective_to is not None]
+    assert expired, "no superseded notice in this book; the test would prove nothing"
+    stale = expired[0]
+
+    after = stale.effective_to + timedelta(days=1)
+    book = rate_book(sources, after)
+    live_rates = {
+        n.mdr_bps for n in sources.rate_notices
+        if n.method == stale.method and n.covers(after, n.method)
+    }
+    if stale.mdr_bps not in live_rates:
+        assert not book.confirms_mdr(stale.method, stale.mdr_bps)

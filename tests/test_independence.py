@@ -17,6 +17,10 @@ MATCHER_MODULES = [
     ROOT / "legs" / "leg2.py",
     ROOT / "legs" / "leg2_t1.py",
     ROOT / "legs" / "ssmp.py",
+    # The tier that reads the merchant's paperwork is under the same rule. It
+    # applies a rate from a source document; being able to see the injected
+    # rate instead would make every fee variance it closes meaningless.
+    ROOT / "legs" / "repricing.py",
     ROOT / "legs" / "__init__.py",
     ROOT / "validate.py",
     ROOT / "pipeline.py",

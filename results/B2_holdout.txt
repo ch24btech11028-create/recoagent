@@ -1,19 +1,19 @@
 
-  sources: orders=2000  payments=2060  adjustments=31  settlements=167  bank_lines=164  defects=130
+  sources: orders=2000  payments=2060  adjustments=31  settlements=167  bank_lines=164  rate_notices=7  fx_advices=4  defects=130
 
 ========================================================================
 RUNG B2   profile=holdout   seed=21
 ========================================================================
 
   FALSE-MATCH RATE         0.00%     <- lead metric
-  Auto-match rate         95.24%
-  Credit value matched    93.89%     (Rs 2,33,95,683.56 of Rs 2,49,19,015.76)
+  Auto-match rate         95.66%
+  Credit value matched    98.18%     (Rs 2,49,17,275.49 of Rs 2,53,78,090.37)
 
 ------------------------------------------------------------------------
 LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC
 ------------------------------------------------------------------------
 1       2000     1908   1908      0   0.00%   95.40%     92
-2        164      153    153      0   0.00%   93.29%     11
+2        164      162    162      0   0.00%   98.78%      2
 
 ------------------------------------------------------------------------
 DEFECT ACCOUNTING                  INJECTED  FLAGGED  RESOLVED MISHANDLED
@@ -22,8 +22,8 @@ ADJUSTMENT_ENTRY                          6        0         6          0
 CHARGEBACK_NETTED                         5        0         5          0
 DUPLICATE_PAYMENT                        60       60         0          0
 DUPLICATE_UTR                             1        1         0          0
-FEE_TAX_VARIANCE                          7        7         0          0
-FX_CONVERSION                             2        2         0          0
+FEE_TAX_VARIANCE                          7        0         7          0
+FX_CONVERSION                             2        0         2          0
 MISSING_BANK_LINE                         4        4         0          0
 NARRATION_TRUNCATION                      2        0         2          0
 PARTIAL_CAPTURE                          32       32         0          0

@@ -6,14 +6,14 @@ LEG 2 TOLERANCE SWEEP   n=2000  seed=7  profile=dev
 
    TOLERANCE      RECALL     FMR  RESOLVED  AMBIGUOUS  MISHANDLED
 ------------------------------------------------------------------------------
-     Rs 0.00     90.24%   0.00%        21          0           0
-     Rs 0.01     90.85%   0.00%        22          0           0
-     Rs 0.05     92.07%   0.00%        24          0           0
-     Rs 0.10     93.29%   0.00%        26          0           0
-     Rs 0.50     93.29%   0.00%        26          0           0
-     Rs 1.00     93.29%   0.00%        26          0           0
-    Rs 10.00     95.12%   0.00%        29          1           0
-   Rs 100.00     94.51%   0.00%        28          5           0
+     Rs 0.00     94.51%   0.00%        28          0           0
+     Rs 0.01     95.12%   0.00%        29          0           0
+     Rs 0.05     96.34%   0.00%        31          0           0
+     Rs 0.10     97.56%   0.00%        33          0           0
+     Rs 0.50     97.56%   0.00%        33          0           0
+     Rs 1.00     96.34%   0.00%        31          2           0
+    Rs 10.00     96.34%   0.00%        31          2           0
+   Rs 100.00     91.46%   0.00%        23         10           0
  Rs 1,000.00     92.07%   0.00%        24          9           0
 ------------------------------------------------------------------------------
 
@@ -29,12 +29,12 @@ LEG 2 TOLERANCE SWEEP   n=2000  seed=7  profile=dev
 
 DEFECT CLASS RESOLVED        Rs 0.00   Rs 0.10   Rs 0.50  Rs 10.00 Rs 100.00
 ------------------------------------------------------------------------------
-ADJUSTMENT_ENTRY                   4         4         4         4         2
-CHARGEBACK_NETTED                  3         3         3         2         2
-FEE_TAX_VARIANCE                   0         0         0         2         4  <- REAL MONEY, absorbed
-FX_CONVERSION                      0         0         0         2         3  <- REAL MONEY, absorbed
+ADJUSTMENT_ENTRY                   4         4         4         4         3
+CHARGEBACK_NETTED                  3         3         3         3         0
+FEE_TAX_VARIANCE                   4         4         4         4         4
+FX_CONVERSION                      3         3         3         3         3
 NARRATION_TRUNCATION               3         3         3         3         3
-REFUND_NETTED                      7         7         7         7         5
+REFUND_NETTED                      7         7         7         5         1
 ROUNDING_DRIFT                     0         5         5         5         5  <- rounding, legitimate
 TIMING_SPILL                       4         4         4         4         4
 ------------------------------------------------------------------------------

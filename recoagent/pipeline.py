@@ -89,12 +89,31 @@ def run_b3(
     made the system better, and the scorecard alone would not show it.
     """
     from .agent.tier import recover_with_agent
+    from .legs.repricing import rate_book
 
     tol = tol or Tolerance.calibrated()
     result = _compose(sources, tol, "B3", with_leg2_t1=True)
+
+    # The agent's citations are checked against the merchant's own paperwork.
+    # Without this the tier can compute a claimed rate's consequences but has
+    # nothing to confirm the rate itself, so every fee and FX explanation --
+    # however well reasoned -- can only ever close as `needs_approval`. Built
+    # from the same reading `legs/repricing.py` uses, so a rate cannot be
+    # authoritative for one tier and not the other.
+    #
+    # Note what this does *not* do: a notice that applies cleanly has already
+    # been spent by the deterministic tier, so the book is closed before the
+    # model sees it. What reaches here is the harder remainder -- a batch whose
+    # paperwork is missing, or partial, or contradicted -- and the rate book's
+    # job there is to catch the cases where a cited rate does turn out to be on
+    # file after all.
+    when = max((s.settled_at for s in sources.settlements), default=None)
+    book = rate_book(sources, when) if when is not None else None
+
     report = recover_with_agent(
         sources, tol, result, proposer,
         max_workers=max_workers, proposer_factory=proposer_factory,
+        rate_book=book,
     )
     return result, report
 

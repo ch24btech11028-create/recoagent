@@ -6,6 +6,7 @@ than an anecdote costing API calls.
 """
 
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -21,7 +22,20 @@ from recoagent.validate import Tolerance
 
 @pytest.fixture(scope="module")
 def case():
+    """A batch whose paperwork never arrived.
+
+    Once a rate notice is in the book the deterministic tier closes the variance
+    outright and there is nothing here for an agent to reason about -- which is
+    the point of having built that tier. What is left for the agent tier is the
+    case where the merchant has not got the circular: the gap is real, no
+    document explains it, and a hypothesis is the best thing available. So the
+    fixture strips the notices to put the agent back in the only territory it
+    still honestly owns.
+    """
     batch = generate(GeneratorConfig(n_orders=1500, seed=7, mix=DefectMix.dev()))
+    batch = replace(batch, sources=replace(
+        batch.sources, rate_notices=(), fx_advices=()
+    ))
     result = run_b2(batch.sources)
     exc = next(
         e for e in result.exceptions

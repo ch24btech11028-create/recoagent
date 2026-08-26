@@ -1,5 +1,5 @@
 
-  sources: orders=2000  payments=2000  adjustments=19  settlements=164  bank_lines=164  defects=0
+  sources: orders=2000  payments=2000  adjustments=19  settlements=164  bank_lines=164  rate_notices=3  fx_advices=4  defects=0
 
 ========================================================================
 RUNG B0   profile=clean   seed=7

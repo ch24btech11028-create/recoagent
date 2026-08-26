@@ -19,11 +19,11 @@ below. Whole batch runs in **0.15s**, single-threaded.
 | | B0 dev | B0 held-out | **B2 dev** | **B2 held-out** | clean (control) |
 |---|---:|---:|---:|---:|---:|
 | **False-match rate** | **0.00%** | **0.00%** | **0.00%** | **0.00%** | **0.00%** |
-| Auto-match rate | 93.85% | 93.85% | 95.24% | 95.24% | 100.00% |
-| Credit value matched | 77.89% | 76.21% | 92.88% | 93.89% | 100.00% |
+| Auto-match rate | 93.85% | 93.85% | 95.56% | 95.66% | 100.00% |
+| Credit value matched | 71.99% | 77.25% | 95.51% | 98.18% | 100.00% |
 | Leg 1 recall (order → payment) | 95.40% | 95.40% | 95.40% | 95.40% | 100.00% |
-| Leg 2 recall (credit → batch) | 75.00% | 75.00% | **93.29%** | **93.29%** | 100.00% |
-| Leg 2 exceptions | 41 | 41 | 11 | 11 | 0 |
+| Leg 2 recall (credit → batch) | 75.00% | 75.00% | **97.56%** | **98.78%** | 100.00% |
+| Leg 2 exceptions | 41 | 41 | 4 | 2 | 0 |
 | Defects mishandled | 0 | 0 | 0 | 0 | 0 |
 
 **Read the first row first.** A reconciliation engine that matches everything
@@ -45,8 +45,10 @@ let the model take credit for something arithmetic closes on its own. **Every
 class that can be closed mechanically is closed mechanically first**, so what
 B3 is measured on is its own contribution rather than borrowed. What survives
 needs a *reason* rather than a sum — a mid-cycle repricing, an FX rate the
-report does not carry — and that territory is deliberately narrow: 7 defects of
-129 on dev.
+report does not carry — and that territory is deliberately narrow, and has since
+narrowed again: the fee and FX cases that used to sit here are now closed from
+the merchant's own paperwork (see below), which leaves B3 the cases where no
+document exists at all.
 
 | Defect class | B0 | B2 |
 |---|---|---|
@@ -54,40 +56,51 @@ report does not carry — and that territory is deliberately narrow: 7 defects o
 | `ROUNDING_DRIFT` | flagged | **resolved** |
 | `NARRATION_TRUNCATION` | flagged | **resolved** |
 | `TIMING_SPILL` | flagged | **resolved** (4/4 dev, 6/6 held-out) |
-| `FEE_TAX_VARIANCE`, `FX_CONVERSION` | flagged | flagged → B3 |
+| `FEE_TAX_VARIANCE`, `FX_CONVERSION` | flagged | **resolved** from the rate notice / FX advice |
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
 
-### B3 — the LLM exception tier, measured honestly
+### The fourth source, and what it did to B3
 
-Run against **nvidia/nemotron-3-ultra-550b-a55b** via NVIDIA NIM, under the
-citation contract. Full detail in
-[`results/B3_citation_contract.txt`](results/B3_citation_contract.txt).
+A fee variance used to be the agent tier's to explain. It is not any more.
+
+The book now carries what a merchant actually receives: the gateway's
+**repricing notice** and the bank's **FX advice**, alongside decoys — circulars
+for other methods, schedules superseded months ago, advices for payments that
+converted exactly as reported. `legs/repricing.py` reads the notice in force for
+a method on a settlement date, re-derives the fee from the payment's own gross,
+and checks. Every fee and FX defect on both published profiles now closes that
+way, deterministically:
 
 | | dev | held-out |
 |---|---:|---:|
-| Cases attempted | 7 | 9 |
-| **Resolved (source-backed)** | **0** | **0** |
-| Needs approval (AI-supported explanation) | 5 | 7 |
-| Rejected by the gate | 0 | 0 |
-| Declined by the model | 1 | 0 |
-| Malformed reply | 1 | 2 |
-| Leg 2 recall | 93.29% → **93.29%** | 93.29% → **93.29%** |
+| `FEE_TAX_VARIANCE` resolved | 4 of 4 | 7 of 7 |
+| `FX_CONVERSION` resolved | 3 of 3 | 2 of 2 |
+| Leg 2 recall | 93.29% → **97.56%** | 93.29% → **98.78%** |
 | **False-match rate** | **0.00%** | **0.00%** |
 
-**B3 reconciles nothing, and that is the correct result.** Every explanation it
-produced rests on a rate the model chose — a claimed MDR, a claimed FX slip —
-and nothing in the sources confirms those rates. The system computes the money
-from the claim and the arithmetic closes, but a closed sum on an unconfirmed
-premise is a hypothesis, so all twelve are held as *AI-supported explanations
-awaiting approval* rather than booked as reconciled.
+**This deliberately takes work away from the model.** The missing ingredient was
+never reasoning — it was a document. Once the document is in the book the job is
+a lookup and two multiplications, and that belongs in a tier that costs nothing
+and replays identically, not one that costs a network call. It is the same call
+already made for `TIMING_SPILL`, made for the same reason.
 
-What the tier actually delivers: twelve bare residuals become twelve worked
-explanations — *"the residual equals exactly 12.5% of total fee+tax on this
-batch"* — which is the analysis a human would otherwise do by hand. Useful.
-Not a reconciliation. With an authoritative rate source (a gateway repricing
-notice, a bank FX advice) wired into `RateBook`, the same claims would verify
-and book outright; that is the top item on the roadmap.
+Where two notices are in force for one method on one day, the tier **refuses**.
+That is a contradiction in the merchant's own file, and picking the newer one
+would be exactly the guess the rest of this system exists to avoid.
+
+**What B3 still owns.** The case where the paperwork is missing. A gap with no
+document behind it is where a hypothesis is genuinely the best thing available,
+and `RateBook` — now populated from the sources rather than left empty — is what
+decides whether a cited rate turns out to be on file after all. A rate that is
+confirmed books as `resolved`; one nobody issued still closes as
+`needs_approval`, however well the arithmetic works out.
+
+**The previous B3 measurement is void and is not quoted here.** It was measured
+when fee and FX cases still reached the model, so its denominators describe a
+tier that no longer sees them. It is quarantined in
+[`results/void/`](results/void/) with a note. B3 needs re-measuring against what
+is actually left to it, and that number is not yet in this repository.
 
 **An earlier design reported 95.73% recall here, and that number was wrong.**
 The proposer could state amounts, so "there was an adjustment of exactly the

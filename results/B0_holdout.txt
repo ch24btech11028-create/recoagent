@@ -1,5 +1,5 @@
 
-  sources: orders=2000  payments=2060  adjustments=31  settlements=167  bank_lines=164  defects=130
+  sources: orders=2000  payments=2060  adjustments=31  settlements=167  bank_lines=164  rate_notices=7  fx_advices=4  defects=130
 
 ========================================================================
 RUNG B0   profile=holdout   seed=21
@@ -7,7 +7,7 @@ RUNG B0   profile=holdout   seed=21
 
   FALSE-MATCH RATE         0.00%     <- lead metric
   Auto-match rate         93.85%
-  Credit value matched    76.21%     (Rs 1,89,91,988.74 of Rs 2,49,19,015.76)
+  Credit value matched    77.25%     (Rs 1,96,03,870.96 of Rs 2,53,78,090.37)
 
 ------------------------------------------------------------------------
 LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC

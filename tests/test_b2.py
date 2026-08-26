@@ -85,17 +85,23 @@ def test_the_solver_closes_exactly_the_classes_it_claims(
     assert spill.resolved + spill.flagged == spill.injected
     assert spill.mishandled == 0
 
-    # What is left needs a *reason* rather than a sum -- a repricing, an FX
-    # rate -- or must stay refused on principle. This is the territory B3 has
-    # to earn, and it is deliberately small: closing TIMING_SPILL
-    # deterministically rather than handing it to the model is what keeps the
-    # eventual LLM result honest.
-    for cls in (
-        DefectClass.FEE_TAX_VARIANCE,
-        DefectClass.FX_CONVERSION,
-        DefectClass.DUPLICATE_UTR,
-    ):
-        assert by_class[cls].flagged == by_class[cls].injected, cls
+    # A repricing and an FX slip are now closed from the merchant's own
+    # paperwork -- the notice and the advice -- rather than flagged. That moved
+    # them out of the agent tier's territory on purpose: the model was never
+    # short of reasoning on these, it was short of a document, and once the
+    # document is in the book the work is a lookup and two multiplications.
+    # Same call as TIMING_SPILL, for the same reason.
+    for cls in (DefectClass.FEE_TAX_VARIANCE, DefectClass.FX_CONVERSION):
+        acc = by_class[cls]
+        assert acc.resolved == acc.injected, acc
+        assert acc.mishandled == 0, acc
+
+    # What genuinely stays refused. A duplicated UTR is ambiguous by
+    # construction: two lines carry the same reference and nothing in the book
+    # says which is which, so there is no document that would settle it and no
+    # arithmetic that would either.
+    dup = by_class[DefectClass.DUPLICATE_UTR]
+    assert dup.flagged == dup.injected, dup
 
 
 def test_clean_book_is_still_perfect_at_b2():

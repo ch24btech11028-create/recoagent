@@ -5,6 +5,7 @@ endpoint would be skipped in CI and would stop protecting anything.
 """
 
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -16,7 +17,24 @@ from recoagent.qa import agent, bank
 
 @pytest.fixture(scope="module")
 def run():
-    batch = generate(GeneratorConfig(n_orders=1500, seed=7, mix=DefectMix.dev()))
+    """A book whose rate notices never arrived, so there is something to ask about.
+
+    The bank derives its questions from the run, and the hardest ones -- the
+    largest unexplained gap, what would remain if it were fixed, which of two
+    gaps is bigger -- need an unexplained gap to exist. Since `legs/repricing.py`
+    landed, a book with its paperwork intact barely has any: the dev mix at 2,000
+    orders now closes every residual-bearing leg-2 exception. That is the product
+    working, and it would quietly hollow out this bank into portfolio counts
+    alone.
+
+    So the fixture withholds the notices, which is the case the questions are
+    really about: a gap nobody has a document for. Chasing a seed that still
+    happened to leave a residual would make the bank a property of the seed.
+    """
+    batch = generate(GeneratorConfig(n_orders=2000, seed=7, mix=DefectMix.dev()))
+    batch = replace(batch, sources=replace(
+        batch.sources, rate_notices=(), fx_advices=()
+    ))
     result = run_b2(batch.sources)
     return batch, result, bank.build(batch, result)
 
