@@ -1,0 +1,51 @@
+========================================================================
+RECOAGENT ON BENCHREC  (cash v1.0 eval, 32,048 labelled statement lines)
+========================================================================
+
+  WRONG-MATCH RATE          0.28%   <- lead metric
+  coverage                 84.36%   (27,037 of 32,048 attempted)
+  accuracy                 84.12%   (correct out of every line)
+
+  correct 26,960   WRONG 77   refused 5,011
+  window +/-1d   max subset 1   0s
+
+------------------------------------------------------------------------
+  WHERE THE MATCHES CAME FROM
+------------------------------------------------------------------------
+  TIER                                     MATCHED    WRONG     RATE
+  T0 amount+value-date, unique              27,037       77    0.28%
+
+------------------------------------------------------------------------
+  WHAT IT REFUSED, AND WHY
+------------------------------------------------------------------------
+  ambiguous                                  3,492   several allocations fit equally well
+  no candidate                               1,519   no A-side row carries this amount at all
+
+  Of the refusals, 1,779 lines have an answer that appears
+  nowhere in the eval file's candidate pool. No matcher reading only this
+  file can reach them; they are a ceiling, not a miss.
+
+------------------------------------------------------------------------
+  AGAINST THE MATCHER THAT SHIPS WITH BENCHREC
+------------------------------------------------------------------------
+                          COVERAGE    WRONG-MATCH RATE
+  MatcherByChatGPT          64.90%               4.80%
+  RecoAgent                 84.36%               0.28%
+
+  Both numbers matter and neither is free. Every wrong match is money
+  filed against the wrong entry, found later by someone who has to
+  unpick it -- and the baseline reported high confidence on all of its.
+  Refusing costs a queue item. Guessing costs a correction.
+
+------------------------------------------------------------------------
+  WHAT DID NOT TRANSFER
+------------------------------------------------------------------------
+  The subset-sum tier earns nothing here, and the measurement says so:
+  over 2,000 lines it ran for 231s and closed 0 additional matches. It
+  finds subsets -- it then refuses them, because in a pool of ~600 rows
+  a day, three amounts summing to a target is a coincidence rather than
+  a batch, and the rows it names belong to different allocations. That
+  is the gate working, not failing: BenchRec has no batch structure to
+  prove, so there is nothing for a proof to be about. It is off by
+  default; --max-size 3 reproduces the run.
+========================================================================

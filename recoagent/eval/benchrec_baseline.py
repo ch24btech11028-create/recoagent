@@ -6,10 +6,16 @@ solution file covers. Scoring it gives an external, third-party data point for
 the argument this whole system is built around, on data nobody here generated.
 
 **This does not evaluate RecoAgent, and must never be presented as if it does.**
-BenchRec is a different problem shape: 1:1 prediction of an allocation key from
-a bank statement line, resolved by text similarity. RecoAgent solves N:1 subset
-matching over a payment batch with a fee model. There is no batch to sum here
-and no fee to model, so `prove_leg2` has nothing to say about it.
+BenchRec is a different problem shape: prediction of an allocation key from a
+bank statement line, resolved by text similarity, against one account in one
+currency. RecoAgent solves N:1 subset matching over a payment batch with a fee
+model. There is no fee to model here, so `prove_leg2` has nothing to say about
+it.
+
+It is *mostly* 1:1 but not entirely -- 6,000 of BenchRec's 56,074 training
+groups carry more than one row a side, including 532 that are 2:1 and 424 that
+are 3:1. `recoagent.eval.benchrec` runs our own matcher over the same rows and
+reports what that structure is and is not worth.
 
 What transfers is the *metric*, and that is the point of running this at all.
 
@@ -110,7 +116,8 @@ def render(result: dict) -> str:
         "  confidence on all of them -- the failure mode RecoAgent's arithmetic",
         "  gate exists to make structurally impossible.",
         "",
-        "  NOT a RecoAgent result. Different problem shape: 1:1 allocation-key",
+        "  NOT a RecoAgent result -- see recoagent.eval.benchrec for that.",
+        "  Different problem shape: allocation-key",
         "  prediction by text similarity, not N:1 subset matching over a batch.",
         "=" * 72,
     ]

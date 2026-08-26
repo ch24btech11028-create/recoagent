@@ -20,6 +20,7 @@ ICAIF 2023, CC BY 4.0. Scored against BenchRec_cash_v1.0_solution.csv.
   confidence on all of them -- the failure mode RecoAgent's arithmetic
   gate exists to make structurally impossible.
 
-  NOT a RecoAgent result. Different problem shape: 1:1 allocation-key
+  NOT a RecoAgent result -- see recoagent.eval.benchrec for that.
+  Different problem shape: allocation-key
   prediction by text similarity, not N:1 subset matching over a batch.
 ========================================================================
