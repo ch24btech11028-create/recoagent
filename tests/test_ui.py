@@ -95,8 +95,14 @@ def test_the_queue_never_carries_the_answer_key(run):
     # An allowlist, not a banned-word scan: a new field that leaked the answer
     # key would have to be added here deliberately, which is the point.
     allowed = {
-        "id", "leg", "kind", "residual_paise", "amount", "direction",
-        "severity", "severity_hint", "suspected", "reason", "stopped_at",
+        # `xid` is the exception's own id, so a row can be deep-linked and its
+        # case file fetched; `related` is the counterparty it was adjudicated
+        # against. Both are the system's own output -- neither can be known
+        # without running the matchers -- and both are needed by a screen that
+        # opens an item rather than just listing it.
+        "xid", "id", "leg", "kind", "related", "residual_paise", "amount",
+        "direction", "severity", "severity_hint", "suspected", "reason",
+        "stopped_at",
     }
     for row in d["queue"]:
         assert set(row) == allowed, f"unexpected field on a queue row: {set(row) - allowed}"
@@ -215,8 +221,13 @@ def server():
 
 
 def _get(url):
-    with urllib.request.urlopen(url, timeout=30) as r:
-        return r.status, json.loads(r.read())
+    # A refusal is a result here, not an exception: several of these tests are
+    # about *which* 4xx a bad request earns.
+    try:
+        with urllib.request.urlopen(url, timeout=30) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read())
 
 
 def _post(url, payload):
@@ -235,7 +246,16 @@ def test_the_page_serves(server):
     with urllib.request.urlopen(server + "/", timeout=30) as r:
         body = r.read().decode()
     assert r.status == 200
-    assert "RecoAgent Console" in body
+    assert "<title>RecoAgent</title>" in body
+    # The shell and the container the router fills. Every screen is rendered
+    # into this one element, so if it is missing the console is a blank page.
+    assert 'id="view"' in body and 'class="app"' in body
+    # Every route in the sidebar has a view behind it. A dead link in the nav
+    # is the one bug a screenshot will not show.
+    for route in ("overview", "exceptions", "agent", "matches", "sources",
+                  "assurance", "results", "method"):
+        assert f'href="#/{route}"' in body, f"{route} is not in the nav"
+        assert f"VIEWS.{route} = " in body, f"{route} has no view behind it"
     # Self-contained apart from the font stylesheet: no script or data endpoint
     # outside this origin.
     assert "cdn" not in body.lower()
@@ -278,3 +298,67 @@ def test_an_empty_question_is_refused(server):
 
 def test_an_enormous_question_is_refused(server):
     assert _post(server + "/api/ask", {"question": "x" * 5000})[0] == 400
+
+
+# ── the screens behind the queue ─────────────────────────────────────────
+
+
+def test_a_case_file_opens_from_a_queue_row(server):
+    """Every row the queue offers must lead somewhere. A dead row is a dead end."""
+    _, run = _post(server + "/api/run", {"n": 600, "seed": 7, "profile": "dev", "rung": "B2"})
+    assert run["queue"], "no exceptions to open on the dev mix"
+    for row in run["queue"][:12]:
+        status, d = _get(server + f"/api/exception?n=600&seed=7&profile=dev&rung=B2&id={row['xid']}")
+        assert status == 200, row
+        assert d["item"]["id"] == row["id"]
+        assert d["case"]["shape"] != "bare", f"no case file for {row['id']} ({row['kind']})"
+
+
+def test_an_unknown_case_file_is_a_404(server):
+    assert _get(server + "/api/exception?n=300&id=not_a_real_exception")[0] == 404
+
+
+def test_the_match_log_pages_and_filters(server):
+    _post(server + "/api/run", {"n": 600, "seed": 7, "profile": "dev", "rung": "B2"})
+    base = "/api/matches?n=600&seed=7&profile=dev&rung=B2"
+    status, first = _get(server + base)
+    assert status == 200 and first["rows"] and first["page"] == 1
+    # Every accepted match carries the arithmetic that accepted it.
+    assert all(r["proof"] is None or r["proof"]["closes"] for r in first["rows"])
+
+    _, leg2 = _get(server + base + "&leg=2")
+    assert leg2["rows"] and all(r["leg"] == 2 for r in leg2["rows"])
+    assert leg2["total"] < first["total"]
+
+    _, page2 = _get(server + base + "&page=2")
+    assert page2["page"] == 2
+    assert {r["match_id"] for r in page2["rows"]}.isdisjoint({r["match_id"] for r in first["rows"]})
+
+
+def test_every_source_ledger_is_browsable(server):
+    from recoagent.views import SOURCE_KINDS
+
+    _post(server + "/api/run", {"n": 600, "seed": 7, "profile": "dev", "rung": "B2"})
+    for kind in SOURCE_KINDS:
+        status, d = _get(server + f"/api/source?n=600&seed=7&profile=dev&rung=B2&kind={kind}")
+        assert status == 200, kind
+        assert d["columns"] and d["blurb"]
+        # Whatever the columns say they will show, the rows have to carry.
+        for row in d["rows"][:5]:
+            assert {c["key"] for c in d["columns"]} <= set(row), kind
+
+
+def test_an_unknown_ledger_is_refused(server):
+    status, d = _get(server + "/api/source?n=300&kind=../../etc/passwd")
+    assert status == 400 and "unknown source" in d["error"]
+
+
+def test_published_results_are_served_only_from_the_results_directory(server):
+    """The name has to be one the index already offered."""
+    status, index = _get(server + "/api/results")
+    assert status == 200
+    names = {f["name"] for f in index["files"]}
+    if names:
+        assert _get(server + "/api/results?file=" + sorted(names)[0])[0] == 200
+    for escape in ("../STATE.md", "../.env", "/etc/passwd", "..%2f.env"):
+        assert _get(server + "/api/results?file=" + escape)[0] == 404, escape

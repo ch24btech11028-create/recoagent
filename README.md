@@ -187,9 +187,22 @@ python3 -m recoagent.run --n 2000 --seed 7 --rung B2 --exceptions 5
 python3 -m recoagent.ui
 ```
 
-The live console: change the run and watch the numbers move, open an exception
-to see every tier that touched it, and ask the settlement agent in English. It
-binds to loopback and needs no key — Q&A is disabled and everything else works.
+The operator console — a dashboard rather than a page. An **overview** of where
+the money is, the **exception queue** with a case file behind every row — the credit,
+the batch it joined, every payment and adjustment inside it, and the arithmetic
+that failed to close — a **match log** where each accepted match opens to the
+proof and the hash of the inputs it was decided from, the four **source ledgers**
+as the matcher receives them, an **agent** to ask in English, the **published
+results** in `results/` served as they were written, and **assurance** — the one
+screen that uses the answer key.
+
+That split is the design, not the layout. Every operator screen is built from
+the sources and the result alone — the same restriction the matchers run under,
+enforced by `tests/test_independence.py`, which reads the imports of the module
+that shapes them. Ground truth lives on Assurance, behind a heading that says so.
+
+It binds to loopback and needs no key — Q&A is disabled and everything else
+works.
 
 ```bash
 python3 -m recoagent.eval.b3 --profile dev

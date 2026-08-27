@@ -1,17 +1,24 @@
-"""The live operator console: run a reconciliation, work the queue, ask about it.
+"""The operator console: run a reconciliation, work the queue, audit the result.
 
 `recoagent.report` writes a static page — the 9am snapshot, mailable, no server.
-This is the same product with its hands free: change the run and watch the
-numbers move, open an exception and see every tier that touched it, and ask the
-settlement agent a question in English.
+This is the same product with its hands free, and it is a dashboard rather than
+a page: an overview, the exception queue with a case file behind every row, the
+match log, the four source ledgers, the agent, the published results, and the
+one screen that uses the answer key.
+
+The server is only routes and payload shaping. What each screen renders is built
+in `views.py`; the document it renders into is `console_page.py`.
 
 Three things are deliberate.
 
-**The queue still cannot see the answer key.** It is built from `result` and
-`sources` only, exactly like the static export and exactly like the matchers.
-The verification panel is the one place ground truth appears, and it is fenced
-off and labelled, because "what do I work on" and "should I believe this" are
-different questions and mixing them is how a demo starts lying.
+**No operator screen can see the answer key.** The queue, the case files, the
+match log and the source ledgers are shaped in `views.py`, which takes a
+`SourceBundle` and a `ReconResult` and nothing else — exactly like the static
+export and exactly like the matchers, and covered by the same test that proves
+it (`tests/test_independence.py`). Ground truth appears on the Assurance screen
+alone, fenced off and labelled, because "what do I work on" and "should I
+believe this" are different questions and mixing them is how a demo starts
+lying.
 
 **A question typed into the box is answered but never scored.** There is no
 ground truth for it, so it is returned marked *ungraded* with the factsheet the
@@ -42,6 +49,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+from . import views
 from .console_page import PAGE
 from .eval.scorer import Scorecard, score
 from .generator import DefectMix, GeneratorConfig, generate
@@ -49,9 +57,8 @@ from .money import format_inr
 from .pipeline import run_b0, run_b2
 from .qa import agent as qa_agent
 from .qa import bank as qa_bank
-from .report import RULE_LABEL, _severity
 from .schemas import LabelledBatch, ReconResult
-from .webstyle import CSS
+from .views import RULE_LABEL
 
 MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean": (7, DefectMix.clean)}
 
@@ -128,27 +135,6 @@ class RunCache:
 
 # ── shaping a run for the browser ────────────────────────────────────────────
 
-def _queue_payload(result: ReconResult) -> list[dict]:
-    ordered = sorted(result.exceptions, key=lambda e: (-abs(e.residual_paise or 0), e.entity_id))
-    out = []
-    for exc in ordered:
-        level, hint = _severity(exc.residual_paise)
-        out.append({
-            "id": exc.entity_id,
-            "leg": exc.leg,
-            "kind": exc.entity_kind,
-            "residual_paise": exc.residual_paise,
-            "amount": format_inr(exc.residual_paise) if exc.residual_paise is not None else "—",
-            "direction": "" if not exc.residual_paise else ("short" if exc.residual_paise < 0 else "over"),
-            "severity": level,
-            "severity_hint": hint,
-            "suspected": exc.suspected_class.value if exc.suspected_class else "not classified",
-            "reason": exc.reason,
-            "stopped_at": exc.escalated_from_tier or "T0",
-        })
-    return out
-
-
 def _recovered_payload(result: ReconResult, limit: int = 40) -> list[dict]:
     leg2 = [m for m in result.matches_for_leg(2) if m.proof is not None]
     leg2.sort(key=lambda m: (m.tier, m.match_id))
@@ -200,7 +186,8 @@ def run_payload(run: Run) -> dict:
             "unattributed": card.unattributed_exceptions,
             "injected_total": sum(a.injected for a in card.accounting),
         },
-        "queue": _queue_payload(result),
+        "queue": views.queue(result),
+        "shape": views.shape(run.batch.sources, result),
         "recovered": _recovered_payload(result),
     }
 
@@ -332,6 +319,11 @@ class Handler(BaseHTTPRequestHandler):
         # Nothing here is meant to be embedded anywhere else.
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
+        # Nothing this server sends is worth keeping. Every response describes
+        # one run of a book that is regenerated on demand, and a cached page
+        # after a restart shows an operator the previous version of the console
+        # with none of the fixes in it.
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -356,10 +348,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, PAGE.encode(), "text/html; charset=utf-8")
         elif path == "/api/model":
             self._json(self.model.status())
-        elif path == "/api/run":
-            query = parse_qs(urlparse(self.path).query)
-            flat = {k: v[0] for k, v in query.items()}
-            self._run(flat)
+        elif path in ("/api/run", "/api/exception", "/api/matches", "/api/source"):
+            query = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+            if path == "/api/run":
+                self._run(query)
+            elif path == "/api/exception":
+                self._exception(query)
+            elif path == "/api/matches":
+                self._matches(query)
+            else:
+                self._source(query)
+        elif path == "/api/results":
+            query = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+            self._results(query)
         else:
             self._json({"error": "not found"}, 404)
 
@@ -381,6 +382,68 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             return self._json({"error": str(exc)}, 400)
         self._json(run_payload(self.cache.get(key)))
+
+    def _int(self, payload: dict, name: str, default: int) -> int:
+        try:
+            return int(payload.get(name, default))
+        except (TypeError, ValueError):
+            return default
+
+    def _exception(self, payload: dict) -> None:
+        """One item's case file. Built from the sources, like everything else."""
+        try:
+            key = RunKey.parse(payload)
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
+        run = self.cache.get(key)
+        found = views.exception_case(run.batch.sources, run.result, str(payload.get("id", "")))
+        if found is None:
+            return self._json({"error": "no such exception in this run"}, 404)
+        self._json(found)
+
+    def _matches(self, payload: dict) -> None:
+        try:
+            key = RunKey.parse(payload)
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
+        run = self.cache.get(key)
+        self._json(views.matches(
+            run.result,
+            leg=str(payload.get("leg", "")),
+            tier=str(payload.get("tier", "")),
+            query=str(payload.get("q", ""))[:120],
+            page=self._int(payload, "page", 1),
+        ))
+
+    def _source(self, payload: dict) -> None:
+        try:
+            key = RunKey.parse(payload)
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
+        run = self.cache.get(key)
+        try:
+            self._json(views.source(
+                run.batch.sources,
+                str(payload.get("kind", "payments")),
+                query=str(payload.get("q", ""))[:120],
+                page=self._int(payload, "page", 1),
+            ))
+        except ValueError as exc:
+            self._json({"error": str(exc)}, 400)
+
+    def _results(self, payload: dict) -> None:
+        """The published artefacts, served as they were written.
+
+        Read-only and confined to the results directory: the name has to be one
+        the index already offered, so a request cannot describe a path.
+        """
+        name = str(payload.get("file", ""))
+        if not name:
+            return self._json({"files": views.results_index()})
+        text = views.result_file(name)
+        if text is None:
+            return self._json({"error": "no such result file"}, 404)
+        self._json({"name": name, "text": text})
 
     def _ask(self, payload: dict) -> None:
         text = str(payload.get("question", "")).strip()

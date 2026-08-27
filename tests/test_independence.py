@@ -33,6 +33,11 @@ MATCHER_MODULES = [
     ROOT / "agent" / "tier.py",
     ROOT / "agent" / "tools.py",
     ROOT / "agent" / "agentic.py",
+    # Every operator screen -- the queue, the case files, the match log, the
+    # source ledgers -- is shaped here. A console that could reach the labels
+    # would show an analyst answers no real book comes with, and the difference
+    # is invisible from a screenshot.
+    ROOT / "views.py",
 ]
 
 FORBIDDEN = "generator"

@@ -33,45 +33,16 @@ from .money import format_inr
 from .webstyle import CSS
 from .pipeline import run_b0, run_b2
 from .schemas import LabelledBatch, ReconResult
+# Tier labels, rule names and the severity bands live in `views.py`, which the
+# live console reads from too. Two surfaces onto one run should not be able to
+# disagree about what a rule is called or how loud a row is.
+from .views import RULE_LABEL, severity as _severity
 
 MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean": (7, DefectMix.clean)}
-
-#: Which tier each rule id belongs to, for the ladder shown on every row.
-TIER_OF_RULE = {
-    "leg1.t0.exact_order_id": "T0",
-    "leg2.t0.exact_utr": "T0",
-    "leg2.t1.rate_notice": "T1",
-    "leg2.t1.amount_window": "T1",
-    "leg2.t1.ssmp_residual": "T1",
-    "leg2.t1.spill_pair": "T1",
-    "leg2.t2.llm_hypothesis": "T2",
-}
-
-RULE_LABEL = {
-    "leg1.t0.exact_order_id": "exact order id",
-    "leg2.t0.exact_utr": "exact UTR",
-    "leg2.t1.rate_notice": "gateway repricing notice, fees re-derived",
-    "leg2.t1.amount_window": "amount + date window",
-    "leg2.t1.ssmp_residual": "subset-sum over unlinked rows",
-    "leg2.t1.spill_pair": "cross-batch cutoff spill",
-    "leg2.t2.llm_hypothesis": "model hypothesis, arithmetic verified",
-}
 
 
 def _esc(text: object) -> str:
     return html.escape(str(text), quote=True)
-
-
-def _severity(residual_paise: int | None) -> tuple[str, str]:
-    """Form as well as number: how loud should this row be?"""
-    if residual_paise is None:
-        return "structural", "no amount in dispute"
-    magnitude = abs(residual_paise)
-    if magnitude >= 10_000_00:
-        return "critical", "over Rs 10,000 unexplained"
-    if magnitude >= 100_00:
-        return "warn", "over Rs 100 unexplained"
-    return "minor", "under Rs 100"
 
 
 def _queue_rows(result: ReconResult) -> str:
