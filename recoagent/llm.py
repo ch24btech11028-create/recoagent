@@ -124,7 +124,21 @@ class OpenAICompatibleChat:
         client=None,
     ) -> None:
         if client is None:
-            from openai import OpenAI
+            try:
+                from openai import OpenAI
+            except ImportError as exc:
+                # "No module named 'openai'" is accurate and useless to someone
+                # who has just cloned this. The deterministic rungs need no
+                # dependencies at all, so nothing has told them the agent tier
+                # does -- say what to install instead of leaking the traceback.
+                raise RuntimeError(
+                    "The agent tier needs the OpenAI SDK, which is not installed. "
+                    "The deterministic rungs (B0, B2) do not need it, which is why "
+                    "it is absent by default.\n"
+                    "    pip install openai\n"
+                    "or, for every optional tier:\n"
+                    "    pip install -r requirements.txt"
+                ) from exc
 
             key = require_key(api_key_env)
             client = OpenAI(base_url=base_url, api_key=key, timeout=timeout)
@@ -189,7 +203,13 @@ class AnthropicChat:
         client=None,
     ) -> None:
         if client is None:
-            import anthropic
+            try:
+                import anthropic
+            except ImportError as exc:
+                raise RuntimeError(
+                    "The Anthropic path needs the Anthropic SDK, which is not "
+                    "installed.\n    pip install anthropic"
+                ) from exc
 
             client = anthropic.Anthropic(timeout=timeout)
         self._client = client

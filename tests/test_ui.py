@@ -283,11 +283,18 @@ def test_qa_without_a_key_is_disabled_not_broken(server, monkeypatch):
     if d["ready"]:
         pytest.skip("a live API key is configured in this environment")
     assert status == 200
-    assert "NVIDIA_API_KEY" in d["problem"]
+    # Two legitimate reasons the model is not ready -- no key, or no SDK -- and
+    # a fresh clone hits the second one first. Assert the message is actionable
+    # rather than that it names one specific cause; an earlier version pinned
+    # NVIDIA_API_KEY and so failed for everyone who had simply not run pip yet.
+    def actionable(text: str) -> bool:
+        return "NVIDIA_API_KEY" in text or "pip install" in text
+
+    assert actionable(d["problem"]), d["problem"]
     for route in ("/api/ask", "/api/bank"):
         code, body = _post(server + route, {"question": "anything"})
         assert code == 503
-        assert "NVIDIA_API_KEY" in body["error"]
+        assert actionable(body["error"]), body["error"]
     # ...and the reconciliation still runs.
     assert _post(server + "/api/run", {"n": 300})[0] == 200
 
