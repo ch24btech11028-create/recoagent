@@ -195,12 +195,6 @@ DEFECT_SPECS: dict[DefectClass, DefectSpec] = {
 }
 
 
-def defects_for_leg(leg: Leg) -> tuple[DefectClass, ...]:
-    return tuple(
-        d for d, spec in DEFECT_SPECS.items() if spec.leg in (leg, Leg.BOTH)
-    )
-
-
 #: Classes an arithmetic-only tier should be able to close, given the right
 #: evidence. Used by the scorer to separate "the solver missed something it
 #: should have caught" from "this is genuinely what the LLM tier is for".

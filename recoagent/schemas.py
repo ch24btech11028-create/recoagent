@@ -286,11 +286,6 @@ class GroundTruth:
             out[d.defect] = out.get(d.defect, 0) + 1
         return out
 
-    def defect_on(self, entity_id: str) -> InjectedDefect | None:
-        for d in self.defects:
-            if d.entity_id == entity_id:
-                return d
-        return None
 
 
 @dataclass(frozen=True)
