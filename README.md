@@ -1,13 +1,28 @@
-# RecoAgent
+# FinMind
 
 [![ci](https://github.com/ch24btech11028-create/recoagent/actions/workflows/ci.yml/badge.svg)](https://github.com/ch24btech11028-create/recoagent/actions/workflows/ci.yml)
 
-Two-leg settlement reconciliation. Deterministic solvers do the matching, an
-LLM explains only what they could not match, and every explanation must survive
-an arithmetic replay before it becomes a match.
+A finance controller built on a reconciliation engine, on the principle that
+you cannot categorise, report on, or answer questions about a book you have not
+first proved. Deterministic solvers do the matching, the reconciliation then
+determines most of the accounting, and a model is allowed to speak only about
+what is left — never without quoting the evidence.
 
-> **Solvers find matches. The LLM proposes why the rest didn't match — and no
+> **Solvers find matches. The model proposes why the rest didn't match — and no
 > hypothesis is accepted until the arithmetic closes.**
+
+Three things it does, each with a ladder underneath it so the model's
+contribution is a measured difference rather than a claim:
+
+| | What it does | Where the number comes from |
+|---|---|---|
+| **Reconcile** | order ↔ payment (1:1), settlement batch ↔ bank credit (N:1) | B0 → B2 → B3, [below](#results) |
+| **Categorise** | every row assigned an accounting category | C0 → C1 → C2, [below](#categorisation) |
+| **Ingest** | Razorpay test mode, or your own CSVs | [below](#razorpay-test-mode) |
+
+The reconciliation engine is `recoagent/`, and it keeps that name throughout —
+v1.0 is tagged [`v1.0-recoagent`](../../releases/tag/v1.0-recoagent) if you want
+the engine on its own.
 
 ---
 
@@ -360,6 +375,101 @@ Two results are worth stating because they shaped the design:
 
 ---
 
+## Categorisation
+
+Every row gets an accounting category. The interesting number is not the
+accuracy — it is **how few of the rows a model touches at all.**
+
+| Rung | What it may use | Rows assigned | Coverage | Wrong-category rate |
+|---|---|---:|---:|---:|
+| **C0** | source fields only | 8 | 0.86% | **0.00%** |
+| **C1** | + what the reconciliation proved | **885** | **94.86%** | **0.00%** |
+| **C2** | + a model that must quote its evidence | 20 rows left to ask about | — | — |
+
+500 orders, dev seed 7. Held-out (seed 21, inverted mix): **94.44% coverage,
+0.00% wrong.** Artifacts in [`results/C0_dev.txt`](results/C0_dev.txt) and
+[`results/C1_dev.txt`](results/C1_dev.txt).
+
+**Wrong-category rate leads, not accuracy** — the same argument as false-match
+rate. A row sent to a human costs a minute. A row confidently filed as revenue
+when it was a transfer costs a wrong GST return, and the merchant finds out from
+a notice rather than from a dashboard.
+
+**C1 is the claim.** In a reconciled book the matching has already categorised
+nearly everything, and it did so with arithmetic proofs attached. A payment that
+closed against an order *is* revenue — not "probably revenue, 0.94". A bank
+credit that closed against a batch is a transfer because the payments inside
+that batch summed to it, not because its narration contained the word
+SETTLEMENT. C0 exists to make that lift legible: reading source fields alone,
+without a reconciliation, gets you 0.86%.
+
+The taxonomy is built around the two errors that are catastrophic and tidy:
+
+- **`settlement_credit` is not `sales_revenue`.** The customer payment and the
+  batch credit are two rows for one sale. A tool that calls both revenue doubles
+  the merchant's declared turnover, and every dashboard total goes reassuringly
+  up while it happens.
+- **`gst_input_credit` is not `gateway_fee`.** GST on the MDR is reclaimable.
+  Buried inside an expense it is a filing error, not a display one.
+
+C2 keeps the citation contract: the model does not choose a category, it quotes
+the span of the row's own text that chooses one, and the quote is checked
+literally against that text. A category whose quotation is absent is not
+downgraded — it is discarded and the row goes to a human. The confidence floor
+applies *after* that check and never instead of it. The model is also barred
+from proposing the three categories the arithmetic owns.
+
+```bash
+python3 -m recoagent.categorize.run --n 500 --seed 7 --rung C1
+```
+
+---
+
+## Razorpay test mode
+
+Every other number here is measured on a book this repository generated, or on
+BenchRec. Neither answers *does it run on Razorpay's own data shapes?*
+
+```bash
+python3 -m recoagent.razorpay.run pull --out data/razorpay/pull.json
+python3 -m recoagent.razorpay.run reconcile data/razorpay/pull.json --bank bank.csv
+python3 -m recoagent.razorpay.run serve --port 8000     # webhooks
+```
+
+`pull` needs a test key and refuses an `rzp_live_` one. `reconcile` needs
+neither key nor network — it replays a recorded pull, so a published number can
+be re-checked by someone with no account. A recorded book ships in
+[`tests/fixtures/razorpay/`](tests/fixtures/razorpay/) and CI reconciles it on
+every push.
+
+**Two bugs fell out of this that synthetic data structurally could not contain.**
+
+1. **A failed payment was being matched to its order.** A declined card leaves a
+   row carrying the full order amount; an exact join gated only on
+   `gross == order.amount` matches it perfectly, booking revenue that never
+   arrived — on the tier with the highest confidence. Our generator emits
+   nothing but `captured` and `partially_captured`, so the assumption that a
+   payment row *is money* had never once been tested.
+2. **Razorpay's `fee` includes GST; ours does not.** Copying both fields across
+   books the tax twice. It fails silently: every settlement looks short by
+   exactly the GST inside it, producing a consistent wall of fee-variance
+   exceptions for a model to explain.
+
+What the mapping refuses to do is the rest of the design. It does not invent a
+bank side — a settlement header carries an amount and a UTR, so
+`BankLine(amount=settlement.amount, ref=settlement.utr)` is one line away and
+reports 100% Leg 2 recall for ever, measuring the mapping rather than the
+reconciler. It does not invent a partial capture, does not guess an
+unrecognised status, and prints a **readiness** section before any number:
+test mode runs no settlement cycles, so a fresh account yields a Leg 2 recall of
+zero that is correct and would otherwise read as a failure.
+
+Webhooks verify HMAC-SHA256 over the **raw body** — not the reparsed JSON, whose
+digest is a different digest — in constant time, and store by event id, so
+Razorpay's delivery retries book nothing twice.
+
+---
+
 ## Layout
 
 ```
@@ -379,13 +489,20 @@ recoagent/
   qa/                      the settlement Q&A agent and its graded bank
   pipeline.py              rung assembly
   ingest.py                your own CSVs — coverage only, no scorecard
+  razorpay/api.py          test-mode client: auth, pagination, backoff, recording
+  razorpay/mapping.py      Razorpay JSON → SourceBundle, and what it refuses to invent
+  razorpay/webhook.py      raw-body HMAC, idempotent event log (sqlite)
+  categorize/taxonomy.py   the category set, and the two errors it prevents
+  categorize/rules.py      C0 source fields, C1 what the reconciliation proved
+  categorize/agent.py      C2: the model, which must quote its evidence
+  categorize/score.py      wrong-category rate first, then coverage
   ui.py, views.py          the live operator console
   eval/scorer.py           false-match rate, defect accounting, value coverage
   eval/benchrec.py         the external corpus, scored against its own baseline
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
   run.py                   CLI
 results/                   committed run artifacts
-tests/             251 tests
+tests/             298 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

@@ -227,6 +227,70 @@ dev. `TIMING_SPILL` was moved into the deterministic solver rather than left
 here, because it is mechanically detectable and handing it over would have
 inflated the model's apparent contribution.
 
+## Categorisation rides on the reconciliation, not beside it
+
+The obvious way to categorise transactions is to hand each row to a model with
+a list of categories and a confidence threshold. It takes a day, it demos well,
+and the accuracy number it produces cannot be checked by anyone — including its
+author, because the ground truth would have to be hand-labelled by the same
+person who wrote the prompt.
+
+The design here inverts it. **A reconciled book is already categorised**, and
+categorised with proofs: a payment that closed against an order is revenue
+because the arithmetic tying it to that order balanced; a bank credit that
+closed against a settlement batch is a transfer because the payments inside that
+batch summed to it. That is a stronger statement than any classifier makes, and
+it covers 94.86% of rows on dev at a 0.00% wrong-category rate.
+
+So the ladder is C0 (source fields alone — 0.86%), C1 (+ the reconciliation —
+94.86%), C2 (+ a model, on the 20 rows that are left). C0 exists to prevent the
+most common overstatement in this space: a "95% accurate AI categoriser" that
+is mostly reading a `status` field, and would score the same with the model
+switched off.
+
+Two categories in the taxonomy are load-bearing rather than descriptive.
+`SETTLEMENT_CREDIT` is separate from `SALES_REVENUE` because the customer
+payment and the batch credit are two rows for one sale — merging them doubles
+declared turnover while every total on the dashboard moves the right way.
+`GST_INPUT_CREDIT` is separate from `GATEWAY_FEE` because GST on the MDR is
+reclaimable, and filed as an expense it becomes an unclaimed credit that nobody
+notices, which is a filing error rather than a presentation one.
+
+C2 reuses the citation contract from `agent/citations.py` unchanged in spirit:
+the model returns a category **and a verbatim span of that row's own text**, and
+the span is checked with a literal substring test against a string the model was
+shown in full. This is weaker than the arithmetic gate in one direction — a
+model can quote correctly and still classify wrongly, and that error is not
+caught — and stronger in another: it cannot classify a row on the strength of a
+narration it imagined, which is the failure mode that produces confident,
+plausible, unfalsifiable bookkeeping. Confidence is recorded, and gates nothing
+on its own.
+
+## Real data found what the generator could not
+
+Reading Razorpay test mode was meant to answer a credibility question. It
+answered a correctness one instead, twice, and both are worth stating because
+they are properties of synthetic evaluation in general rather than of this
+generator in particular.
+
+**Every payment row our generator emits is `captured`.** So the assumption that
+a payment row represents money that moved was never tested — and Leg 1's exact
+join, gated only on `gross == order.amount`, matched a declined card carrying
+the full order amount. A false match, in the leg where one is most expensive,
+produced by the tier with the highest confidence, invisible to 254 tests.
+
+**Razorpay's `fee` field includes GST and ours does not.** A translation layer
+copying both fields across books the tax twice. It does not fail loudly; it makes
+every settlement look short by exactly the GST inside it, which then presents as
+a large, consistent, entirely explicable-looking population of fee-variance
+exceptions — the kind a model would happily produce fluent explanations for.
+
+The generalisation: a generator encodes its author's model of the domain, so the
+defects it injects are the ones its author already knew about. It cannot produce
+the class of bug that comes from having been wrong about the shape of the data
+itself. That is not an argument against synthetic evaluation, which is what makes
+the false-match rate measurable at all. It is an argument for having both.
+
 ## Not built yet
 
 - **B1** — Splink / Fellegi-Sunter probabilistic linkage on Leg 1

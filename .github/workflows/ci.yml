@@ -74,5 +74,19 @@ jobs:
           python -m recoagent.run --n 2000 --seed 21 --profile holdout --rung B2 --out fresh_holdout.json > /dev/null
           diff fresh_dev.json     results/B2_dev.json
           diff fresh_holdout.json results/B2_holdout.json
+      # Exits non-zero if anything was filed under a wrong category, so a
+      # regression here is as loud as a false match.
+      - name: the categorisation ladder holds
+        run: |
+          python -m recoagent.categorize.run --n 500 --seed 7  --profile dev     --rung C0
+          python -m recoagent.categorize.run --n 500 --seed 7  --profile dev     --rung C1
+          python -m recoagent.categorize.run --n 500 --seed 21 --profile holdout --rung C1
+      # A recorded pull, so the Razorpay path is checked without a key. An
+      # integration whose tests need credentials is an integration nobody finds
+      # out has broken.
+      - name: a Razorpay book reconciles from a recorded pull
+        run: |
+          python -m recoagent.razorpay.run reconcile tests/fixtures/razorpay/pull.json \
+            --bank tests/fixtures/razorpay/bank.csv
       - name: the agent tier degrades instead of breaking
         run: python -m recoagent.eval.b3 --profile dev
