@@ -24,6 +24,12 @@ venv/
 # Data & run outputs
 data/benchrec/
 data/raw/
+# Live Razorpay pulls carry the payer's email, phone and card metadata, even in
+# test mode -- it is your own contact details, but it is still contact details
+# in a public repository. The committed fixture under tests/fixtures/razorpay/
+# is hand-written and carries none, which is what CI reconciles.
+data/razorpay/
+data/llm-cache/
 out/
 *.duckdb
 
