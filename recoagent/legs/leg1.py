@@ -29,6 +29,22 @@ from ..schemas import (
 )
 from ..validate import Tolerance, prove_leg1, prove_leg1_capture
 
+#: Statuses in which the money actually moved. Everything else is an attempt.
+#:
+#: This looked like a tautology for as long as the only books in existence were
+#: generated ones, where every payment row is `captured` by construction. A
+#: pull from a real gateway is not like that: a declined card leaves a `failed`
+#: row carrying the full order amount, and an exact join on `order_id` gated
+#: only by `gross == order.amount` matches it perfectly. The result is revenue
+#: booked against a payment that never arrived -- a false match, in the leg
+#: where a false match is most expensive, produced by the tier with the highest
+#: confidence.
+#:
+#: `refunded` belongs here. The money did arrive and then left again; the
+#: departure is an adjustment on Leg 2, not a reason to deny that the order was
+#: ever paid.
+FUNDED_STATUSES = frozenset({"captured", "partially_captured", "refunded"})
+
 TIER = "T0"
 TIER_T1 = "T1"
 RULE_EXACT_ORDER_ID = "leg1.t0.exact_order_id"
@@ -86,7 +102,17 @@ def _partial_capture_match(
         return None
 
     for mdr in (None, *_noticed_rates(sources, payment, settled_at)):
-        proof = prove_leg1_capture(order, payment, fees, mdr)
+        try:
+            proof = prove_leg1_capture(order, payment, fees, mdr)
+        except KeyError:
+            # No rate on file for this method. Real gateway exports carry
+            # methods a schedule was never configured for -- `paylater`,
+            # `cardless_emi`, `bank_transfer` -- and the tier's whole claim is
+            # that it only closes what a rate re-derives. Without a rate there
+            # is nothing to re-derive against, so it declines and the row goes
+            # to a human. Guessing the nearest rate would be exactly the
+            # invented number this design exists to refuse.
+            return None
         if proof.closes:
             return MatchRecord(
                 match_id=f"m1_{order.order_id}",
@@ -121,16 +147,26 @@ def match(
             by_order[p.order_id].append(p)
 
     for order in sources.orders:
-        candidates = by_order.get(order.order_id, [])
+        attempts = by_order.get(order.order_id, [])
+        # Unsuccessful attempts are dropped before the ambiguity check, not
+        # after. A customer who retried a declined card leaves two rows against
+        # one order, and calling that ambiguous would send a perfectly ordinary
+        # recovery to a human: only one of the two is money.
+        candidates = [p for p in attempts if p.status in FUNDED_STATUSES]
 
         if not candidates:
+            unfunded = ", ".join(sorted(f"{p.payment_id} ({p.status})" for p in attempts))
             result.exceptions.append(
                 ReconException(
                     exception_id=f"x1_{order.order_id}",
                     leg=1,
                     entity_kind="order",
                     entity_id=order.order_id,
-                    reason="no payment row references this order",
+                    reason=(
+                        f"{len(attempts)} payment attempts, none funded: {unfunded}"
+                        if attempts
+                        else "no payment row references this order"
+                    ),
                     suspected_class=None,
                 )
             )

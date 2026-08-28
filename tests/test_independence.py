@@ -28,6 +28,14 @@ MATCHER_MODULES = [
     # from files this repository has never seen, and it must not acquire a
     # taste for the shapes the generator happens to produce.
     ROOT / "ingest.py",
+    # The other door, and the one with the strongest pull towards cheating:
+    # the generator and the Razorpay mapping both produce SourceBundles, so it
+    # would be effortless to reach across and borrow a shape. A translation
+    # layer that knew what our synthetic books look like would quietly make
+    # real data resemble them.
+    ROOT / "razorpay" / "mapping.py",
+    ROOT / "razorpay" / "api.py",
+    ROOT / "razorpay" / "webhook.py",
     # The agent tier is under the same restriction as every other matcher. A
     # proposer that could reach ground truth would make the B3 numbers
     # worthless in exactly the way this test exists to prevent.

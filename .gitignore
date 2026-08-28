@@ -33,3 +33,7 @@ results/scratch/
 
 # OS
 .DS_Store
+
+# The v2 spec is a working document written to brief an agent, not a
+# reader-facing doc. ROADMAP.md is the tracked version.
+FUTURE.md
