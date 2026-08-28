@@ -31,6 +31,7 @@ from .schemas import ReconException, ReconResult, SourceBundle
 #: Which tier each rule id belongs to, for the ladder shown on every row.
 TIER_OF_RULE = {
     "leg1.t0.exact_order_id": "T0",
+    "leg1.t1.documented_partial_capture": "T1",
     "leg2.t0.exact_utr": "T0",
     "leg2.t1.rate_notice": "T1",
     "leg2.t1.amount_window": "T1",
@@ -41,6 +42,7 @@ TIER_OF_RULE = {
 
 RULE_LABEL = {
     "leg1.t0.exact_order_id": "exact order id",
+    "leg1.t1.documented_partial_capture": "declared partial capture, fees re-derived",
     "leg2.t0.exact_utr": "exact UTR",
     "leg2.t1.rate_notice": "gateway repricing notice, fees re-derived",
     "leg2.t1.amount_window": "amount + date window",
@@ -350,6 +352,8 @@ def matches(
             "right": list(m.right_ids),
             "confidence": round(m.confidence, 2),
             "hypothesised": list(m.hypothesised_ids),
+            "variance": money(m.variance_paise) if m.variance_paise else "",
+            "variance_paise": m.variance_paise,
             "input_hash": m.input_hash,
             "created_at": _when(m.created_at),
             "proof": None if m.proof is None else {
@@ -540,6 +544,11 @@ def shape(sources: SourceBundle, result: ReconResult) -> dict[str, Any]:
         name = e.suspected_class.value if e.suspected_class else "not classified"
         classes[name] = classes.get(name, 0) + 1
 
+    # Matched, and still owed an explanation. This is deliberately not folded
+    # into the credit bar: it is not outstanding credit, it is a declared gap
+    # inside a settled pairing, and merging the two would misstate both.
+    carried = [m for m in result.matches if m.variance_paise]
+
     matched_lines = {m.left_ids[0] for m in result.matches_for_leg(2)}
     total_credit = sum(b.amount_paise for b in sources.bank_lines)
     matched_credit = sum(b.amount_paise for b in sources.bank_lines
@@ -562,6 +571,10 @@ def shape(sources: SourceBundle, result: ReconResult) -> dict[str, Any]:
             "matched_share": matched_credit / total_credit if total_credit else 0.0,
             "lines_total": len(sources.bank_lines),
             "lines_matched": len(matched_lines),
+        },
+        "variance": {
+            "total": money(sum(m.variance_paise for m in carried)),
+            "count": len(carried),
         },
     }
 

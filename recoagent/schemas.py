@@ -77,7 +77,10 @@ class PGAdjustment:
     """
 
     adjustment_id: str
-    settlement_id: str
+    #: None where the gateway netted the row but linked it to no batch. Those
+    #: are the haystack the subset-sum tier searches, so the nullability is
+    #: load-bearing rather than incidental.
+    settlement_id: str | None
     kind: str  # refund | chargeback | dispute_fee | reversal | platform_fee
     payment_id: str | None
     amount_paise: Paise
@@ -341,6 +344,15 @@ class MatchRecord:
     #: an audit trail that proves a total without naming what went into it
     #: cannot be checked by the person who has to sign it off.
     hypothesised_ids: tuple[str, ...] = ()
+    #: Money this match does *not* claim to have reconciled away.
+    #:
+    #: A documented under-capture is still a match -- the payment belongs to
+    #: this order and nothing about the pairing is in doubt -- but the gap
+    #: between authorised and captured is real money, and a queue that stops
+    #: showing it has hidden a revenue leak behind a green number. Carrying it
+    #: on the record keeps the two facts separate: the pairing is settled, the
+    #: variance is not.
+    variance_paise: Paise = 0
 
     @property
     def pair(self) -> tuple[str, str]:

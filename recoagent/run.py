@@ -38,6 +38,11 @@ def _canonical(result: ReconResult, card) -> dict:
     """
     return {
         "rung": result.rung,
+        # Money that was matched but not reconciled away. Published at the top
+        # of the artifact rather than left to be summed out of the match list,
+        # because a reader who takes the headline rates and skips the detail
+        # should still see it.
+        "documented_variance_paise": sum(m.variance_paise for m in result.matches),
         "scorecard": {
             "profile": card.profile,
             "seed": card.seed,
@@ -69,6 +74,7 @@ def _canonical(result: ReconResult, card) -> dict:
                 "confidence": m.confidence,
                 "input_hash": m.input_hash,
                 "residual_paise": m.proof.residual_paise if m.proof else None,
+                "variance_paise": m.variance_paise,
             }
             for m in sorted(result.matches, key=lambda m: m.match_id)
         ],
@@ -118,6 +124,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     print()
     print(render(card))
+
+    variance = [m for m in result.matches if m.variance_paise]
+    if variance:
+        total = sum(m.variance_paise for m in variance)
+        print(
+            f"  Documented variance   {format_inr(total):>18}"
+            f"     ({len(variance)} matches carry a declared gap; matched, not reconciled away)"
+        )
+        print()
 
     if args.exceptions:
         # Split by leg. Leg-1 partial captures are individually large and would

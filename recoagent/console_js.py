@@ -140,6 +140,8 @@ VIEWS.overview = {
       <div class="stat stat--money"><dt>Unexplained</dt><dd>${esc(h.unexplained)}
         <small>across ${n(h.open_items)} open items</small></dd></div>
       <div class="stat"><dt>Leg 2 recall</dt><dd>${pct(leg2.recall)}<small>credit → batch, the N:1 leg</small></dd></div>
+      ${sh.variance && sh.variance.count ? `<div class="stat stat--money"><dt>Documented variance</dt>
+        <dd>${esc(sh.variance.total)}<small>matched, not reconciled away — ${n(sh.variance.count)} declared gaps</small></dd></div>` : ""}
     </dl>
 
     <div class="cols-2">
@@ -521,6 +523,8 @@ async function loadMatches() {
         <div><dt>Right side</dt><dd class="num">${esc(p.rhs)}</dd></div>
         <div><dt>Residual</dt><dd class="num">${esc(p.residual)} (tolerance ${n(p.tolerance_paise)} paise)</dd></div>`
         : `<div class="wide"><dt>Proof</dt><dd>No arithmetic proof on this record.</dd></div>`}
+        ${r.variance ? `<div class="wide"><dt>Variance carried on this match</dt>
+          <dd class="num">${esc(r.variance)} — the pairing is settled, this gap is not</dd></div>` : ""}
         ${r.hypothesised.length ? `<div class="wide"><dt>Rows the source data did not link, needed to close it</dt>
           <dd><code>${esc(r.hypothesised.join(", "))}</code></dd></div>` : ""}
       </div></div></td>`;

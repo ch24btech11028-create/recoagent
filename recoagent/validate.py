@@ -21,7 +21,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
-from .money import Paise
+from .money import FeeSchedule, Paise, bps_of
 from .schemas import (
     ArithmeticProof,
     BankLine,
@@ -85,6 +85,44 @@ def prove_leg1(order: Order, payment: PGPayment, tol: Tolerance) -> ArithmeticPr
         lhs_paise=payment.gross_paise,
         rhs_paise=order.amount_paise,
         tolerance_paise=tol.leg1_paise,
+    )
+
+
+def prove_leg1_capture(
+    order: Order, payment: PGPayment, fees: FeeSchedule, mdr_bps: int | None = None
+) -> ArithmeticProof:
+    """Does the payment's own arithmetic hold at the amount it says was captured?
+
+    The proof for a documented under-capture cannot be `gross == order.amount`.
+    By definition it is not, and a tolerance wide enough to make it close would
+    swallow the whole class (see `Tolerance.calibrated`). So the equation moves:
+    re-derive the fee and tax from the captured gross at the contracted rate,
+    and check that the net the report claims is the net that rate produces.
+
+    That is the same discipline `legs/repricing.py` applies to a rate notice. A
+    status field is a claim, and a claim is not proof -- a row stamped
+    `partially_captured` whose fees do not re-derive is a row whose numbers
+    disagree with the merchant's own rate card, which is a different and more
+    serious problem than a short capture. It gets refused.
+
+    `mdr_bps` overrides the schedule where a rate notice was in force for the
+    method: the gateway charged what it noticed, so that is the rate the check
+    must use.
+    """
+    if mdr_bps is None:
+        fee, tax = fees.fee_and_tax(payment.gross_paise, payment.method)
+    else:
+        fee = bps_of(payment.gross_paise, mdr_bps)
+        tax = bps_of(fee, fees.gst_bps)
+    return ArithmeticProof(
+        expression=(
+            f"payment[{payment.payment_id}].net == "
+            f"captured({payment.gross_paise}) - fee({fee}) - tax({tax})"
+            f" @ {mdr_bps if mdr_bps is not None else fees.mdr_for(payment.method)}bps"
+        ),
+        lhs_paise=payment.net_paise,
+        rhs_paise=payment.gross_paise - fee - tax,
+        tolerance_paise=0,
     )
 
 

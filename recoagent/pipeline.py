@@ -7,8 +7,8 @@ four scripts that happen to print similar-looking numbers.
 
     B0   exact join            + exact UTR                  <- implemented
     B1   + Splink linkage      + exact UTR
-    B2   + Splink linkage      + SSMP DP-greedy
-    B3   + Splink linkage      + SSMP + LLM exception tier
+    B2   + documented capture  + SSMP DP-greedy
+    B3   + documented capture  + SSMP + LLM exception tier
 """
 
 from __future__ import annotations
@@ -32,11 +32,11 @@ def run_b0(sources: SourceBundle, tol: Tolerance | None = None) -> ReconResult:
     bookkeeping recovers before any probabilistic or model-driven tier is
     allowed to claim credit for anything.
     """
-    return _compose(sources, tol or Tolerance.strict(), "B0", with_leg2_t1=False)
+    return _compose(sources, tol or Tolerance.strict(), "B0", with_recovery=False)
 
 
 def _compose(
-    sources: SourceBundle, tol: Tolerance, rung: str, *, with_leg2_t1: bool
+    sources: SourceBundle, tol: Tolerance, rung: str, *, with_recovery: bool
 ) -> ReconResult:
     """Run the tiers in order, then sweep for settlements nothing reached.
 
@@ -47,10 +47,10 @@ def _compose(
     """
     result = ReconResult(rung=rung)
 
-    leg1.match(sources, tol, result)
+    leg1.match(sources, tol, result, with_t1=with_recovery)
     adjudicated = leg2.match(sources, tol, result)
 
-    if with_leg2_t1:
+    if with_recovery:
         leg2_t1.recover(sources, tol, result)
         # Spill pairing runs after local recovery: it reasons over the
         # residuals that survive, so it needs them to have settled first.
@@ -63,14 +63,20 @@ def _compose(
 
 
 def run_b2(sources: SourceBundle, tol: Tolerance | None = None) -> ReconResult:
-    """B0 plus Leg 2 Tier 1: a calibrated tolerance and SSMP residual closure.
+    """B0 plus the recovery tiers: documented captures, calibrated tolerance, SSMP.
 
     The tolerance change and the recovery pass arrive together on purpose. A
     tolerance without a solver just quietly absorbs small errors; a solver
     without a tolerance cannot close anything that drifted by a paise. Reported
     as one rung because they are one decision.
+
+    Leg 1's tier is here for the same reason the repricing tier is: the book
+    contains a document -- the gateway's own `partially_captured` status, with
+    fees that re-derive at the contracted rate -- that settles a difference B0
+    can only file. Leg 1 keeps its zero tolerance throughout; nothing is
+    absorbed, the variance is carried on the match record instead.
     """
-    return _compose(sources, tol or Tolerance.calibrated(), "B2", with_leg2_t1=True)
+    return _compose(sources, tol or Tolerance.calibrated(), "B2", with_recovery=True)
 
 
 def run_b3(
@@ -92,7 +98,7 @@ def run_b3(
     from .legs.repricing import rate_book
 
     tol = tol or Tolerance.calibrated()
-    result = _compose(sources, tol, "B3", with_leg2_t1=True)
+    result = _compose(sources, tol, "B3", with_recovery=True)
 
     # The agent's citations are checked against the merchant's own paperwork.
     # Without this the tier can compute a claimed rate's consequences but has

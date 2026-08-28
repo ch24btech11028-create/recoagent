@@ -42,12 +42,12 @@ def test_b2_beats_b0_where_it_claims_to():
 
 
 @pytest.mark.parametrize(
-    "mix, seed, expected_spill_resolved",
-    [(DefectMix.dev(), 7, 4), (DefectMix.holdout(), 21, 6)],
+    "mix, seed, expected_spill_resolved, expected_partial_captures",
+    [(DefectMix.dev(), 7, 4, 56), (DefectMix.holdout(), 21, 6, 32)],
     ids=["dev", "holdout"],
 )
 def test_the_solver_closes_exactly_the_classes_it_claims(
-    mix, seed, expected_spill_resolved
+    mix, seed, expected_spill_resolved, expected_partial_captures
 ):
     """Pins the exact claims the README publishes, on the runs it publishes them from.
 
@@ -102,6 +102,13 @@ def test_the_solver_closes_exactly_the_classes_it_claims(
     # arithmetic that would either.
     dup = by_class[DefectClass.DUPLICATE_UTR]
     assert dup.flagged == dup.injected, dup
+
+    # Leg 1's own tier, pinned the same way and for the same reason: the README
+    # publishes "56 of 56" and "32 of 32", and the whole class has to close or
+    # the tier is picking which under-captures it likes.
+    cap = by_class[DefectClass.PARTIAL_CAPTURE]
+    assert cap.resolved == cap.injected == expected_partial_captures, cap
+    assert cap.flagged == 0 and cap.mishandled == 0, cap
 
 
 def test_clean_book_is_still_perfect_at_b2():
@@ -234,9 +241,42 @@ def test_a_lying_solver_cannot_book_a_match(monkeypatch):
     assert score(batch, result).overall_false_match_rate == 0.0
 
 
-def test_leg1_is_untouched_by_leg2_recovery():
-    """The two legs are independent; B2 adds nothing to Leg 1 and must not
-    accidentally change it either."""
+def test_leg2_is_untouched_by_leg1_recovery():
+    """B2's Leg 1 tier must not reach across into the other leg.
+
+    The legs share nothing but the source bundle. This used to assert that B2
+    left Leg 1 alone entirely, which stopped being true when the documented
+    partial capture moved into B2 -- so the assertion moves to the direction
+    that is still supposed to hold.
+    """
     _, b0, b2 = _both(DefectMix.dev())
-    assert b0.legs[1].true_matches == b2.legs[1].true_matches
-    assert b0.legs[1].exceptions == b2.legs[1].exceptions
+    assert b2.legs[1].true_matches > b0.legs[1].true_matches
+    assert b2.legs[1].false_matches == 0
+
+
+def test_leg1_recovery_only_books_documented_captures():
+    """Everything B2 adds on Leg 1 is a partial capture, proved and true.
+
+    The count is the whole population of the class: a tier that closed some of
+    them would be picking, and picking is the thing this system does not do.
+    """
+    batch = generate(GeneratorConfig(n_orders=1500, seed=7, mix=DefectMix.dev()))
+    result = run_b2(batch.sources)
+    recovered = [m for m in result.matches_for_leg(1) if m.tier == "T1"]
+
+    declared = {
+        p.payment_id for p in batch.sources.payments
+        if p.status == "partially_captured"
+    }
+    assert declared, "the dev book must contain partial captures for this to mean anything"
+    assert {m.right_ids[0] for m in recovered} == declared
+
+    for m in recovered:
+        assert m.rule_id == "leg1.t1.documented_partial_capture"
+        assert m.proof is not None and m.proof.closes
+        # The money is still on the record. A match that quietly zeroed the
+        # gap would be the failure this field exists to prevent.
+        assert m.variance_paise < 0
+        assert batch.truth.leg1[m.left_ids[0]] == m.right_ids[0]
+
+    assert score(batch, result).overall_false_match_rate == 0.0

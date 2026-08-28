@@ -1,5 +1,7 @@
 # RecoAgent
 
+[![ci](https://github.com/ch24btech11028-create/recoagent/actions/workflows/ci.yml/badge.svg)](https://github.com/ch24btech11028-create/recoagent/actions/workflows/ci.yml)
+
 Two-leg settlement reconciliation. Deterministic solvers do the matching, an
 LLM explains only what they could not match, and every explanation must survive
 an arithmetic replay before it becomes a match.
@@ -19,12 +21,20 @@ below. Whole batch runs in **0.15s**, single-threaded.
 | | B0 dev | B0 held-out | **B2 dev** | **B2 held-out** | clean (control) |
 |---|---:|---:|---:|---:|---:|
 | **False-match rate** | **0.00%** | **0.00%** | **0.00%** | **0.00%** | **0.00%** |
-| Auto-match rate | 93.85% | 93.85% | 95.56% | 95.66% | 100.00% |
+| Auto-match rate | 93.85% | 93.85% | 98.15% | 97.13% | 100.00% |
 | Credit value matched | 71.99% | 77.25% | 95.51% | 98.18% | 100.00% |
-| Leg 1 recall (order → payment) | 95.40% | 95.40% | 95.40% | 95.40% | 100.00% |
+| Leg 1 recall (order → payment) | 95.40% | 95.40% | **98.20%** | **97.00%** | 100.00% |
 | Leg 2 recall (credit → batch) | 75.00% | 75.00% | **97.56%** | **98.78%** | 100.00% |
+| Leg 1 exceptions | 92 | 92 | 36 | 60 | 0 |
 | Leg 2 exceptions | 41 | 41 | 4 | 2 | 0 |
+| Variance carried on matches | — | — | Rs 4,17,173.79 | Rs 2,40,111.98 | Rs 0 |
 | Defects mishandled | 0 | 0 | 0 | 0 | 0 |
+
+**The second-to-last row is not a rounding note.** B2 matches 56 orders on dev
+that B0 refuses, and every one of them is short: the gateway captured less than
+the order authorised. Matching them does not make that money agree, so the gap
+stays on the match record and is reported here rather than absorbed. See
+[the documented capture](#the-documented-capture-and-why-leg-1-recall-moves-at-all).
 
 **Read the first row first.** A reconciliation engine that matches everything
 and is occasionally wrong is worse than useless: it books money against the
@@ -57,8 +67,52 @@ document exists at all.
 | `NARRATION_TRUNCATION` | flagged | **resolved** |
 | `TIMING_SPILL` | flagged | **resolved** (4/4 dev, 6/6 held-out) |
 | `FEE_TAX_VARIANCE`, `FX_CONVERSION` | flagged | **resolved** from the rate notice / FX advice |
+| `PARTIAL_CAPTURE` | flagged | **resolved** from the capture status, fees re-derived |
 | `DUPLICATE_UTR`, `DUPLICATE_PAYMENT` | flagged | flagged (correctly refused) |
 | `MISSING_BANK_LINE` | flagged | flagged (correctly declined) |
+
+### The documented capture, and why Leg 1 recall moves at all
+
+Leg 1 recall sat at 95.40% on every rung, because Leg 1 had no recovery tier and
+its largest exception class did not need one. A partial capture is not a
+discrepancy the system has to solve. It is a business event the gateway
+*declares*: the order authorised one amount, the capture took a smaller one, and
+the payment row says `partially_captured` on its face.
+
+Refusing to match those conflates two different facts. The pairing is not in
+doubt — the order id joins exactly, one payment, no ambiguity — and filing it
+as "unmatched" says the system could not work out where the money went, when in
+fact it knows precisely where it went and how much less of it there was.
+
+So B2 matches them, and the gate is the same one used everywhere else in this
+repository: **a status field is a claim, not a proof.** What earns the match is
+that the fee and tax re-derive from the captured gross at a rate the merchant
+has on file — the contracted rate card, or a repricing notice in force for that
+method on that settlement date. A row stamped `partially_captured` whose fees do
+not re-derive is a book that disagrees with its own rate card, which is a worse
+problem than a short capture, and it is refused. `tests/test_leg1.py` runs that
+attack, along with a capture larger than the authorisation and a shortfall with
+no declaration behind it.
+
+| | dev | held-out |
+|---|---:|---:|
+| `PARTIAL_CAPTURE` resolved | 56 of 56 | 32 of 32 |
+| Leg 1 recall | 95.40% → **98.20%** | 95.40% → **97.00%** |
+| Leg 1 exceptions | 92 → 36 | 92 → 60 |
+| **False-match rate** | **0.00%** | **0.00%** |
+
+**And the money does not disappear.** Every one of those matches carries a
+`variance_paise` — Rs 4,17,173.79 across the dev book — reported on the run, in
+the JSON artifact, and on its own line in the console. That is the whole reason
+this is defensible: a reconciliation engine that raises its recall by
+reclassifying a gap as a match, and stops showing the gap, has not reconciled
+anything. The pairing is settled; the variance is not; the queue that an
+operator works shrinks from 92 items to 36 and the under-captured rupees stay on
+the screen.
+
+What Leg 1 still refuses is what it always refused: two payment rows claiming one
+order. There is no document that resolves that one, and picking a winner is a
+coin flip with revenue.
 
 ### The fourth source, and what it did to B3
 
@@ -121,10 +175,11 @@ Where it still has work is the book whose paperwork never arrived:
 python3 -m recoagent.eval.b3 --profile dev --no-paperwork
 ```
 
-That run needs an API key and **is not yet measured** — the number is not in this
-repository, and the previous one is void: it was taken when fee and FX cases
-still reached the model, so its denominators describe a tier that no longer sees
-them. It is quarantined in [`results/void/`](results/void/) with a note.
+That run needs an API key and **is not yet published here** — the previous
+number is void: it was taken when fee and FX cases still reached the model, so
+its denominators describe a tier that no longer sees them, and it is quarantined
+in [`results/void/`](results/void/) with a note. No replacement is claimed until
+a committed artifact backs it.
 
 Until then, note what B3 has already earned its place by surviving: a proposer
 that cites a row which does not exist, one that refuses, and a dead endpoint all
@@ -142,10 +197,14 @@ money the code recomputes. The old runs are quarantined in
 [`results/void/`](results/void/) with a note, because the before-and-after is
 the most instructive thing in this repository. The attack is a permanent test.
 
-**19% of model calls returned unparseable output** (3 of 16), one opening with
-"Let me analyze this reco…" — a reasoning model leaking preamble where JSON was
-required. This endpoint's native tool calling is broken, which is why the JSON
-path exists at all; the rate is reported rather than smoothed away.
+**Malformed output is a first-class number here, not a footnote.** The
+quarantined pre-RateBook run recorded 19% of calls (3 of 16) returning
+unparseable output, one opening with "Let me analyze this reco…" — a reasoning
+model leaking preamble where JSON was required. That figure belongs to the void
+run and is quoted only as history; the report now counts a malformed reply and a
+rate-limited endpoint as separate lines, because one is a property of the model
+and the other is a property of the account, and a reader should never have to
+guess which produced a zero.
 
 **The control still holds:** running B3 with `NullProposer` reproduces B2
 exactly, so whatever the tier contributes is the model's and not plumbing's.
@@ -165,13 +224,13 @@ identical behaviour.
 |---|---|---|---|
 | **B0** | exact join | exact UTR | **built, measured** |
 | B1 | + Splink (Fellegi-Sunter) | — | not built |
-| **B2** | *(unchanged)* | + SSMP, tolerance, spill pairing | **built, measured** |
-| **B3** | *(unchanged)* | + LLM exception tier | **built, measured (n=7/11, reported as a range)** |
+| **B2** | + documented partial capture | + SSMP, tolerance, spill pairing | **built, measured** |
+| **B3** | *(unchanged)* | + LLM exception tier | **built; with the paperwork in the book, 0 cases reach it** |
 
 The two legs are independent — Splink only touches Leg 1, SSMP only Leg 2 — so
 the ladder is really two ladders over shared inputs, and rungs can be built out
-of order without making the comparison unfair. B2 here means B0 plus the Leg 2
-Tier 1 recovery pass.
+of order without making the comparison unfair. B2 here means B0 plus the Tier 1
+recovery pass on each leg.
 
 ---
 
@@ -203,6 +262,24 @@ that shapes them. Ground truth lives on Assurance, behind a heading that says so
 
 It binds to loopback and needs no key — Q&A is disabled and everything else
 works.
+
+```bash
+python3 -m recoagent.ingest --orders orders.csv --payments payments.csv \
+    --settlements settlements.csv --bank bank.csv
+```
+
+Your files, not ours. Column names are folded and matched (`Order ID`, `utr`,
+`Amount` all land), amounts are read as rupee strings and converted to integer
+paise without a float in the path, and anything it cannot place is named
+alongside the columns your file does have and the `--map` that would fix it.
+`--adjustments`, `--notices` and `--fx` are optional; supply them and the
+corresponding tiers switch on.
+
+**It prints coverage and an exception list, and no accuracy figure at all.** A
+false-match rate needs an answer key, your export does not come with one, and a
+tool that quotes you an accuracy number on unlabelled data is scoring itself
+against its own opinion. What it will tell you is how much credit tied out, which
+tier tied it, and every item that did not.
 
 ```bash
 python3 -m recoagent.eval.b3 --profile dev
@@ -248,6 +325,13 @@ Determinism:
 python3 -m recoagent.run --n 2000 --seed 7 --out /tmp/a.json && python3 -m recoagent.run --n 2000 --seed 7 --out /tmp/b.json && diff /tmp/a.json /tmp/b.json && echo identical
 ```
 
+**On a machine that is not the author's.** `.github/workflows/ci.yml` runs the
+suite on 3.11, 3.12 and 3.13, and then runs a second job with **nothing
+installed at all** — no `pip install` anywhere in it — which reconciles both
+profiles, repeats a run and diffs it byte for byte, and diffs a fresh run
+against the committed `results/B2_*.json`. A published artifact that has drifted
+from the code that made it fails the build.
+
 **The matcher cannot see the answer key.** `tests/test_independence.py` parses
 the AST of every matching module and fails if any imports the generator or
 references a ground-truth type. A matcher that can reach the labels can be
@@ -283,18 +367,25 @@ recoagent/
   money.py                 integer paise, MDR/GST with per-step rounding
   defects.py               the twelve-class exception taxonomy
   schemas.py               entities + the SourceBundle / LabelledBatch split
-  generator.py             synthetic three-source world, labelled defect injection
+  generator.py             synthetic four-source world, labelled defect injection
   validate.py              the arithmetic gate — the LLM tier's only privilege
-  legs/leg1.py             order ↔ payment, 1:1
+  legs/leg1.py             order ↔ payment, 1:1, + the documented partial capture
   legs/leg2.py             bank credit ↔ settlement batch, N:1, exact UTR
   legs/ssmp.py             subset-sum solver (Wu et al. 2025)
   legs/leg2_t1.py          amount-window and residual-closure recovery
+  legs/repricing.py        the merchant's paperwork: rate notices, FX advices
+  agent/citations.py       what a proposer is allowed to say (never an amount)
+  agent/tier.py            B3: propose, gate, book or hold for approval
+  qa/                      the settlement Q&A agent and its graded bank
   pipeline.py              rung assembly
+  ingest.py                your own CSVs — coverage only, no scorecard
+  ui.py, views.py          the live operator console
   eval/scorer.py           false-match rate, defect accounting, value coverage
+  eval/benchrec.py         the external corpus, scored against its own baseline
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
   run.py                   CLI
 results/                   committed run artifacts
-tests/             93 tests
+tests/             251 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance
@@ -354,3 +445,5 @@ real, and nothing here produced it.
 - [FinBalance](https://arxiv.org/abs/2606.15949) — Tumpati et al., 2026
 - [Splink](https://github.com/moj-analytical-services/splink) (MIT) — planned Leg 1 baseline
 - [BenchRec](https://www.kaggle.com/datasets/benchmarkteam/benchrec-real-world-cash-reconciliation-dataset) / ICAIF 2023 (CC BY 4.0) — the external benchmark, scored above
+
+Licensed under the MIT License — see [LICENSE](LICENSE).

@@ -50,6 +50,10 @@ def sweep(n_orders: int = 2000, seed: int = 7) -> str:
         f"{'TOLERANCE':>12}{'':>3}{'RECALL':>9}{'FMR':>8}"
         f"{'RESOLVED':>10}{'AMBIGUOUS':>11}{'MISHANDLED':>12}"
     )
+    # RECALL is Leg 2, because that is the leg this tolerance governs. RESOLVED
+    # counts defects on both legs, so it carries a constant floor from Leg 1 --
+    # whose tolerance is zero at every row here and therefore contributes the
+    # same number to all of them.
     lines.append("-" * w)
 
     per_class: dict[int, dict[DefectClass, int]] = {}

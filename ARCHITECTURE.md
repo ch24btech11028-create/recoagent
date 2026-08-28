@@ -14,7 +14,11 @@ the arithmetic — into "the gateway said 240bps". See *The fourth source* below
 
 **Leg 1 — order ↔ payment, 1:1.** A record-linkage problem. Join on
 `payment_id`/`order_id`, then check the captured amount against what the order
-said was owed.
+said was owed. Where the two disagree because the gateway *says* they should —
+a `partially_captured` row — Tier 1 re-derives the fee and tax from the captured
+gross at a rate the merchant has on file and matches on that instead, carrying
+the shortfall on the match record as a variance. A status field is a claim; the
+re-derivation is what makes it a proof.
 
 **Leg 2 — settlement batch ↔ bank credit, N:1.** One bank credit is a whole
 batch of payments, minus MDR, minus GST on MDR, minus refunds, minus
@@ -148,8 +152,11 @@ are real differences in money reconciled green, a merchant silently short a few
 hundred rupees. Ten paise is the largest window that absorbs rounding and only
 rounding.
 
-Leg 1 stays at zero: a capture that differs from its order by any amount is a
-partial capture, not a rounding artifact.
+Leg 1 stays at zero, and the partial-capture tier is the reason it can. A
+tolerance wide enough to absorb an under-capture would absorb every wrong amount
+of similar size along with it; re-deriving the fee arithmetic at the captured
+gross accepts the one case and nothing that merely resembles it. The gap is
+never absorbed — it is matched, and then reported.
 
 ## Why the evaluation is trustworthy
 
@@ -223,19 +230,11 @@ inflated the model's apparent contribution.
 ## Not built yet
 
 - **B1** — Splink / Fellegi-Sunter probabilistic linkage on Leg 1
-- **An authoritative rate source.** Fee-variance and FX claims rest on a rate the
-  model chooses. Code computes the money from it either way, but nothing
-  confirms the rate itself, so those close as *needs approval* rather than
-  reconciled. `RateBook` is the hook a real gateway repricing notice or bank FX
-  advice would fill, turning the same claims into facts.
 - **Provenance accuracy at scale.** `AgentReport.provenance()` checks whether an
   accepted explanation cited the right evidence, which the main scorer cannot
   see: it grades a B3 match on its bank-line → settlement pairing, and that
   pairing comes from the UTR join rather than from the model. So a wrong
   explanation can still report a perfect false-match rate.
-- **BenchRec** — external validation on real labelled data. Until this lands,
-  every number in the README is self-generated, and the independence and
-  accounting checks are what stand in for external validity.
 - **Confidence calibration** — B0 emits confidence 1.0 on every match, which is
   honest for exact keys but leaves nothing to calibrate. It becomes meaningful
   at B1 and necessary at B3.

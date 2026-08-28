@@ -11,7 +11,8 @@ with the merchant's paperwork   model=nvidia/nemotron-3-ultra-550b-a55b
   cited unverifiable               0   named evidence that does not exist here
   declined by the model            0
   below confidence floor           0
-  call failed / malformed          0
+  malformed reply                  0   answered, and the answer could not be used
+  endpoint failed                  0   rate limit, timeout or 5xx -- never reached the model
 
 ------------------------------------------------------------------------
   DID IT MOVE THE BOOK

@@ -277,11 +277,20 @@ def test_bad_form_values_come_back_as_400(server):
     assert status == 400 and "between" in d["error"]
 
 
-def test_qa_without_a_key_is_disabled_not_broken(server, monkeypatch):
-    """The queue must keep working when no model is configured."""
+def test_qa_without_a_key_is_disabled_not_broken(server, monkeypatch, tmp_path):
+    """The queue must keep working when no model is configured.
+
+    The absence of a key is *constructed* rather than hoped for. This used to
+    skip when the environment happened to have one, which meant it protected
+    nothing on the machine of anyone who had configured a model -- and the
+    behaviour it guards is exactly what a reader cloning the repository sees
+    first. Unset the variable and move away from the `.env`, and the condition
+    is the same for everyone.
+    """
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    monkeypatch.chdir(tmp_path)  # so `require_key` finds no .env either
     status, d = _get(server + "/api/model")
-    if d["ready"]:
-        pytest.skip("a live API key is configured in this environment")
+    assert d["ready"] is False, d
     assert status == 200
     # Two legitimate reasons the model is not ready -- no key, or no SDK -- and
     # a fresh clone hits the second one first. Assert the message is actionable
