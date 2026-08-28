@@ -228,6 +228,7 @@ def _run_case(
 
         if isinstance(proposal, ProposerError):
             case.outcome = "failed"
+            case.failure_kind = proposal.kind
             case.detail = f"{proposal.kind}: {proposal.detail}"
             break
 
@@ -368,7 +369,8 @@ def render_report(
     lines.append(f"  {'declined by the model':<32}{report.refused:>9}")
     lines.append(f"  {'below confidence floor':<32}{report.low_confidence:>9}")
     lines.append(f"  {'cited unverifiable evidence':<32}{report.unverifiable:>9}")
-    lines.append(f"  {'proposer failed':<32}{report.failed:>9}")
+    lines.append(f"  {'malformed reply':<32}{report.failed_malformed:>9}")
+    lines.append(f"  {'endpoint failed':<32}{report.failed_transport:>9}")
     lines.append("")
     lines.append(f"  {'resolution rate':<32}{report.resolution_rate:>8.1%}")
     cost = report.usage.cost_usd(input_per_mtok, output_per_mtok)

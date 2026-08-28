@@ -112,6 +112,35 @@ def _is_retryable(exc: Exception) -> bool:
     return status == 429 or (isinstance(status, int) and status >= 500)
 
 
+def endpoint_for(
+    model: str, base_url: str | None, api_key_env: str | None
+) -> tuple[str, str, str]:
+    """Where a model spec actually lives: (model id, base url, key variable).
+
+    `recoagent.llm` already knows this for every provider the repository
+    supports, and the README says the model swap is one string. It was one
+    string for the Q&A agent, which goes through `client_for`, and not for the
+    agent tier, which built its client itself and defaulted the endpoint to
+    NIM -- so `--model gemini/...` sent a Gemini model id to NVIDIA and asked
+    for an NVIDIA key. One table, read from both places, or the claim is only
+    true on the path that happens to be tested.
+
+    An explicit `base_url` still wins: a self-hosted vLLM is exactly the case
+    the provider table cannot know about.
+    """
+    from ..llm import PROVIDERS
+
+    if base_url is not None:
+        return model, base_url, api_key_env or "OPENAI_API_KEY"
+
+    provider = model.split("/", 1)[0]
+    known = PROVIDERS.get(provider)
+    if known and known[0] is not None:
+        url, env, keep_prefix = known
+        return (model if keep_prefix else model.split("/", 1)[1], url, api_key_env or env)
+    return model, DEFAULT_BASE_URL, api_key_env or "NVIDIA_API_KEY"
+
+
 class OpenAICompatibleProposer:
     """Calls an OpenAI-compatible chat endpoint once per attempt.
 
@@ -125,14 +154,15 @@ class OpenAICompatibleProposer:
         self,
         client=None,
         model: str = DEFAULT_MODEL,
-        base_url: str = DEFAULT_BASE_URL,
-        api_key_env: str = "NVIDIA_API_KEY",
+        base_url: str | None = None,
+        api_key_env: str | None = None,
         max_tokens: int = 8000,
         temperature: float = 0.0,
         timeout: float = 240.0,
         extra_body: dict | None = None,
         max_retries: int = 3,
     ) -> None:
+        model, base_url, api_key_env = endpoint_for(model, base_url, api_key_env)
         if client is None:
             from openai import OpenAI  # lazy: the core stays dependency-free
 

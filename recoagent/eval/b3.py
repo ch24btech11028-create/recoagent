@@ -51,10 +51,24 @@ from ..schemas import LabelledBatch
 
 MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout)}
 
-#: Cost per million tokens, for the line that says whether this was worth it.
-#: Nemotron on NIM at the time of writing; override for another host.
-INPUT_PER_MTOK = 0.60
-OUTPUT_PER_MTOK = 0.60
+#: Cost per million tokens (input, output), for the line that says whether this
+#: was worth it. Keyed by model prefix, and deliberately sparse: a rate here is
+#: one that was looked up for that host, not a house average. A model with no
+#: entry prints its token counts and says the rate is unknown -- quoting a
+#: dollar figure computed from some other vendor's price list is the kind of
+#: number that gets repeated in a slide and is simply false.
+PRICES: dict[str, tuple[float, float]] = {
+    # Nemotron on NVIDIA NIM, at the time of writing.
+    "nvidia/": (0.60, 0.60),
+    "deepseek-ai/": (0.60, 0.60),
+}
+
+
+def prices_for(model: str) -> tuple[float, float] | None:
+    for prefix, rate in PRICES.items():
+        if model.startswith(prefix):
+            return rate
+    return None
 
 
 @dataclass
@@ -200,7 +214,10 @@ def render(run: B3Run) -> str:
         "named evidence that does not exist here",
         f"  declined by the model     {r.refused:>8}",
         f"  below confidence floor    {r.low_confidence:>8}",
-        f"  call failed / malformed   {r.failed:>8}",
+        f"  malformed reply           {r.failed_malformed:>8}   "
+        "answered, and the answer could not be used",
+        f"  endpoint failed           {r.failed_transport:>8}   "
+        "rate limit, timeout or 5xx -- never reached the model",
         "",
         "-" * w,
         "  DID IT MOVE THE BOOK",
@@ -240,15 +257,26 @@ def render(run: B3Run) -> str:
         f"{r.usage.output_tokens:,} out",
         f"  wall clock          {run.seconds:.0f}s over {r.attempted} cases",
     ]
-    spend = r.usage.cost_usd(INPUT_PER_MTOK, OUTPUT_PER_MTOK)
-    out.append(f"  spend               ${spend:.4f}")
-    if r.resolved:
+    rate = prices_for(run.model)
+    if rate is None:
         out.append(
-            f"  per resolved        "
-            f"${r.cost_per_resolved(INPUT_PER_MTOK, OUTPUT_PER_MTOK):.4f}"
+            "  spend               unpriced -- no published rate on file for "
+            f"{run.model}"
         )
     else:
+        out.append(f"  spend               ${r.usage.cost_usd(*rate):.4f}")
+    if r.resolved and rate is not None:
+        out.append(
+            f"  per resolved        "
+            f"${r.cost_per_resolved(*rate):.4f}"
+        )
+    elif not r.resolved:
         out.append("  per resolved        n/a -- nothing was resolved")
+    else:
+        out.append(
+            f"  per resolved        {r.usage.input_tokens / r.resolved:,.0f} in / "
+            f"{r.usage.output_tokens / r.resolved:,.0f} out tokens per case"
+        )
 
     out += [
         "",

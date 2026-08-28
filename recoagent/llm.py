@@ -5,6 +5,7 @@ agent -- takes a `Chat` and nothing else. Swapping models is a string:
 
     chat = client_for("nvidia/nemotron-3-ultra-550b-a55b")
     chat = client_for("anthropic/claude-opus-5")
+    chat = client_for("gemini/gemini-3.6-flash")
     chat = client_for("openai-compatible:http://localhost:8000/v1:my-model")
 
 Why a shim rather than using the SDKs directly at each call site: the two things
@@ -44,11 +45,23 @@ EXTRA_BODY_PRESETS: dict[str, dict] = {
     },
 }
 
-#: Endpoint defaults per provider prefix.
+#: Endpoint defaults per provider prefix: (base_url, key env var, keep_prefix).
+#:
+#: `keep_prefix` is not a detail. On NIM the vendor prefix is genuinely part of
+#: the model id -- `nvidia/nemotron-3-ultra-550b-a55b` is what the endpoint
+#: expects -- while Google's OpenAI-compatible surface wants `gemini-3.6-flash`
+#: and 404s on `gemini/gemini-3.6-flash`. Getting it wrong produces a not-found
+#: from the far end, which reads like a typo in the model name rather than a
+#: bug here.
 PROVIDERS = {
-    "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY"),
-    "deepseek-ai": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY"),
-    "anthropic": (None, "ANTHROPIC_API_KEY"),
+    "nvidia": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY", True),
+    "deepseek-ai": ("https://integrate.api.nvidia.com/v1", "NVIDIA_API_KEY", True),
+    "gemini": (
+        "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "GEMINI_API_KEY",
+        False,
+    ),
+    "anthropic": (None, "ANTHROPIC_API_KEY", False),
 }
 
 _RETRYABLE = (
@@ -291,8 +304,9 @@ def client_for(spec: str = DEFAULT_MODEL, **kw) -> Chat:
     if provider == "anthropic":
         return AnthropicChat(spec.split("/", 1)[1], **kw)
     if provider in PROVIDERS:
-        base_url, key_env = PROVIDERS[provider]
-        return OpenAICompatibleChat(spec, base_url, key_env, **kw)
+        base_url, key_env, keep_prefix = PROVIDERS[provider]
+        model = spec if keep_prefix else spec.split("/", 1)[1]
+        return OpenAICompatibleChat(model, base_url, key_env, **kw)
 
     raise ValueError(
         f"unknown provider in {spec!r}. Known: {', '.join(sorted(PROVIDERS))}, "

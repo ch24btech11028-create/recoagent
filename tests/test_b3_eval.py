@@ -146,3 +146,30 @@ def test_provenance_is_unmeasurable_when_nothing_resolves():
     out = run("dev", n_orders=2000, paperwork=False,
               proposer_factory=lambda: _Scripted(Refusal(reason="no")))
     assert out.provenance == (0, 0)
+
+
+def test_a_model_string_picks_its_own_endpoint():
+    """"Swapping the model is one string" has to be true on the tier as well.
+
+    It was true for Q&A, which goes through `client_for`, and false here: the
+    proposer built its own client with the endpoint and key variable defaulted
+    to NIM, so `--model gemini/...` posted a Gemini model id to NVIDIA and
+    demanded an NVIDIA key. Both paths now read the same provider table.
+    """
+    from recoagent.agent.openai_proposer import endpoint_for
+    from recoagent.llm import PROVIDERS
+
+    for provider, (url, env, keep_prefix) in PROVIDERS.items():
+        if url is None:
+            continue  # not an OpenAI-protocol host
+        spec = f"{provider}/some-model"
+        model, base_url, key_env = endpoint_for(spec, None, None)
+        assert base_url == url
+        assert key_env == env
+        assert model == (spec if keep_prefix else "some-model")
+
+    # A host the table has never heard of is the reason `--base-url` exists,
+    # and passing one must not be overridden by a provider-shaped model name.
+    assert endpoint_for("nvidia/x", "http://localhost:8000/v1", "MY_KEY") == (
+        "nvidia/x", "http://localhost:8000/v1", "MY_KEY"
+    )

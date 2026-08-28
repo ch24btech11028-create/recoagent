@@ -106,6 +106,12 @@ class CaseOutcome:
     #                | refused | failed | low_confidence
     attempts: int = 0
     model_confidence: float | None = None
+    #: For `failed` only: the `ProposerError.kind` behind it. A 429 from a
+    #: shared endpoint and a model that answered with prose where JSON was
+    #: required are both "the tier got nothing", and reporting them as one
+    #: number puts an infrastructure limit in a column a reader will read as a
+    #: property of the model.
+    failure_kind: str = ""
     detail: str = ""
     usage: Usage = field(default_factory=Usage)
     #: Source ids the accepted explanation rests on. Empty unless resolved.
@@ -166,6 +172,23 @@ class AgentReport:
     @property
     def low_confidence(self) -> int:
         return self._count("low_confidence")
+
+    @property
+    def failed_transport(self) -> int:
+        """Failures that never reached the model: rate limits, timeouts, 5xx."""
+        return sum(
+            1 for c in self.cases
+            if c.outcome == "failed" and c.failure_kind in ("transport", "timeout", "overloaded")
+        )
+
+    @property
+    def failed_malformed(self) -> int:
+        """The model answered and the answer could not be used."""
+        return sum(
+            1 for c in self.cases
+            if c.outcome == "failed" and c.failure_kind not in
+            ("transport", "timeout", "overloaded")
+        )
 
     @property
     def resolution_rate(self) -> float:
