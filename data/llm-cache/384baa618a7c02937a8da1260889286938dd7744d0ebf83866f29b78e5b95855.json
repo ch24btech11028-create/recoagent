@@ -1,0 +1,1 @@
+{"text": "```json\n{\"category\": \"needs_review\", \"quote\": \"\", \"confidence\": 0.0, \"reason\": \"The row describes a captured payment event without indicating a payout, refund, dispute, or bank fee, which means it does not fit the specific financial ledger categories provided.\"}\n```"}

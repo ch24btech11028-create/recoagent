@@ -384,7 +384,7 @@ accuracy — it is **how few of the rows a model touches at all.**
 |---|---|---:|---:|---:|
 | **C0** | source fields only | 8 | 0.86% | **0.00%** |
 | **C1** | + what the reconciliation proved | **885** | **94.86%** | **0.00%** |
-| **C2** | + a model that must quote its evidence | 20 rows left to ask about | — | — |
+| **C2** | + a model that must quote its evidence | 4 held, not booked | 94.86% | **0.00%** |
 
 500 orders, dev seed 7. Held-out (seed 21, inverted mix): **94.44% coverage,
 0.00% wrong.** Artifacts in [`results/C0_dev.txt`](results/C0_dev.txt) and
@@ -418,6 +418,29 @@ literally against that text. A category whose quotation is absent is not
 downgraded — it is discarded and the row goes to a human. The confidence floor
 applies *after* that check and never instead of it. The model is also barred
 from proposing the three categories the arithmetic owns.
+
+**What C2 measured, live** (`gemini-3.5-flash-lite`, 20 rows,
+[`results/C2_dev.txt`](results/C2_dev.txt)):
+
+| | |
+|---|---:|
+| Correctly declined | **16 of 20** |
+| Fabricated a quotation | **0** |
+| Committed to an answer | 4 |
+| …of which correct | **1** |
+
+The citation contract held perfectly — nothing was invented. And the model still
+got **three of its four answers wrong, quoting the row correctly every time.**
+That is the limitation the contract cannot cover, stated in the module docstring
+before it was measured and now measured: a citation proves the evidence exists,
+not that the conclusion follows from it.
+
+So a C2 assignment is **held for approval, never booked** — the same treatment
+`agent/tier.py` gives a model-chosen rate. The proposal reaches the operator
+queue with its quotation attached, the wrong-category rate stays at 0.00%, and
+the model's 25% is reported rather than buried. Booking those four would have
+taken the system from 0.00% wrong to 0.34% in exchange for 0.42 points of
+coverage.
 
 ```bash
 python3 -m recoagent.categorize.run --n 500 --seed 7 --rung C1

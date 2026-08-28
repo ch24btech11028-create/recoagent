@@ -1,0 +1,1 @@
+{"text": "```json\n{\n  \"category\": \"not_a_transaction\",\n  \"quote\": \"status: captured\",\n  \"confidence\": 0.5,\n  \"reason\": \"This row indicates a captured order status and settlement reference without providing enough transaction detail to classify it as a completed monetary movement.\"\n}\n```"}

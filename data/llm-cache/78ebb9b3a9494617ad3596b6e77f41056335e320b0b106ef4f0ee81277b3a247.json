@@ -1,0 +1,1 @@
+{"text": "```json\n{\"category\": \"needs_review\", \"quote\": \"\", \"confidence\": 0.0, \"reason\": \"The row does not show a customer payment amount or a transaction type that fits the allowed categories without relying on unsupported inferences.\"}\n```"}

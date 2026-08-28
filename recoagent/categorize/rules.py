@@ -48,7 +48,17 @@ class Assignment:
     #: did not, and attaching 1.0 to it would put rules and guesses in one
     #: column and invite someone to average them.
     confidence: float | None = None
+    #: False means *proposed, not booked*. The category is real and reaches the
+    #: operator queue with its evidence attached, but it is not filed and does
+    #: not count towards the wrong-category rate, because nothing has been
+    #: decided yet. C2 sets this on every assignment it makes; see the note in
+    #: `agent.run_c2`.
     verified: bool = True
+
+    @property
+    def booked(self) -> bool:
+        """Whether this assignment is a decision or a suggestion."""
+        return self.verified and self.category is not Category.NEEDS_REVIEW
 
 
 @dataclass

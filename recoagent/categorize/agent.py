@@ -316,6 +316,16 @@ def run_c2(
             report.cases.append(case)
             continue
 
+        # Accepted, and *held* rather than booked. Measured on this book: of 20
+        # rows the model was asked about it correctly declined 16, fabricated
+        # nothing, and got 3 of the 4 it committed to wrong -- every one of
+        # them quoting the row correctly. A citation proves the evidence
+        # exists; it does not prove the conclusion follows from it.
+        #
+        # So the proposal reaches the operator queue with its quotation
+        # attached and does not enter the books. This is the same treatment
+        # `agent/tier.py` gives a model-chosen rate: a hypothesis a human has
+        # not confirmed is a hypothesis, however well cited.
         case.outcome = "assigned"
         ledger.add(Assignment(
             entity_id=entity_id,
@@ -326,6 +336,7 @@ def run_c2(
             rule_id="c2.cited_by_model",
             evidence=f"quoted from the row: {proposal.quote!r}",
             confidence=proposal.confidence,
+            verified=False,
         ))
         report.cases.append(case)
 

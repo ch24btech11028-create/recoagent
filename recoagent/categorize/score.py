@@ -39,6 +39,14 @@ class CategoryScorecard:
     wrong: int
     reviewed: int            # rows sent to a human, correctly or otherwise
     unlabelled: int          # assigned rows the answer key has no entry for
+    #: Proposed by the model, cited, and *not booked*. Scored separately and
+    #: never mixed into `wrong`: nothing has been decided about these rows, so
+    #: counting them against the system would charge it for an opinion it
+    #: explicitly declined to act on. Reported all the same -- a held proposal
+    #: that is usually wrong is a queue an operator learns to rubber-stamp.
+    held: int = 0
+    held_correct: int = 0
+    held_wrong: int = 0
     per_category: dict[Category, tuple[int, int, int]] = field(default_factory=dict)
     confusions: tuple[Confusion, ...] = ()
     by_rung: dict[str, int] = field(default_factory=dict)
@@ -60,15 +68,33 @@ class CategoryScorecard:
     def accuracy(self) -> float:
         return self.correct / self.assigned if self.assigned else 0.0
 
+    @property
+    def held_accuracy(self) -> float:
+        """How often a held proposal was right, had anyone approved it."""
+        return self.held_correct / self.held if self.held else 0.0
+
 
 def score(ledger: Ledger, truth: dict[str, str], rung: str) -> CategoryScorecard:
     correct = wrong = reviewed = unlabelled = 0
+    held = held_correct = held_wrong = 0
     per: dict[Category, list[int]] = {}
     confusions: dict[tuple[Category, Category], list[str]] = {}
 
     for entity_id, assignment in ledger.assignments.items():
         if assignment.category is Category.NEEDS_REVIEW:
             reviewed += 1
+            continue
+
+        if not assignment.verified:
+            # Held for approval. Graded, so the tier's quality is visible, but
+            # kept out of every number that describes what the system decided.
+            held += 1
+            expected_held = truth.get(entity_id)
+            if expected_held is not None:
+                if Category(expected_held) is assignment.category:
+                    held_correct += 1
+                else:
+                    held_wrong += 1
             continue
 
         expected_raw = truth.get(entity_id)
@@ -100,6 +126,9 @@ def score(ledger: Ledger, truth: dict[str, str], rung: str) -> CategoryScorecard
         wrong=wrong,
         reviewed=reviewed,
         unlabelled=unlabelled,
+        held=held,
+        held_correct=held_correct,
+        held_wrong=held_wrong,
         per_category={k: tuple(v) for k, v in per.items()},  # type: ignore[misc]
         confusions=tuple(
             Confusion(predicted=p, actual=a, count=len(ids), entity_ids=tuple(sorted(ids)[:5]))
@@ -122,6 +151,13 @@ def render(card: CategoryScorecard) -> str:
         f"     ({card.assigned} of {card.population} labelled rows)",
         f"  Sent for review          {card.reviewed:>8}",
     ]
+    if card.held:
+        out += [
+            f"  Held for approval        {card.held:>8}"
+            f"     proposed by the model, not booked",
+            f"    of those, correct      {card.held_correct:>8}"
+            f"     ({card.held_accuracy:.0%} — had anyone approved them)",
+        ]
     if card.unlabelled:
         out.append(
             f"  Assigned, unlabelled     {card.unlabelled:>8}"

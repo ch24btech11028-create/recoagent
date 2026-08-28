@@ -289,3 +289,54 @@ def test_a_row_the_answer_key_does_not_cover_is_scored_neither_way():
 def test_render_names_the_lead_metric_first(c1, batch):
     text = score.render(score.score(c1, batch.truth.categories, "C1"))
     assert text.index("Wrong-category rate") < text.index("Coverage")
+
+
+# ── held for approval, not booked ───────────────────────────────────────────
+
+
+def test_a_cited_model_assignment_is_held_rather_than_booked():
+    """Measured on this book: the model declined 16 of 20 correctly, fabricated
+    nothing, and got 3 of the 4 it committed to wrong -- every one of them
+    quoting the row correctly. A citation proves the evidence exists, not that
+    the conclusion follows from it, so a proposal stays a proposal."""
+    book = small_book()
+    ledger, report = categorise(
+        book,
+        [reply("bank_charge", "kind: mystery"),
+         reply("vendor_payment", "ACME SUPPLIES PVT LTD")],
+    )
+
+    assert report.assigned == 2
+    proposal = ledger.assignments["bl_1"]
+    assert proposal.category is Category.VENDOR_PAYMENT   # the opinion survives
+    assert proposal.verified is False                     # the booking does not
+    assert proposal.booked is False
+
+
+def test_a_held_proposal_never_touches_the_wrong_category_rate():
+    ledger = rules.Ledger()
+    ledger.add(rules.Assignment(
+        "booked", "bank_line", Category.BANK_CHARGE, 0, "C1", "r", "e",
+    ))
+    ledger.add(rules.Assignment(
+        "held", "bank_line", Category.VENDOR_PAYMENT, 0, "C2", "r", "e",
+        verified=False,
+    ))
+
+    card = score.score(ledger, {"booked": "bank_charge", "held": "refund"}, "C2")
+
+    assert card.assigned == 1 and card.wrong == 0
+    assert card.wrong_rate == 0.0
+    # The wrong proposal is still counted and reported, just not against the
+    # system's decisions -- a queue that is usually wrong is a queue an
+    # operator learns to rubber-stamp, and that has to be visible.
+    assert (card.held, card.held_wrong, card.held_correct) == (1, 1, 0)
+    assert card.held_accuracy == 0.0
+
+
+def test_a_rule_assignment_is_booked():
+    card_ledger = rules.Ledger()
+    card_ledger.add(rules.Assignment(
+        "e", "payment", Category.SALES_REVENUE, 0, "C1", "r", "proof",
+    ))
+    assert card_ledger.assignments["e"].booked is True

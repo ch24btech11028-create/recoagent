@@ -1,0 +1,1 @@
+{"text": "```json\n{\"category\": \"needs_review\", \"quote\": \"\", \"confidence\": 0.0, \"reason\": \"The row shows a captured payment and an order but does not contain enough information to classify it as a final settlement, refund, or vendor payment without external context.\"}\n```"}

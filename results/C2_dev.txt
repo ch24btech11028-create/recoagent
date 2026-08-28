@@ -3,9 +3,11 @@
   CATEGORISATION   rung=C2
 ========================================================================
 
-  Wrong-category rate         0.34%     (3 of 889 auto-assigned)
-  Coverage                   95.28%     (889 of 933 labelled rows)
+  Wrong-category rate         0.00%     (0 of 885 auto-assigned)
+  Coverage                   94.86%     (885 of 933 labelled rows)
   Sent for review                16
+  Held for approval               4     proposed by the model, not booked
+    of those, correct             1     (25% — had anyone approved them)
 
   Assignments by rung
     C0          8    source fields alone
@@ -20,18 +22,10 @@
   dispute_fee                     1       0        0     100.0%   100.0%
   gateway_fee                   172       0        0     100.0%   100.0%
   gst_input_credit              172       0        0     100.0%   100.0%
-  needs_review                    0       0        1       0.0%     0.0%
-  not_a_transaction               0       2        0       0.0%     0.0%
   refund                          6       0        0     100.0%   100.0%
-  sales_revenue                 491       0        2     100.0%    99.6%
-  settlement_credit              43       1        0      97.7%   100.0%
+  sales_revenue                 491       0        0     100.0%   100.0%
+  settlement_credit              42       0        0     100.0%   100.0%
 
-------------------------------------------------------------------------
-  WHERE IT GOES WRONG
-------------------------------------------------------------------------
-  called not_a_transaction when it was sales_revenue   (2)
-      e.g. pay_00255_retry, pay_00306_retry
-  called settlement_credit when it was needs_review   (1)
-      e.g. bank_0030_dup
+  No misclassifications on this book.
 
 ========================================================================

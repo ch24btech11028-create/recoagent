@@ -1,0 +1,1 @@
+{"text": "```json\n{\"category\": \"needs_review\", \"quote\": \"\", \"confidence\": 0.0, \"reason\": \"The row describes a captured wallet payment order with no settlement or movement of money into the merchant's account yet, so it lacks sufficient transaction detail for definitive categorisation.\"}\n```"}

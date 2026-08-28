@@ -1,0 +1,1 @@
+{"text": "```json\n{\"category\": \"needs_review\", \"quote\": \"\", \"confidence\": 0.0, \"reason\": \"The row represents a captured UPI payment, but without any inbound settlement credit, refund, or fee information, it cannot be categorized into any of the specified ledger categories.\"}\n```"}
