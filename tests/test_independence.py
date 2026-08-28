@@ -24,6 +24,10 @@ MATCHER_MODULES = [
     ROOT / "legs" / "__init__.py",
     ROOT / "validate.py",
     ROOT / "pipeline.py",
+    # The door someone else's data comes in through. It builds a SourceBundle
+    # from files this repository has never seen, and it must not acquire a
+    # taste for the shapes the generator happens to produce.
+    ROOT / "ingest.py",
     # The agent tier is under the same restriction as every other matcher. A
     # proposer that could reach ground truth would make the B3 numbers
     # worthless in exactly the way this test exists to prevent.
