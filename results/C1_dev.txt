@@ -1,0 +1,28 @@
+
+========================================================================
+  CATEGORISATION   rung=C1
+========================================================================
+
+  Wrong-category rate         0.00%     (0 of 885 auto-assigned)
+  Coverage                   94.86%     (885 of 933 labelled rows)
+  Sent for review                 0
+
+  Assignments by rung
+    C0          8    source fields alone
+    C1        877    determined by the reconciliation
+
+------------------------------------------------------------------------
+  PER CATEGORY
+------------------------------------------------------------------------
+  category                  correct   wrong   missed   precision   recall
+  chargeback                      1       0        0     100.0%   100.0%
+  dispute_fee                     1       0        0     100.0%   100.0%
+  gateway_fee                   172       0        0     100.0%   100.0%
+  gst_input_credit              172       0        0     100.0%   100.0%
+  refund                          6       0        0     100.0%   100.0%
+  sales_revenue                 491       0        0     100.0%   100.0%
+  settlement_credit              42       0        0     100.0%   100.0%
+
+  No misclassifications on this book.
+
+========================================================================

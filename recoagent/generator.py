@@ -980,6 +980,55 @@ def _file_decoy_paperwork(w: _World, cfg: "GeneratorConfig") -> None:
         ))
 
 
+
+def _categories(w) -> dict[str, str]:
+    """The accounting category of every row, from the generator's own records.
+
+    This is an answer key, not a categoriser. It knows what each row is because
+    it created it, which is precisely why it lives on `GroundTruth` and why
+    `tests/test_independence.py` forbids the categorising modules from importing
+    this file.
+
+    The two entries worth arguing about are the ones the taxonomy exists for: a
+    matched bank credit is `settlement_credit` and never `sales_revenue`,
+    because the revenue was recognised when the customer paid; and the tax on
+    the MDR is `gst_input_credit` and never part of the fee, because the
+    merchant reclaims it.
+    """
+    labels: dict[str, str] = {}
+
+    for payment in w.payments:
+        if payment.status in ("captured", "partially_captured", "refunded"):
+            labels[payment.payment_id] = "sales_revenue"
+            if payment.fee_paise:
+                labels[f"{payment.payment_id}:fee"] = "gateway_fee"
+            if payment.tax_paise:
+                labels[f"{payment.payment_id}:tax"] = "gst_input_credit"
+        else:
+            labels[payment.payment_id] = "not_a_transaction"
+
+    kinds = {
+        "refund": "refund",
+        "reversal": "refund",
+        "chargeback": "chargeback",
+        "dispute_fee": "dispute_fee",
+        "platform_fee": "gateway_fee",
+    }
+    for adjustment in w.adjustments:
+        labels[adjustment.adjustment_id] = kinds.get(adjustment.kind, "needs_review")
+
+    # Only credits that genuinely belong to a batch are transfers. A bank line
+    # the generator never tied to a settlement is money from somewhere else,
+    # and calling it a settlement credit would build the answer key out of the
+    # same assumption the matcher is being tested on.
+    for line in w.bank_lines:
+        labels[line.bank_line_id] = (
+            "settlement_credit" if line.bank_line_id in w.leg2 else "needs_review"
+        )
+
+    return labels
+
+
 def generate(cfg: GeneratorConfig | None = None) -> LabelledBatch:
     """Build one labelled batch. Deterministic in `cfg.seed`."""
     cfg = (cfg or GeneratorConfig()).resolved()
@@ -1005,6 +1054,7 @@ def generate(cfg: GeneratorConfig | None = None) -> LabelledBatch:
         leg2=dict(w.leg2),
         members={k: tuple(v) for k, v in w.members.items()},
         defects=tuple(w.defects),
+        categories=_categories(w),
     )
     return LabelledBatch(
         sources=sources, truth=truth, seed=cfg.seed, profile=cfg.mix.label

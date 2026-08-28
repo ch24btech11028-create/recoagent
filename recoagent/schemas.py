@@ -282,6 +282,13 @@ class GroundTruth:
     #: settlement_id -> the payment_ids genuinely inside that batch
     members: dict[str, tuple[str, ...]]
     defects: tuple[InjectedDefect, ...]
+    #: entity_id -> the accounting category the generator knows it created.
+    #:
+    #: Defaulted, so every fixture written before categories existed is still a
+    #: valid batch. Lives here rather than on the bundle for the reason the
+    #: whole file is organised around: it is an answer key, and a categoriser
+    #: that could read it would be grading its own homework.
+    categories: dict[str, str] = field(default_factory=dict)
 
     def defects_by_class(self) -> dict[DefectClass, int]:
         out: dict[DefectClass, int] = {}

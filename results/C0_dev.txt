@@ -1,0 +1,23 @@
+
+========================================================================
+  CATEGORISATION   rung=C0
+========================================================================
+
+  Wrong-category rate         0.00%     (0 of 8 auto-assigned)
+  Coverage                    0.86%     (8 of 933 labelled rows)
+  Sent for review                 0
+
+  Assignments by rung
+    C0          8    source fields alone
+
+------------------------------------------------------------------------
+  PER CATEGORY
+------------------------------------------------------------------------
+  category                  correct   wrong   missed   precision   recall
+  chargeback                      1       0        0     100.0%   100.0%
+  dispute_fee                     1       0        0     100.0%   100.0%
+  refund                          6       0        0     100.0%   100.0%
+
+  No misclassifications on this book.
+
+========================================================================

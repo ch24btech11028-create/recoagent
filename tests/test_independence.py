@@ -36,6 +36,12 @@ MATCHER_MODULES = [
     ROOT / "razorpay" / "mapping.py",
     ROOT / "razorpay" / "api.py",
     ROOT / "razorpay" / "webhook.py",
+    # The categoriser is graded against an answer key on `GroundTruth`, so it
+    # is under exactly the same rule as the matchers: a rung that could read
+    # `truth.categories` would score 100% and mean nothing.
+    ROOT / "categorize" / "rules.py",
+    ROOT / "categorize" / "agent.py",
+    ROOT / "categorize" / "taxonomy.py",
     # The agent tier is under the same restriction as every other matcher. A
     # proposer that could reach ground truth would make the B3 numbers
     # worthless in exactly the way this test exists to prevent.
