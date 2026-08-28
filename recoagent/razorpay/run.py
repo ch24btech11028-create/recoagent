@@ -114,7 +114,37 @@ def cmd_serve(args) -> int:
     log = EventLog(args.db)
 
     class Handler(BaseHTTPRequestHandler):
-        def do_POST(self) -> None:  # noqa: N802  (stdlib's spelling)
+        def do_GET(self) -> None:  # noqa: N802  (stdlib's spelling)
+            """A health check, so a tunnel can be verified before Razorpay is.
+
+            Razorpay validates the endpoint when you save the webhook, and a
+            failure there says nothing about *why*. Being able to open the URL
+            in a browser first separates "the tunnel is down" from "the path is
+            wrong" from "the secret does not match", which are three different
+            afternoons.
+            """
+            if self.path.rstrip("/") != args.path.rstrip("/"):
+                self._reply(404, {
+                    "error": f"nothing is listening on {self.path}",
+                    "expected": args.path,
+                })
+                return
+            self._reply(200, {
+                "status": "listening",
+                "path": args.path,
+                "events_stored": log.count(),
+                "deliveries": log.deliveries(),
+            })
+
+        def do_POST(self) -> None:  # noqa: N802
+            if self.path.rstrip("/") != args.path.rstrip("/"):
+                # A 404 rather than a silent accept. Razorpay retries a
+                # non-2xx, so a typo in the dashboard URL surfaces as failed
+                # deliveries you can see, instead of events that quietly go
+                # nowhere.
+                self._reply(404, {"error": f"expected {args.path}, got {self.path}"})
+                return
+
             length = int(self.headers.get("Content-Length") or 0)
             body = self.rfile.read(length)
             signature = self.headers.get("X-Razorpay-Signature", "")
@@ -150,9 +180,12 @@ def cmd_serve(args) -> int:
             """Silence the default access log; the handler prints what matters."""
 
     server = HTTPServer(("", args.port), Handler)
-    print(f"\n  listening on :{args.port}, storing to {args.db}")
-    print("  every event is signature-checked before it is stored, and stored")
-    print("  by event id, so a delivery retry books nothing twice.\n")
+    print(f"\n  listening on http://localhost:{args.port}{args.path}")
+    print(f"  storing to {args.db}")
+    print("\n  Every event is signature-checked before it is stored, and stored")
+    print("  by event id, so a delivery retry books nothing twice.")
+    print("\n  Razorpay needs a public HTTPS URL. This is bound to localhost, so")
+    print("  put a tunnel in front of it and register <tunnel>" + args.path + ".\n")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -182,6 +215,10 @@ def main(argv=None) -> int:
     p = sub.add_parser("serve", help="receive webhooks")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--db", default="data/razorpay/events.db")
+    p.add_argument(
+        "--path", default="/webhook/razorpay",
+        help="the path to accept deliveries on; anything else gets a 404",
+    )
     p.set_defaults(func=cmd_serve)
 
     args = ap.parse_args(argv)
