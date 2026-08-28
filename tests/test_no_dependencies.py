@@ -52,6 +52,47 @@ def test_b2_runs_with_every_third_party_package_blocked():
     assert "FALSE-MATCH RATE" in proc.stdout
 
 
+def test_ingest_runs_with_every_third_party_package_blocked(tmp_path):
+    """The CSV door is stdlib too.
+
+    It is the entry point a reader is most likely to try on their own machine
+    before installing anything, so a pandas import sneaking in here would break
+    the claim exactly where it is first tested by someone else.
+    """
+    csv_maker = """
+import csv, datetime
+rows = {
+  'orders': (['order_id','customer_id','invoice_no','amount_paise','currency','created_at'],
+             [['o1','c1','i1','100.00','INR','2026-07-01T10:00:00']]),
+  'payments': (['payment_id','order_id','gross_paise','fee_paise','tax_paise','method','status','settlement_id','captured_at'],
+               [['p1','o1','100.00','2.00','0.36','card_domestic','captured','s1','2026-07-01T10:05:00']]),
+  'settlements': (['settlement_id','utr','settled_at','net_paise','status'],
+                  [['s1','UTR1','2026-07-03T10:00:00','97.64','processed']]),
+  'bank': (['bank_line_id','value_date','amount_paise','narration','bank_ref'],
+           [['b1','2026-07-03','97.64','NEFT UTR1','UTR1']]),
+}
+import sys
+out = sys.argv[1]
+for name, (head, body) in rows.items():
+    with open(f'{out}/{name}.csv', 'w', newline='') as fh:
+        w = csv.writer(fh); w.writerow(head); w.writerows(body)
+"""
+    subprocess.run([sys.executable, "-c", csv_maker, str(tmp_path)], check=True)
+
+    script = BLOCKER.format(rung="B2").replace(
+        "sys.argv = ['recoagent.run', '--n', '600', '--seed', '7', '--rung', 'B2']",
+        "sys.argv = ['recoagent.ingest', '--orders', %r, '--payments', %r, "
+        "'--settlements', %r, '--bank', %r]"
+        % tuple(str(tmp_path / f"{n}.csv") for n in
+                ("orders", "payments", "settlements", "bank")),
+    ).replace("runpy.run_module('recoagent.run'", "runpy.run_module('recoagent.ingest'")
+
+    proc = subprocess.run([sys.executable, "-c", script], cwd=ROOT,
+                          capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr[-2000:]
+    assert "Credit value cleared" in proc.stdout
+
+
 def test_the_blocker_actually_blocks():
     """Guard against the test passing because the blocker silently does nothing."""
     proc = subprocess.run(
