@@ -1,0 +1,46 @@
+#!/bin/sh
+# Refuse a commit that carries a credential.
+#
+# `tests/test_no_secrets.py` already knew how to spot this; it ran in CI, which
+# is after the push, and for a secret "after the push" is the whole problem. A
+# key reached .env.example once in this repository's history and was published.
+# This runs the same check one step earlier, where it can still say no.
+#
+# Scans the STAGED content, not the working tree: reverting the file after
+# staging it would otherwise slip through.
+
+set -e
+
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+fail=0
+
+# 1. Nothing that looks like a live key, in any staged file.
+for file in $staged; do
+    case "$file" in
+        .githooks/pre-commit|tests/test_no_secrets.py) continue ;;
+    esac
+    hits=$(git show ":$file" 2>/dev/null | grep -nE \
+        'nvapi-[A-Za-z0-9_-]{20,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[A-Za-z0-9_-]{30,}|rzp_(test|live)_[A-Za-z0-9]{10,}' \
+        || true)
+    if [ -n "$hits" ]; then
+        echo "refusing to commit: $file looks like it carries a credential"
+        echo "$hits" | sed -E 's/(.{0,24}).*/  \1… [truncated]/'
+        fail=1
+    fi
+done
+
+# 2. The template must stay a template. Checked separately because a blank
+#    RAZORPAY_KEY_ID= is fine and an rzp_test_… one is not, and the pattern
+#    scan above cannot express "this particular file must have no values".
+if git diff --cached --name-only | grep -qx '.env.example'; then
+    if git show ':.env.example' | grep -qE '^[A-Za-z_]+= *["'"'"']?[^"'"'"' ]'; then
+        echo "refusing to commit: .env.example has a value in it."
+        echo "  It is committed so people can copy it, which is exactly why a"
+        echo "  value there is worse than one anywhere else. Put it in .env."
+        fail=1
+    fi
+fi
+
+[ "$fail" -eq 0 ] || { echo; echo "Nothing was committed."; exit 1; }
