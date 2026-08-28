@@ -154,7 +154,7 @@ def cmd_serve(args) -> int:
                 # 401, not 400. A 400 says "fix your payload"; this payload is
                 # not Razorpay's to fix.
                 self._reply(401, {"error": str(exc)})
-                print(f"    REJECTED  {exc}")
+                print(f"    REJECTED  {exc}", flush=True)
                 return
             except (UnicodeDecodeError, ValueError) as exc:
                 self._reply(400, {"error": f"body is not JSON: {exc}"})
@@ -162,7 +162,12 @@ def cmd_serve(args) -> int:
 
             mark = "replay " if event.replay else ""
             known = "" if event.event in SUBSCRIBED else "  (not subscribed)"
-            print(f"    {mark}{event.event:<24}{event.event_id}{known}")
+            # flush=True on every line this server prints. Python block-buffers
+            # stdout whenever it is not a terminal, so piping the log to a file
+            # -- or watching it in a split pane -- showed nothing at all until
+            # the process exited. The entire point of this command is that you
+            # can see an event land as it lands.
+            print(f"    {mark}{event.event:<24}{event.event_id}{known}", flush=True)
             # 200 even on a replay: Razorpay retries until it gets one, and a
             # non-2xx on an event we have already stored asks for the retry we
             # just proved we do not need.
@@ -185,7 +190,8 @@ def cmd_serve(args) -> int:
     print("\n  Every event is signature-checked before it is stored, and stored")
     print("  by event id, so a delivery retry books nothing twice.")
     print("\n  Razorpay needs a public HTTPS URL. This is bound to localhost, so")
-    print("  put a tunnel in front of it and register <tunnel>" + args.path + ".\n")
+    print("  put a tunnel in front of it and register <tunnel>" + args.path + ".\n",
+          flush=True)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
