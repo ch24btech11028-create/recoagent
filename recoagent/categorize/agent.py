@@ -30,6 +30,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from ..budget import BudgetExhausted
 from ..llm import Chat, Usage
 from ..schemas import SourceBundle
 from .rules import Assignment, Ledger
@@ -38,6 +39,10 @@ from .taxonomy import DEFINITIONS, PROPOSABLE, Category
 #: Below this, a correctly-cited category is still filed for review. It is a
 #: second gate, never the first one.
 CONFIDENCE_FLOOR = 0.55
+
+#: Token budget for one reply. Sized for a reasoning model's hidden tokens, not
+#: for the four fields it eventually emits.
+REPLY_BUDGET = 3000
 
 SYSTEM = """You categorise rows from an Indian payments book for a merchant's accounts.
 
@@ -118,6 +123,17 @@ class CategoryReport:
     @property
     def failed(self) -> int:
         return self._count("failed")
+
+    @property
+    def not_asked(self) -> int:
+        """Rows the daily request budget ran out before reaching.
+
+        Kept strictly apart from `failed`. A row nobody asked about is not a
+        row the model got wrong, and folding the two together turns "the key
+        has a 20-request daily cap" into "the model could not do this" -- which
+        is how a quota becomes a finding about a model.
+        """
+        return self._count("not_asked")
 
 
 class Categoriser(Protocol):
@@ -218,7 +234,12 @@ class ChatCategoriser:
         reply = self.chat.send(
             SYSTEM.replace("{categories}", categories),
             f"Row {entity_id} ({kind}). The text this row carries:\n\n{text}\n",
-            max_tokens=500,
+            # The reply is four short fields, so 500 was the obvious budget and
+            # it was wrong: a reasoning model spends the allowance on thinking
+            # tokens and returns `finish_reason=length` with empty content.
+            # Measured on gemini-3.6-flash -- 19 of 20 rows came back blank.
+            # The cap is on the whole generation, not on the visible answer.
+            max_tokens=REPLY_BUDGET,
         )
         self.usage.merge(reply.usage)
         if not reply.ok:
@@ -238,11 +259,28 @@ def run_c2(
 
     report = CategoryReport()
 
+    exhausted = False
+
     for entity_id, kind, amount in residue(sources, ledger):
         text = row_text(sources, entity_id, kind)
         case = CategoryCase(entity_id=entity_id, entity_kind=kind, outcome="failed")
 
-        proposal = categoriser.propose(kind, entity_id, text)
+        if exhausted:
+            case.outcome = "not_asked"
+            case.detail = "daily request budget spent before this row"
+            _review(ledger, entity_id, kind, amount, "not asked: request budget spent")
+            report.cases.append(case)
+            continue
+
+        try:
+            proposal = categoriser.propose(kind, entity_id, text)
+        except BudgetExhausted as exc:
+            exhausted = True
+            case.outcome = "not_asked"
+            case.detail = str(exc)
+            _review(ledger, entity_id, kind, amount, "not asked: request budget spent")
+            report.cases.append(case)
+            continue
         if isinstance(proposal, str):
             case.detail = proposal
             report.cases.append(case)
