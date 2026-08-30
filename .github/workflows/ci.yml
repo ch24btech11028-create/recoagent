@@ -138,6 +138,10 @@ jobs:
             exit 1
           fi
           git reset --hard HEAD
+      # The page is generated from the artifacts above, so it is built after
+      # they have been checked rather than before.
+      - name: the scorecard page builds from the artifacts
+        run: python -m recoagent.publish --out site/index.html
       # Exits non-zero if the books do not balance, so this is an assertion.
       # The artifacts are diffed too: a published trial balance that has drifted
       # from the code that made it is worse than no trial balance.

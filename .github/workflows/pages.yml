@@ -1,0 +1,47 @@
+# Publishes the one-page scorecard so a reader can see the evidence before
+# deciding whether to read the code. The page is generated from the committed
+# artifacts in `results/` -- it holds no numbers of its own, so it cannot drift
+# from them, and `ci.yml` is what checks those artifacts still match the code.
+
+name: pages
+
+on:
+  push:
+    branches: ["main", "finmind"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # No pip install: the generator is standard library only, like the rest.
+      - name: build the page
+        run: |
+          python -m recoagent.publish --out site/index.html
+          cp -r results site/results
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

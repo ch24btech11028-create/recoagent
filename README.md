@@ -21,6 +21,10 @@ model's contribution is a measured difference rather than a claim:
 | **Post** | double-entry journal + trial balance, every open rupee attributed | [below](#posting-to-the-ledger) |
 | **Ingest** | Razorpay test mode, or your own CSVs | [below](#razorpay-test-mode) |
 
+**[Open the scorecard](https://ch24btech11028-create.github.io/recoagent/)** —
+one page, generated from the committed artifacts, showing the false-match rate,
+the adversarial audit, the trial balance and the agent tier's measured zero.
+
 The reconciliation engine is `recoagent/`, and it keeps that name throughout —
 v1.0 is tagged [`v1.0-recoagent`](../../releases/tag/v1.0-recoagent) if you want
 the engine on its own.
@@ -852,6 +856,7 @@ recoagent/
   agent/tier.py            B3: propose, gate, book or hold for approval
   qa/                      the settlement Q&A agent and its graded bank
   pipeline.py              rung assembly
+  publish.py               the one-page scorecard, generated from results/
   journal/accounts.py      chart of accounts; the gateway-receivable clearing idea
   journal/post.py          double-entry postings, trial balance, open-batch causes
   ingest.py                your own CSVs — coverage only, no scorecard
@@ -872,7 +877,7 @@ recoagent/
   worklist/store.py        the exception queue: idempotent, carry-forward
   run.py                   CLI
 results/                   committed run artifacts
-tests/             368 tests
+tests/             373 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance
