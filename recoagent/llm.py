@@ -121,6 +121,26 @@ def _is_retryable(exc: Exception) -> bool:
     return status == 429 or (isinstance(status, int) and status >= 500)
 
 
+def _openai_client(*, base_url: str, api_key_env: str, timeout: float):
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        # "No module named 'openai'" is accurate and useless to someone who has
+        # just cloned this. The deterministic rungs need no dependencies at all,
+        # so nothing has told them the agent tier does -- say what to install
+        # instead of leaking the traceback.
+        raise RuntimeError(
+            "The agent tier needs the OpenAI SDK, which is not installed. "
+            "The deterministic rungs (B0, B2) do not need it, which is why "
+            "it is absent by default.\n"
+            "    pip install openai\n"
+            "or, for every optional tier:\n"
+            "    pip install -r requirements.txt"
+        ) from exc
+
+    return OpenAI(base_url=base_url, api_key=require_key(api_key_env), timeout=timeout)
+
+
 class OpenAICompatibleChat:
     """Any host speaking the OpenAI chat-completions protocol."""
 
@@ -136,26 +156,14 @@ class OpenAICompatibleChat:
         extra_body: dict | None = None,
         client=None,
     ) -> None:
-        if client is None:
-            try:
-                from openai import OpenAI
-            except ImportError as exc:
-                # "No module named 'openai'" is accurate and useless to someone
-                # who has just cloned this. The deterministic rungs need no
-                # dependencies at all, so nothing has told them the agent tier
-                # does -- say what to install instead of leaking the traceback.
-                raise RuntimeError(
-                    "The agent tier needs the OpenAI SDK, which is not installed. "
-                    "The deterministic rungs (B0, B2) do not need it, which is why "
-                    "it is absent by default.\n"
-                    "    pip install openai\n"
-                    "or, for every optional tier:\n"
-                    "    pip install -r requirements.txt"
-                ) from exc
-
-            key = require_key(api_key_env)
-            client = OpenAI(base_url=base_url, api_key=key, timeout=timeout)
+        # Built on the first send, not here. A run whose every request is
+        # already answered on disk sends nothing, and it should not need a
+        # credential to replay answers it already has -- that is what makes a
+        # published live-model result checkable by a reader who has no key.
         self._client = client
+        self._build = None if client is not None else lambda: _openai_client(
+            base_url=base_url, api_key_env=api_key_env, timeout=timeout
+        )
         self._model = model
         self._temperature = temperature
         self._max_retries = max_retries
@@ -164,7 +172,18 @@ class OpenAICompatibleChat:
         )
         self.label = model
 
+    def check_ready(self) -> None:
+        """Do now what the first send would do, so a caller can ask in advance.
+
+        Construction is lazy so a cached run needs no key; that would otherwise
+        turn "is a model configured?" into a question nothing could answer
+        until the first question had already failed in front of an operator.
+        """
+        if self._client is None:
+            self._client = self._build()
+
     def send(self, system: str, user: str, *, max_tokens: int = 4000) -> Reply:
+        self.check_ready()
         usage = Usage()
         messages = [
             {"role": "system", "content": system},
@@ -230,6 +249,9 @@ class AnthropicChat:
         self._effort = effort
         self.label = model
 
+    def check_ready(self) -> None:
+        """Nothing deferred here: construction already decided it."""
+
     def send(self, system: str, user: str, *, max_tokens: int = 4000) -> Reply:
         usage = Usage()
         try:
@@ -261,6 +283,9 @@ class ScriptedChat:
         self._i = 0
         self.label = label
         self.seen: list[tuple[str, str]] = []
+
+    def check_ready(self) -> None:
+        """Nothing deferred here: construction already decided it."""
 
     def send(self, system: str, user: str, *, max_tokens: int = 4000) -> Reply:
         self.seen.append((system, user))

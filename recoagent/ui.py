@@ -212,7 +212,10 @@ class Model:
         with self._probe_lock:
             if not self._probed:
                 try:
-                    self._build()
+                    # `check_ready`, not construction: an OpenAI-compatible
+                    # client is built lazily now, so constructing one proves
+                    # nothing about whether a key is present.
+                    self._build().check_ready()
                     self._problem = None
                 except Exception as exc:  # noqa: BLE001 - shown to the operator verbatim
                     self._problem = str(exc)
