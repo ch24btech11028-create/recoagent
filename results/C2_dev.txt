@@ -28,4 +28,14 @@
 
   No misclassifications on this book.
 
+------------------------------------------------------------------------
+  THE MODEL RUN
+------------------------------------------------------------------------
+  model                           gemini-3.5-flash-lite
+  rows asked about                      20
+  assigned on a quotation                4
+  discarded, quote not in the row        0
+  model declined                        16
+  call failed                            0
+
 ========================================================================

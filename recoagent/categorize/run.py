@@ -7,6 +7,10 @@
 C0 and C1 need no key and no network. C2 does, and the point of running the
 ladder rather than C2 alone is that the model's contribution is then the
 difference between two measured numbers instead of a claim.
+
+The published C2 run replays without a key: every reply it received is
+committed under `data/llm-cache/`, so the default model is the one that was
+measured rather than the newest one available. `--no-cache` asks again.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--profile", choices=sorted(MIXES), default="dev")
     ap.add_argument("--rung", choices=("C0", "C1", "C2"), default="C1")
-    ap.add_argument("--model", default="gemini/gemini-3.6-flash")
+    ap.add_argument("--model", default="gemini/gemini-3.5-flash-lite")
     ap.add_argument("--rpm", type=int, help="override the requests-per-minute limit")
     ap.add_argument("--rpd", type=int, help="override the requests-per-day budget")
     ap.add_argument(
@@ -77,19 +81,36 @@ def main(argv=None) -> int:
 
     card = score(ledger, batch.truth.categories, args.rung)
     text = render(card)
-    print(text)
 
+    # Part of the artifact, not a console extra. A published C2 scorecard that
+    # does not name the model, or say how many quotations were discarded, is a
+    # number the reader has to take on trust -- and the README quotes these
+    # lines, so they have to be in the file it points at.
     if report is not None:
-        print(f"  model                    {report.model}")
-        print(f"  rows asked about         {report.attempted:>8}")
-        print(f"  assigned on a quotation  {report.assigned:>8}")
-        print(f"  discarded, quote not in the row  {report.uncited:>8}")
-        print(f"  model declined           {report.declined:>8}")
-        print(f"  call failed              {report.failed:>8}")
+        def row(label: str, value, note: str = "") -> str:
+            return f"  {label:<32}{value:>8}" + (f"     {note}" if note else "")
+
+        lines = [
+            f"  {'model':<32}{report.model:>8}",
+            row("rows asked about", report.attempted),
+            row("assigned on a quotation", report.assigned),
+            row("discarded, quote not in the row", report.uncited),
+            row("model declined", report.declined),
+            row("call failed", report.failed),
+        ]
         if report.not_asked:
-            print(f"  never asked (budget)     {report.not_asked:>8}"
-                  "     unmeasured, not unresolved")
-        print()
+            lines.append(row("never asked (budget)", report.not_asked,
+                             "unmeasured, not unresolved"))
+        rule = "=" * 72 + "\n"
+        body = text[: -len(rule)] if text.endswith(rule) else text
+        text = (
+            body
+            + "-" * 72 + "\n  THE MODEL RUN\n" + "-" * 72 + "\n"
+            + "\n".join(lines) + "\n\n"
+            + rule
+        )
+
+    print(text)
 
     if args.out:
         with open(args.out, "w") as fh:

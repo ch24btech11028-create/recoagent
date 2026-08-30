@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime, timezone
+from pathlib import Path
 
 import pytest
 
@@ -340,3 +341,34 @@ def test_a_rule_assignment_is_booked():
         "e", "payment", Category.SALES_REVENUE, 0, "C1", "r", "proof",
     ))
     assert card_ledger.assignments["e"].booked is True
+
+
+def test_the_published_c2_run_replays_from_the_committed_cache(monkeypatch, tmp_path):
+    """The one live-model claim in this repository has to be checkable.
+
+    Every other number here reproduces from code and a seed. `results/C2_dev.txt`
+    cannot: it is what a model actually answered on one day. What makes it a
+    measurement rather than a report of one is that the replies are committed,
+    so anyone can re-derive the scorecard from them -- with no key, which is
+    the condition a reader is actually in. This test puts itself in that
+    condition rather than assuming it.
+    """
+    from recoagent.categorize import run as categorize_run
+
+    published = Path("results/C2_dev.txt")
+    cache = Path("data/llm-cache")
+    if not published.is_file() or not any(cache.glob("*.json")):
+        pytest.skip("the published C2 artifact or its cache is not in this checkout")
+
+    for var in ("GEMINI_API_KEY", "NVIDIA_API_KEY", "ANTHROPIC_API_KEY", "OPENAI_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    out = tmp_path / "replay.txt"
+    assert categorize_run.main(
+        ["--n", "500", "--seed", "7", "--profile", "dev", "--rung", "C2", "--out", str(out)]
+    ) == 0
+
+    # Byte-for-byte: a scorecard that merely agreed on the headline rate would
+    # hide a changed model, a changed row count, or a quotation check that had
+    # quietly stopped discarding anything.
+    assert out.read_text() == published.read_text()

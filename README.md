@@ -449,8 +449,15 @@ the model's 25% is reported rather than buried. Booking those four would have
 taken the system from 0.00% wrong to 0.34% in exchange for 0.42 points of
 coverage.
 
+**And the C2 run above replays with no key.** Every reply the model gave is
+committed under [`data/llm-cache/`](data/llm-cache/), so the command below
+reproduces `results/C2_dev.txt` byte-for-byte on a machine with no credentials
+— which is the only way a reader can check a live-model claim rather than take
+it. `--no-cache` asks the model again.
+
 ```bash
 python3 -m recoagent.categorize.run --n 500 --seed 7 --rung C1
+python3 -m recoagent.categorize.run --n 500 --seed 7 --rung C2   # replays from cache
 ```
 
 ---
@@ -534,7 +541,7 @@ recoagent/
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
   run.py                   CLI
 results/                   committed run artifacts
-tests/             312 tests
+tests/             313 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

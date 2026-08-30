@@ -29,7 +29,10 @@ data/raw/
 # in a public repository. The committed fixture under tests/fixtures/razorpay/
 # is hand-written and carries none, which is what CI reconciles.
 data/razorpay/
-data/llm-cache/
+# NOT ignored: the replies behind results/C2_dev.txt are committed, which is
+# what lets a reader replay the one live-model measurement in this repository
+# byte-for-byte with no key. They are evidence, on the same footing as
+# results/ -- a cached reply is the model's actual answer, not a run output.
 out/
 *.duckdb
 

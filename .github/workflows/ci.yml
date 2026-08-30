@@ -81,6 +81,15 @@ jobs:
           python -m recoagent.categorize.run --n 500 --seed 7  --profile dev     --rung C0
           python -m recoagent.categorize.run --n 500 --seed 7  --profile dev     --rung C1
           python -m recoagent.categorize.run --n 500 --seed 21 --profile holdout --rung C1
+      # The only live-model result in the repository, re-derived from the
+      # replies committed under data/llm-cache on a runner with no key and no
+      # SDK. If it ever needs one, the claim that a reader can check it has
+      # quietly become false.
+      - name: the published C2 measurement replays with no key
+        run: |
+          python -m recoagent.categorize.run --n 500 --seed 7 --profile dev --rung C2 \
+            --out fresh_c2.txt > /dev/null
+          diff fresh_c2.txt results/C2_dev.txt
       # A recorded pull, so the Razorpay path is checked without a key. An
       # integration whose tests need credentials is an integration nobody finds
       # out has broken.
