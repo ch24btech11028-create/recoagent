@@ -1,22 +1,19 @@
-"""The shared stylesheet for every HTML surface RecoAgent renders.
+/* The shared stylesheet for every HTML surface RecoAgent renders.
 
-The static export (`recoagent.report`) and the live console (`recoagent.ui`)
-are the same product seen from two angles, so they read from one stylesheet
-rather than drifting apart one colour at a time.
+   The static export (`recoagent.report`) and the live console (`recoagent.ui`)
+   are the same product seen from two angles, so they read from one stylesheet
+   rather than drifting apart one colour at a time.
 
-Design notes worth keeping:
+   Design notes worth keeping:
 
-- **Colour never carries meaning alone.** Severity is a chip *and* a position in
-  the sort order *and* a label; the palette is support, not the signal.
-- **Tabular numerals everywhere money appears.** Digits that do not line up are
-  digits an operator has to read twice.
-- **Three themes, one palette.** Light, dark via `prefers-color-scheme`, and an
-  explicit `data-theme` override that wins over both.
-"""
+   - Colour never carries meaning alone. Severity is a chip *and* a position in
+     the sort order *and* a label; the palette is support, not the signal.
+   - Tabular numerals everywhere money appears. Digits that do not line up are
+     digits an operator has to read twice.
+   - Three themes, one palette. Light, dark via `prefers-color-scheme`, and an
+     explicit `data-theme` override that wins over both. */
 
-from __future__ import annotations
-
-CSS = r""":root {
+:root {
   --ground:#F4F6F8; --surface:#FFFFFF; --surface-2:#EBEEF2; --surface-3:#F8F9FB;
   --ink:#11151C; --ink-2:#3A4351; --muted:#5C6675;
   --rule:#DDE2E8; --rule-2:#C4CBD5;
@@ -120,4 +117,3 @@ tbody tr:hover td{background:var(--surface-3)}
 footer{border-top:1px solid var(--rule);padding-top:16px;font-family:var(--mono);
         font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-"""

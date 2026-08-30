@@ -30,13 +30,17 @@ from pathlib import Path
 from .eval.scorer import Scorecard, score
 from .generator import DefectMix, GeneratorConfig, generate
 from .money import format_inr
-from .webstyle import CSS
+# The export is one standalone file with no server behind it, so the shared
+# stylesheet is read off disk and inlined rather than linked.
+from .webassets import read as _read_asset
 from .pipeline import run_b0, run_b2
 from .schemas import LabelledBatch, ReconResult
 # Tier labels, rule names and the severity bands live in `views.py`, which the
 # live console reads from too. Two surfaces onto one run should not be able to
 # disagree about what a rule is called or how loud a row is.
 from .views import RULE_LABEL, severity as _severity
+
+CSS = _read_asset("base.css")
 
 MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean": (7, DefectMix.clean)}
 

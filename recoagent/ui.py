@@ -6,8 +6,9 @@ a page: an overview, the exception queue with a case file behind every row, the
 match log, the four source ledgers, the agent, the published results, and the
 one screen that uses the answer key.
 
-The server is only routes and payload shaping. What each screen renders is built
-in `views.py`; the document it renders into is `console_page.py`.
+The server is only routes and payload shaping. What each screen renders is
+built in `views.py`; the front end itself is HTML, CSS and JavaScript under
+`recoagent/web/`, served as-is by `webassets.py`.
 
 Three things are deliberate.
 
@@ -50,7 +51,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import views
-from .console_page import PAGE
 from .eval.scorer import Scorecard, score
 from .generator import DefectMix, GeneratorConfig, generate
 from .money import format_inr
@@ -59,6 +59,7 @@ from .qa import agent as qa_agent
 from .qa import bank as qa_bank
 from .schemas import LabelledBatch, ReconResult
 from .views import RULE_LABEL
+from .webassets import asset_for
 
 MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean": (7, DefectMix.clean)}
 
@@ -347,8 +348,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
-        if path == "/":
-            self._send(200, PAGE.encode(), "text/html; charset=utf-8")
+        asset = asset_for(path)
+        if asset is not None:
+            body, content_type = asset
+            self._send(200, body.encode(), content_type)
         elif path == "/api/model":
             self._json(self.model.status())
         elif path in ("/api/run", "/api/exception", "/api/matches", "/api/source"):

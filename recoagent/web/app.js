@@ -1,20 +1,15 @@
-"""The dashboard client: a router, seven views, and the fetches behind them.
+/* The dashboard client: a router, eight views, and the fetches behind them.
 
-No framework and no build step, for the same reason the rest of the project has
-no dependencies it does not use: a reviewer should be able to read the whole
-surface without installing anything. The shape is deliberately boring --
-`state` holds the current run, a hash route picks a view, a view returns a
-string of markup and then wires its own handlers.
+   No framework and no build step, for the same reason the rest of the project
+   has no dependencies it does not use: a reviewer should be able to read the
+   whole surface without installing anything. The shape is deliberately boring --
+   `state` holds the current run, a hash route picks a view, a view returns a
+   string of markup and then wires its own handlers.
 
-The one rule the client enforces on itself: the queue, the match log and the
-source ledgers render only what the server sent from `views.py`, which cannot
-see the answer key. Ground truth appears on the Assurance screen and is
-labelled there.
-"""
+   The one rule the client enforces on itself: the queue, the match log and the
+   source ledgers render only what the server sent from `views.py`, which cannot
+   see the answer key. Ground truth appears on the Assurance screen, labelled. */
 
-from __future__ import annotations
-
-APP_JS = r"""
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -940,4 +935,3 @@ document.addEventListener("keydown", (e) => {
   route();
   await doRun();
 })();
-"""

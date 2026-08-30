@@ -1,23 +1,14 @@
-"""The dashboard's chrome: the shell, the navigation, and the working surfaces.
+/* The dashboard's chrome: the shell, the navigation, the working surfaces.
 
-`webstyle.CSS` holds what the static export and the console agree on -- the
-palette, the type scale, tables, chips, the tier ladder. This file holds what
-only exists when there is something to click: a sidebar, a run bar, filters,
-a master-detail split, pagination.
+   `base.css` holds what the static export and the console agree on -- the
+   palette, the type scale, tables, chips, the tier ladder. This file holds what
+   only exists when there is something to click: a sidebar, a run bar, filters,
+   a master-detail split, pagination.
 
-Two rules carried over from the palette, because they are the reason the screen
-is readable at all:
+   Both rules from the palette carry over, because they are why the screen is
+   readable at all: colour never carries meaning alone, and money is always set
+   in tabular numerals. */
 
-- **Colour never carries meaning alone.** Severity is a chip *and* a position in
-  the sort order *and* a written label. An operator with no colour vision loses
-  nothing.
-- **Tabular numerals everywhere money appears.** Digits that do not line up are
-  digits somebody has to read twice.
-"""
-
-from __future__ import annotations
-
-APP_CSS = r"""
 /* ── shell ─────────────────────────────────────────────────────────────── */
 body{overflow-y:scroll}
 .app{display:grid;grid-template-columns:238px minmax(0,1fr);min-height:100vh}
@@ -234,4 +225,3 @@ tbody td.num,thead th{white-space:nowrap}
   .view,.topbar,.runbar{padding-left:14px;padding-right:14px}
   .qlist{max-height:none}
 }
-"""

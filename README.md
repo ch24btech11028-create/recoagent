@@ -869,7 +869,10 @@ recoagent/
   categorize/rules.py      C0 source fields, C1 what the reconciliation proved
   categorize/agent.py      C2: the model, which must quote its evidence
   categorize/score.py      wrong-category rate first, then coverage
-  ui.py, views.py          the live operator console
+  ui.py                    the console's server: routes and payload shaping
+  views.py                 what each screen shows, from sources + result only
+  webassets.py             locates and serves the front end
+  web/                     the front end: index.html, app.css, app.js, base.css
   eval/scorer.py           false-match rate, defect accounting, value coverage
   eval/benchrec.py         the external corpus, scored against its own baseline
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
@@ -877,7 +880,7 @@ recoagent/
   worklist/store.py        the exception queue: idempotent, carry-forward
   run.py                   CLI
 results/                   committed run artifacts
-tests/             373 tests
+tests/             375 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

@@ -10,6 +10,7 @@ client, so the suite never needs an endpoint and never costs a call.
 from __future__ import annotations
 
 import json
+import re
 import threading
 import urllib.error
 import urllib.request
@@ -242,23 +243,55 @@ def _post(url, payload):
         return exc.code, json.loads(exc.read())
 
 
-def test_the_page_serves(server):
-    with urllib.request.urlopen(server + "/", timeout=30) as r:
-        body = r.read().decode()
-    assert r.status == 200
+def _text(server, path):
+    with urllib.request.urlopen(server + path, timeout=30) as r:
+        return r.status, r.headers.get("Content-Type"), r.read().decode()
+
+
+def test_the_front_end_is_served_as_html_css_and_javascript(server):
+    """The UI is web files, served as web files -- not strings built in Python."""
+    status, content_type, body = _text(server, "/")
+    assert status == 200 and content_type.startswith("text/html")
     assert "<title>RecoAgent</title>" in body
-    # The shell and the container the router fills. Every screen is rendered
-    # into this one element, so if it is missing the console is a blank page.
+    # The shell and the container the router fills. Every screen renders into
+    # this one element, so if it is missing the console is a blank page.
     assert 'id="view"' in body and 'class="app"' in body
-    # Every route in the sidebar has a view behind it. A dead link in the nav
-    # is the one bug a screenshot will not show.
-    for route in ("overview", "exceptions", "agent", "matches", "sources",
-                  "assurance", "results", "method"):
-        assert f'href="#/{route}"' in body, f"{route} is not in the nav"
-        assert f"VIEWS.{route} = " in body, f"{route} has no view behind it"
+    assert '<link rel="stylesheet" href="/app.css">' in body
+    assert '<script src="/app.js" defer></script>' in body
+
+    for path, expected in (("/base.css", "text/css"), ("/app.css", "text/css"),
+                           ("/app.js", "text/javascript")):
+        status, content_type, text = _text(server, path)
+        assert status == 200 and content_type.startswith(expected), path
+        assert text.strip(), path
+
     # Self-contained apart from the font stylesheet: no script or data endpoint
     # outside this origin.
     assert "cdn" not in body.lower()
+
+
+def test_every_nav_link_has_a_view_behind_it(server):
+    """A dead link in the sidebar is the one bug a screenshot will not show.
+
+    The nav lives in the document and the views live in the script, so this is
+    the seam where the two can drift apart without either file looking wrong.
+    """
+    _, _, html = _text(server, "/")
+    _, _, js = _text(server, "/app.js")
+    routes = set(re.findall(r'href="#/([a-z]+)"', html))
+    assert len(routes) >= 8, routes
+    for route in routes:
+        assert f"VIEWS.{route} = " in js, f"{route} is in the nav with no view behind it"
+
+
+def test_an_asset_that_is_not_on_the_list_is_not_served(server):
+    """An allowlist, not a path join -- so there is no traversal to reason about."""
+    for path in ("/../ui.py", "/views.py", "/web/app.js", "/nope.css"):
+        try:
+            with urllib.request.urlopen(server + path, timeout=30) as r:
+                assert r.status == 404, path
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 404, path
 
 
 def test_an_unknown_route_is_a_clean_404(server):
