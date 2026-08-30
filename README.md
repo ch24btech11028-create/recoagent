@@ -190,13 +190,54 @@ Where it still has work is the book whose paperwork never arrived:
 python3 -m recoagent.eval.b3 --profile dev --no-paperwork
 ```
 
-That run needs an API key and **is not yet published here** — the previous
-number is void: it was taken when fee and FX cases still reached the model, so
-its denominators describe a tier that no longer sees them, and it is quarantined
-in [`results/void/`](results/void/) with a note. No replacement is claimed until
-a committed artifact backs it.
+That run needs an API key, and **it is now published.** Both profiles, live
+against `nvidia/nemotron-3-ultra-550b-a55b`, with **zero endpoint failures** —
+which is what makes them measurements rather than reports on an outage. Full
+artifacts: [`results/B3_dev_nopaper.txt`](results/B3_dev_nopaper.txt) and
+[`results/B3_holdout_nopaper.txt`](results/B3_holdout_nopaper.txt).
 
-Until then, note what B3 has already earned its place by surviving: a proposer
+| | dev | held-out |
+|---|---:|---:|
+| Residual-bearing leg-2 items | 7 | 9 |
+| Cases attempted | 7 of 7 | 9 of 9 |
+| **RESOLVED (source-backed)** | **0** | **0** |
+| needs approval | 4 | 5 |
+| declined by the model | 2 | 3 |
+| rejected by the gate | 0 | 0 |
+| cited unverifiable evidence | 0 | 0 |
+| malformed reply | 1 | 1 |
+| **endpoint failed** | **0** | **0** |
+| Leg 2 recall | 93.29% → 93.29% | 93.29% → 93.29% |
+| **False-match rate** | **0.00%** | **0.00%** |
+| Defects mishandled | 0 | 0 |
+| Cost | $0.038, 428s | $0.041, 377s |
+
+**Every case the model saw produced a worked account of the residual, and not
+one of them could be verified, so nothing was booked.** That is the thesis
+landing, not a disappointing result: the tier's job is to turn a bare number
+into an explanation a human can act on, and the gate's job is to refuse to book
+an explanation nothing confirms. Four cases on dev and five on held-out closed
+the arithmetic on a rate no document in the book issues — `needs_approval`,
+held, visible, not reconciled. Two and three respectively the model declined
+outright, which is also the right answer.
+
+**The zero is the number to read, and it is allowed to be zero.** An LLM tier
+that resolved seven of seven here would mean the gate had been talked into
+something, which is exactly the failure an earlier design shipped and a reviewer
+caught (below).
+
+**Both profiles land on 93.29%, and that is construction rather than a
+copy-paste.** The two mixes hold each leg's *total* defect rate constant and
+invert only the composition, so with the paperwork withheld both books lose the
+same number of leg-2 credits. Where they differ is underneath: 15 leg-2
+exceptions against 16, and 7 residual-bearing items against 9.
+
+**The earlier `--no-paperwork` numbers stay void.** They were taken when fee and
+FX cases still reached the model, so their denominators describe a tier that no
+longer sees them; they remain quarantined in [`results/void/`](results/void/)
+with a note rather than being quietly refreshed.
+
+Note also what B3 has earned its place by surviving: a proposer
 that cites a row which does not exist, one that refuses, and a dead endpoint all
 leave the false-match rate at 0.00% and the book unchanged. Those are tests, not
 claims — `tests/test_b3_eval.py` runs the whole command against scripted
@@ -212,14 +253,18 @@ money the code recomputes. The old runs are quarantined in
 [`results/void/`](results/void/) with a note, because the before-and-after is
 the most instructive thing in this repository. The attack is a permanent test.
 
-**Malformed output is a first-class number here, not a footnote.** The
-quarantined pre-RateBook run recorded 19% of calls (3 of 16) returning
-unparseable output, one opening with "Let me analyze this reco…" — a reasoning
-model leaking preamble where JSON was required. That figure belongs to the void
-run and is quoted only as history; the report now counts a malformed reply and a
-rate-limited endpoint as separate lines, because one is a property of the model
-and the other is a property of the account, and a reader should never have to
-guess which produced a zero.
+**Malformed output is a first-class number here, not a footnote.** On the
+published runs above it is **2 of 16 calls (12.5%)** — one on each profile, and
+one of them again opens with "Let me…", a reasoning model leaking preamble where
+JSON was required. The quarantined pre-RateBook run recorded 19% (3 of 16); that
+figure belongs to the void run and is quoted only as history, but the failure
+mode did not go away and is not rounded off.
+
+The report counts a malformed reply and a rate-limited endpoint as separate
+lines, because one is a property of the model and the other is a property of the
+account, and a reader should never have to guess which produced a zero. On both
+published runs the endpoint line is **0**, so the zero in the resolved column is
+the model's answer rather than an outage.
 
 **The control still holds:** running B3 with `NullProposer` reproduces B2
 exactly, so whatever the tier contributes is the model's and not plumbing's.
@@ -240,7 +285,7 @@ identical behaviour.
 | **B0** | exact join | exact UTR | **built, measured** |
 | B1 | + Splink (Fellegi-Sunter) | — | not built |
 | **B2** | + documented partial capture | + SSMP, tolerance, spill pairing | **built, measured** |
-| **B3** | *(unchanged)* | + LLM exception tier | **built; with the paperwork in the book, 0 cases reach it** |
+| **B3** | *(unchanged)* | + LLM exception tier | **built and measured live; 0 cases reach it with the paperwork in the book, 0 of 16 resolved without it** |
 
 The two legs are independent — Splink only touches Leg 1, SSMP only Leg 2 — so
 the ladder is really two ladders over shared inputs, and rungs can be built out
