@@ -11,13 +11,14 @@ what is left — never without quoting the evidence.
 > **Solvers find matches. The model proposes why the rest didn't match — and no
 > hypothesis is accepted until the arithmetic closes.**
 
-Three things it does, each with a ladder underneath it so the model's
-contribution is a measured difference rather than a claim:
+Four things it does, each with a ladder or an invariant underneath it so the
+model's contribution is a measured difference rather than a claim:
 
 | | What it does | Where the number comes from |
 |---|---|---|
 | **Reconcile** | order ↔ payment (1:1), settlement batch ↔ bank credit (N:1) | B0 → B2 → B3, [below](#results) |
 | **Categorise** | every row assigned an accounting category | C0 → C1 → C2, [below](#categorisation) |
+| **Post** | double-entry journal + trial balance, every open rupee attributed | [below](#posting-to-the-ledger) |
 | **Ingest** | Razorpay test mode, or your own CSVs | [below](#razorpay-test-mode) |
 
 The reconciliation engine is `recoagent/`, and it keeps that name throughout —
@@ -689,6 +690,105 @@ worse than leaving it.
 
 ---
 
+## Posting to the ledger
+
+Categorisation ends at a label, and a label can be wrong quietly. A posting
+cannot: it names two accounts and a direction, and once every row is posted the
+books either balance or they do not.
+
+```bash
+python3 -m recoagent.journal --n 2000 --profile dev
+```
+
+| | dev | held-out |
+|---|---:|---:|
+| Entries posted | 3,572 | 3,575 |
+| Total debits | Rs 4,57,91,502.27 | Rs 5,08,25,737.68 |
+| Total credits | Rs 4,57,91,502.27 | Rs 5,08,25,737.68 |
+| **Trial balance** | **balanced** | **balanced** |
+| Entries that do not balance | 0 | 0 |
+| Suspense (unclassified) | Rs 0.00 | Rs 0.00 |
+| Batches fully cleared | 110 of 164 | 103 of 164 |
+
+Artifacts: [`results/journal_dev.txt`](results/journal_dev.txt),
+[`results/journal_holdout.txt`](results/journal_holdout.txt).
+
+### The clearing account is the whole argument
+
+When a customer pays, the merchant does not have the money — the gateway does.
+So a capture creates a **gateway receivable**, the fee and its tax and any
+refund reduce it, and the settlement credit clears it into the bank. Which
+means this:
+
+```
+gross - fee - tax - refunds - chargebacks - dispute fees - net credit = 0
+```
+
+is *both* the leg-2 identity the matcher proves *and* the statement that a
+batch's receivable nets to zero. They are the same equation in two notations —
+so the accounting output is tied numerically to the reconciliation rather than
+sitting alongside it.
+
+**The claim is not that the account empties.** It does not, and an engine that
+said so would be hiding something. The claim is that every rupee left in it has
+a name against it, and nothing is left over:
+
+| Why a batch still has money in the clearing account | dev | held-out |
+|---|---:|---:|
+| The gateway has not paid this batch out | Rs 7,74,492.94 | Rs 8,21,970.91 |
+| A payment in the batch never matched an order | -Rs 2,40,633.95 | -Rs 2,47,983.28 |
+| A payment reported here was credited with another cycle | -Rs 1,27,594.82 | -Rs 1,02,722.31 |
+| An FX or repricing difference against the reported figure | Rs 1,226.27 | Rs 1,980.33 |
+| Sub-rupee rounding between the gateway and the bank | **Rs 0.03** | **Rs 0.01** |
+| **Unattributed** | **Rs 0.00** | **Rs 0.00** |
+
+Four of those five causes are read straight off **the matcher's own rule id** —
+whatever Tier 1 had to do to close a credit is, by definition, why the books and
+that batch disagree — so the table cannot drift away from the reconciliation it
+describes. The fifth, rounding, is the leftover that no other cause claimed, and
+a test fails if anything larger than sub-rupee drift hides in it. On a clean
+book every batch clears to zero, which is what makes the dev numbers mean the
+defects rather than the posting rules.
+
+### Three bugs a category scorecard could not see
+
+All three had the right label and the wrong number, which is exactly the shape
+of error a categorisation accuracy figure is blind to. A clearing account either
+empties or it does not, so it found them:
+
+- **The settlement credit was booked at the gateway's declared net**, not the
+  cash the bank actually sent. When a cutoff spill moves a credit, the gateway's
+  row still states the original figure — so the bank account was being debited
+  with money that never arrived.
+- **An orphaned refund the solver had attributed to a batch, the books had
+  attributed to nothing.** Tier 1's subset-sum records those on the match as
+  `hypothesised_ids`, having required the subset to be the only one that closes;
+  the journal was ignoring that link and the batch's credit then accounted for
+  money nothing else did.
+- **A manual adjustment with a positive amount was posted in the negative
+  direction its category implies**, moving the receivable the wrong way by twice
+  its value. The trial balance still balanced — a wrong direction is wrong on
+  both sides at once — and it took the per-batch check to surface it. It is now
+  posted as a contra entry *and* reported as a sign anomaly, because a refund
+  carrying a positive amount is worth a human look either way.
+
+### What is deliberately not posted
+
+Nothing a model proposed. Every C2 assignment is marked unverified by design, so
+it reaches the operator queue with its evidence attached and stops there — a
+suggestion in the operator queue is useful, a suggestion in the general ledger
+is a misstatement. A `NEEDS_REVIEW` row goes to **suspense**, which keeps the
+books balanced while leaving the problem visible with a number against it, and
+the suspense balance is printed at the top rather than buried.
+
+The two structural errors [the taxonomy](#categorisation) exists to prevent are
+checked here, where they would actually cost money: a settlement credit may
+never touch an income account (booking a payout as revenue doubles declared
+turnover), and GST on the MDR must debit an asset rather than an expense
+(filed as a cost it understates the credit claimable in GSTR-3B).
+
+---
+
 ## Razorpay test mode
 
 Every other number here is measured on a book this repository generated, or on
@@ -752,6 +852,8 @@ recoagent/
   agent/tier.py            B3: propose, gate, book or hold for approval
   qa/                      the settlement Q&A agent and its graded bank
   pipeline.py              rung assembly
+  journal/accounts.py      chart of accounts; the gateway-receivable clearing idea
+  journal/post.py          double-entry postings, trial balance, open-batch causes
   ingest.py                your own CSVs — coverage only, no scorecard
   llm.py                   one swap point for every model provider
   budget.py                request-per-day throttle + on-disk reply cache
@@ -770,7 +872,7 @@ recoagent/
   worklist/store.py        the exception queue: idempotent, carry-forward
   run.py                   CLI
 results/                   committed run artifacts
-tests/             345 tests
+tests/             368 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

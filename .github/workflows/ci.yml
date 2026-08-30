@@ -138,6 +138,15 @@ jobs:
             exit 1
           fi
           git reset --hard HEAD
+      # Exits non-zero if the books do not balance, so this is an assertion.
+      # The artifacts are diffed too: a published trial balance that has drifted
+      # from the code that made it is worse than no trial balance.
+      - name: the books balance and every open rupee is attributed
+        run: |
+          python -m recoagent.journal --n 2000 --profile dev     --out fresh_journal_dev.txt     > /dev/null
+          python -m recoagent.journal --n 2000 --profile holdout --out fresh_journal_holdout.txt > /dev/null
+          diff fresh_journal_dev.txt     results/journal_dev.txt
+          diff fresh_journal_holdout.txt results/journal_holdout.txt
       # A timing on a shared runner is not a measurement, so this asserts the
       # sweep still runs and still scales -- the published numbers come from
       # `results/throughput.txt`, generated on a quiet machine.

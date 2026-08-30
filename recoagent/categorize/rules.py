@@ -160,7 +160,7 @@ def run_c1(sources: SourceBundle, result: ReconResult, ledger: Ledger | None = N
     ledger = run_c0(sources, ledger)
 
     payments = {p.payment_id: p for p in sources.payments}
-    settlements = {s.settlement_id: s for s in sources.settlements}
+    bank_lines = {b.bank_line_id: b for b in sources.bank_lines}
 
     for match in result.matches_for_leg(1):
         for payment_id in match.right_ids:
@@ -205,12 +205,21 @@ def run_c1(sources: SourceBundle, result: ReconResult, ledger: Ledger | None = N
     for match in result.matches_for_leg(2):
         for bank_line_id in match.left_ids:
             settlement_id = match.right_ids[0] if match.right_ids else "?"
-            settlement = settlements.get(settlement_id)
+            line = bank_lines.get(bank_line_id)
             ledger.add(Assignment(
                 entity_id=bank_line_id,
                 entity_kind="bank_line",
                 category=Category.SETTLEMENT_CREDIT,
-                amount_paise=settlement.net_paise if settlement else 0,
+                # The bank line's own amount, not the settlement's declared
+                # net. The two disagree whenever a defect moved the credit --
+                # a cutoff spill, for instance, shifts what the bank actually
+                # paid while the gateway's row still states the original
+                # figure. Booking the declared net debits the bank account
+                # with money that never arrived, and the error is invisible on
+                # a category-only scorecard: it is the amount that is wrong,
+                # not the label. `journal.post` is what surfaced it, because a
+                # clearing account either empties or it does not.
+                amount_paise=line.amount_paise if line else 0,
                 rung="C1",
                 rule_id="c1.matched_to_settlement",
                 # The point of naming the proof: this credit is a transfer
