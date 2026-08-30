@@ -176,7 +176,9 @@ button.tiny{font-family:var(--mono);font-size:10.5px;padding:4px 8px;font-weight
      display:flex;gap:14px;flex-wrap:wrap}
 .banner{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
      padding:3px 8px;border-radius:3px;align-self:flex-start}
-.banner--ungraded{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+/* Neutral, not amber. "Ungraded" states what the answer is, not that
+   something went wrong -- in warning colours it read as part of a failure. */
+.banner--ungraded{background:var(--flat-bg);color:var(--flat);border:1px solid var(--rule-2)}
 .banner--measured{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
 .banner--truth{background:var(--flat-bg);color:var(--flat);border:1px solid var(--rule-2)}
 details.sheet{border-top:1px solid var(--rule);padding-top:9px}
