@@ -556,6 +556,60 @@ python3 -m recoagent.categorize.run --n 500 --seed 7 --rung C2   # replays from 
 
 ---
 
+## The queue, and why the engine stays stateless
+
+Reconciliation is a pure function — same sources, same result, byte for byte,
+asserted in CI. **Reconciliation *work* is not.** A credit missing on Tuesday
+arrives on Thursday. An analyst opens an item, writes a note, and comes back
+after the weekend. A month-end run happens forty times before anyone closes
+the book.
+
+So the engine stays stateless and the *outcomes* persist in
+[`recoagent/worklist/`](recoagent/worklist/) — sqlite, so the zero-dependency
+property survives.
+
+```bash
+python3 -m recoagent.worklist --carry-forward
+```
+
+That reconciles one book twice: once with the statement truncated to
+month-to-date, once with the whole month.
+
+```
+Run 1  opened  99 items    (open 99, resolved 0)
+       asha takes setl_0109 -> investigating, and leaves a note
+Run 2  opened   0 items, carried forward  55    (open 44, resolved 55)
+
+setl_0109 -- the credit arrived
+  status      resolved   <- closed itself, nobody re-filed it
+  closed by   matched in run 2
+  assignee    asha        <- survived the re-run
+  notes       chased the bank, credit expected Thursday
+```
+
+Three properties, none of them free:
+
+- **Idempotent.** The key is `(leg, entity_kind, entity_id)` — the business
+  identity of the thing that failed — and deliberately *not* the exception id
+  or its reason. A tier that learns to describe the same failure better has not
+  found a new problem, and must not open a second item for it.
+- **Human work survives a re-run.** The pipeline owns the reason, the residual
+  and the timestamps; a person owns status, assignee and notes, and no re-run
+  writes those. A queue that loses an analyst's note is a queue nobody uses
+  twice.
+- **Carry-forward, and its limit.** An item closes only when the run **saw the
+  entity** and **matched it**. `setl_0001` in the same demo stays open, because
+  run 2 looked and still could not match it. An item whose entity is merely
+  *absent* from a batch is left alone — resolving on absence would close every
+  July item the moment somebody ran August. That narrowness is the design, and
+  `tests/test_worklist.py` pins both halves of it.
+
+A written-off item is never reopened by a later run either: somebody decided
+that money was not worth chasing, and a machine silently reversing that is
+worse than leaving it.
+
+---
+
 ## Razorpay test mode
 
 Every other number here is measured on a book this repository generated, or on
@@ -634,9 +688,10 @@ recoagent/
   eval/benchrec.py         the external corpus, scored against its own baseline
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
   audit/mutate.py          seventeen attacks on the matcher, and what survived
+  worklist/store.py        the exception queue: idempotent, carry-forward
   run.py                   CLI
 results/                   committed run artifacts
-tests/             334 tests
+tests/             345 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance
