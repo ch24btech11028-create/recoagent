@@ -138,5 +138,10 @@ jobs:
             exit 1
           fi
           git reset --hard HEAD
+      # A timing on a shared runner is not a measurement, so this asserts the
+      # sweep still runs and still scales -- the published numbers come from
+      # `results/throughput.txt`, generated on a quiet machine.
+      - name: throughput is still linear
+        run: python -m recoagent.eval.throughput --sizes 500,5000 --repeats 1
       - name: the agent tier degrades instead of breaking
         run: python -m recoagent.eval.b3 --profile dev
