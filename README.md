@@ -297,6 +297,33 @@ alongside the columns your file does have and the `--map` that would fix it.
 `--adjustments`, `--notices` and `--fx` are optional; supply them and the
 corresponding tiers switch on.
 
+**Checked against five real statement layouts, not just ours.**
+[`tests/fixtures/banks/`](tests/fixtures/banks/) holds the same nine credits
+written out the way **HDFC, ICICI, SBI, Axis and Kotak** actually export them,
+and `tests/test_bank_formats.py` requires all five to reconcile *identically* —
+same matches, same exceptions, same rupees. Loading without error proves
+nothing; one answer from five presentations is what shows the reader is reading
+the book rather than the file it was written against.
+
+Three things that took real handling, all of which a single-format loader gets
+away with ignoring:
+
+- **The amount is two columns, not one.** Every one of these formats splits it
+  into a debit and a credit with the other cell blank, under a different pair of
+  names (`Withdrawal Amt.`/`Deposit Amt.`, `DR`/`CR`, `Debit`/`Credit`). They
+  are folded into one signed amount, so **money leaving the account survives** —
+  a loader that reads the credit column alone silently drops every debit and
+  still looks like it worked. A row filled in on *both* sides is refused rather
+  than netted, naming both columns: that is a mis-mapped file, and netting it
+  would turn a mapping error into a plausible number.
+- **Three of the five have no line identifier at all.** HDFC, SBI and Axis
+  simply do not issue one. Requiring it would reject three real formats over a
+  column the bank never had, so it is synthesised as `<file>:<row>` — visibly
+  derived, so nobody mistakes it for a bank reference.
+- **Indian lakh grouping and four date formats.** `1,65,342.35` is not
+  `1,65,342.35` to a naive parser, and `05/07/2026` is a different day depending
+  on who wrote it.
+
 **It prints coverage and an exception list, and no accuracy figure at all.** A
 false-match rate needs an answer key, your export does not come with one, and a
 tool that quotes you an accuracy number on unlabelled data is scoring itself
@@ -609,7 +636,7 @@ recoagent/
   audit/mutate.py          seventeen attacks on the matcher, and what survived
   run.py                   CLI
 results/                   committed run artifacts
-tests/             323 tests
+tests/             334 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

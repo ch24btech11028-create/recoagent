@@ -59,19 +59,57 @@ ALIASES: dict[str, tuple[str, ...]] = {
     "fee_paise": ("fee", "mdr", "commission"),
     "tax_paise": ("tax", "gst", "service_tax"),
     "net_paise": ("net", "net_amount", "settlement_amount", "payout"),
-    "bank_ref": ("utr", "reference", "ref", "transaction_ref"),
-    "narration": ("description", "particulars", "remarks", "detail"),
-    "value_date": ("date", "txn_date", "posting_date", "credit_date"),
+    "bank_ref": (
+        "utr", "reference", "ref", "transaction_ref",
+        # Real statement headers, in the shape `_norm` leaves them.
+        "chq_ref_no", "chqno", "chq_no", "cheque_number", "cheque_no",
+        "ref_no_cheque_no", "chq_ref_number",
+    ),
+    "narration": (
+        "description", "particulars", "remarks", "detail",
+        "transaction_remarks", "transaction_description", "narration_particulars",
+    ),
+    "value_date": (
+        "date", "txn_date", "posting_date", "credit_date",
+        "value_dt", "tran_date", "transaction_date", "txn_posted_date",
+    ),
     "settled_at": ("settlement_date", "payout_date"),
     "captured_at": ("payment_date", "txn_date", "created_at"),
     "booked_at": ("adjustment_date", "date"),
-    "bank_line_id": ("id", "line_id", "statement_line_id"),
+    "bank_line_id": ("id", "line_id", "statement_line_id",
+                     "s_no", "sl_no", "sr_no", "srl_no", "serial_no"),
     "settlement_id": ("payout_id", "batch_id"),
     "order_id": ("order_ref", "merchant_order_id", "receipt"),
     "payment_id": ("txn_id", "transaction_id"),
     "method": ("payment_method", "instrument", "mode"),
     "currency": ("ccy", "curr"),
 }
+
+#: A bank statement almost never has one signed amount column. It has two --
+#: money in and money out -- with the other cell blank, and every major Indian
+#: bank names the pair differently. Fixtures for five of them are in
+#: `tests/fixtures/banks/`.
+#:
+#: Folding them is not cosmetic. Reading only the credit column silently drops
+#: every debit, and a reconciliation that cannot see money leaving the account
+#: is not a reconciliation -- it is a report on deposits.
+CREDIT_COLUMNS = (
+    "deposit", "deposit_amt", "deposit_amount", "deposit_amount_inr",
+    "credit", "credit_amount", "credit_amt", "cr", "cr_amount",
+)
+DEBIT_COLUMNS = (
+    "withdrawal", "withdrawal_amt", "withdrawal_amount", "withdrawal_amount_inr",
+    "debit", "debit_amount", "debit_amt", "dr", "dr_amount",
+)
+
+#: Fields a given kind of file may legitimately not carry, and that can be
+#: reconstructed rather than demanded. Only one so far, and it is worth being
+#: precise about why: HDFC, SBI and Axis statements have no line identifier at
+#: all, so requiring one would reject three of the five real formats over a
+#: column the bank never had. A statement line's identity is its position in the
+#: file, and that is what gets synthesised -- visibly, as `<file>:<row>`, so
+#: nobody mistakes it for something the bank issued.
+SYNTHESISABLE = {"bank": ("bank_line_id",)}
 
 #: The bundle field each file feeds, and the row type it builds.
 ENTITIES = {
@@ -177,11 +215,31 @@ def _optional(field) -> bool:
     )
 
 
-def _resolve_columns(row_type, headers, overrides: dict[str, str]) -> dict[str, str]:
-    """Decide which CSV column feeds which field, or say exactly what is missing."""
+def _split_amount(by_norm: dict[str, str]) -> tuple[str | None, str | None] | None:
+    """Find a credit/debit column pair standing in for one signed amount.
+
+    Either side may be absent -- a statement of receipts only is a real thing --
+    but not both, or there is nothing here to fold.
+    """
+    credit = next((by_norm[c] for c in CREDIT_COLUMNS if c in by_norm), None)
+    debit = next((by_norm[c] for c in DEBIT_COLUMNS if c in by_norm), None)
+    return (credit, debit) if (credit or debit) else None
+
+
+def _resolve_columns(
+    row_type, headers, overrides: dict[str, str], kind: str = ""
+) -> tuple[dict[str, str], tuple[str | None, str | None] | None, tuple[str, ...]]:
+    """Decide which CSV column feeds which field, or say exactly what is missing.
+
+    Returns the column map, the credit/debit pair to fold into `amount_paise`
+    if the file splits it, and the fields that have to be synthesised because
+    this format genuinely does not carry them.
+    """
     by_norm = {_norm(h): h for h in headers}
     chosen: dict[str, str] = {}
     missing: list[str] = []
+    fold: tuple[str | None, str | None] | None = None
+    synthesised: list[str] = []
 
     for field in dataclass_fields(row_type):
         if field.name in overrides:
@@ -198,6 +256,10 @@ def _resolve_columns(row_type, headers, overrides: dict[str, str]) -> dict[str, 
         hit = next((by_norm[c] for c in candidates if c in by_norm), None)
         if hit is not None:
             chosen[field.name] = hit
+        elif field.name == "amount_paise" and (pair := _split_amount(by_norm)):
+            fold = pair
+        elif field.name in SYNTHESISABLE.get(kind, ()):
+            synthesised.append(field.name)
         elif _optional(field):
             continue  # a column nobody has to supply
         else:
@@ -210,8 +272,36 @@ def _resolve_columns(row_type, headers, overrides: dict[str, str]) -> dict[str, 
             f"  name them with --map, e.g. "
             + json.dumps({missing[0]: "<your column>"})
         )
-    return chosen
+    return chosen, fold, tuple(synthesised)
 
+
+
+def _folded_amount(raw_row, fold, *, unit: str, where: str) -> Paise:
+    """One signed amount from a credit column and a debit column.
+
+    A row carrying both is refused rather than netted. On a statement that is
+    not a smaller deposit -- it is a mis-mapped file, and netting it would turn
+    a mapping error into a plausible-looking number.
+    """
+    credit_col, debit_col = fold
+
+    def read(column: str | None) -> Paise:
+        if column is None:
+            return 0
+        text = (raw_row.get(column) or "").strip()
+        # A blank cell is the bank saying "not this side", not a bad amount.
+        if text in ("", "-"):
+            return 0
+        return _paise(text, unit=unit, where=where)
+
+    credit, debit = read(credit_col), read(debit_col)
+    if credit and debit:
+        raise IngestError(
+            f"{where}: this row is filled in on both sides -- credit {credit} "
+            f"and debit {debit}. A statement line is one or the other; check "
+            f"that {credit_col!r} and {debit_col!r} are the columns you meant"
+        )
+    return credit - debit
 
 
 def read_rows(path: Path, kind: str, *, unit: str, overrides: dict[str, str]) -> tuple:
@@ -228,7 +318,9 @@ def read_rows(path: Path, kind: str, *, unit: str, overrides: dict[str, str]) ->
             headers = reader.fieldnames or []
             if not headers:
                 raise IngestError(f"{path}: no header row")
-            columns = _resolve_columns(row_type, headers, overrides)
+            columns, fold, synthesised = _resolve_columns(
+                row_type, headers, overrides, kind
+            )
 
             built, problems = [], []
             for n, raw_row in enumerate(reader, start=2):  # 1 is the header
@@ -236,6 +328,16 @@ def read_rows(path: Path, kind: str, *, unit: str, overrides: dict[str, str]) ->
                 try:
                     values = {}
                     for field in dataclass_fields(row_type):
+                        if fold is not None and field.name == "amount_paise":
+                            values[field.name] = _folded_amount(
+                                raw_row, fold, unit=unit, where=where
+                            )
+                            continue
+                        if field.name in synthesised:
+                            # Visibly derived, so it cannot be mistaken for a
+                            # reference the bank issued.
+                            values[field.name] = f"{path.stem}:{n}"
+                            continue
                         column = columns.get(field.name)
                         if column is None:
                             continue
