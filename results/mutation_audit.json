@@ -1,0 +1,345 @@
+{
+  "n_orders": 2000,
+  "profile": "dev",
+  "trials_per_mutation": 25,
+  "overall": {
+    "total": 420,
+    "held": 114,
+    "refused": 289,
+    "wrong_match": 17,
+    "crash": 0,
+    "containment_rate": 0.959524
+  },
+  "families": {
+    "amount": {
+      "total": 100,
+      "held": 24,
+      "refused": 76,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0
+    },
+    "narration": {
+      "total": 122,
+      "held": 58,
+      "refused": 64,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0
+    },
+    "structural": {
+      "total": 148,
+      "held": 32,
+      "refused": 99,
+      "wrong_match": 17,
+      "crash": 0,
+      "containment_rate": 0.885135
+    },
+    "timing": {
+      "total": 50,
+      "held": 0,
+      "refused": 50,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0
+    }
+  },
+  "mutations": {
+    "credit_negated": {
+      "total": 25,
+      "held": 0,
+      "refused": 25,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "credit_off_by_one_paisa": {
+      "total": 25,
+      "held": 24,
+      "refused": 1,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "credit_rupees_not_paise": {
+      "total": 25,
+      "held": 0,
+      "refused": 25,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "credits_swapped": {
+      "total": 25,
+      "held": 0,
+      "refused": 25,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "duplicate_credit_line": {
+      "total": 25,
+      "held": 1,
+      "refused": 24,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": false
+    },
+    "member_moved": {
+      "total": 25,
+      "held": 3,
+      "refused": 22,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "narration_dialect": {
+      "total": 25,
+      "held": 20,
+      "refused": 5,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "orphan_credit": {
+      "total": 25,
+      "held": 0,
+      "refused": 25,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": false
+    },
+    "perfect_forgery": {
+      "total": 24,
+      "held": 20,
+      "refused": 3,
+      "wrong_match": 1,
+      "crash": 0,
+      "containment_rate": 0.958333,
+      "correct_answer_still_available": false
+    },
+    "perfect_forgery_dated": {
+      "total": 24,
+      "held": 7,
+      "refused": 1,
+      "wrong_match": 16,
+      "crash": 0,
+      "containment_rate": 0.333333,
+      "correct_answer_still_available": false
+    },
+    "settled_at_pushed": {
+      "total": 25,
+      "held": 0,
+      "refused": 25,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "settlement_utr_collision": {
+      "total": 25,
+      "held": 1,
+      "refused": 24,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": false
+    },
+    "utr_clipped": {
+      "total": 24,
+      "held": 19,
+      "refused": 5,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "utr_decoy_digits": {
+      "total": 25,
+      "held": 19,
+      "refused": 6,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "utr_digit_transposed": {
+      "total": 24,
+      "held": 0,
+      "refused": 24,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    },
+    "utr_of_another_settlement": {
+      "total": 24,
+      "held": 0,
+      "refused": 24,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": false
+    },
+    "value_date_pushed": {
+      "total": 25,
+      "held": 0,
+      "refused": 25,
+      "wrong_match": 0,
+      "crash": 0,
+      "containment_rate": 1.0,
+      "correct_answer_still_available": true
+    }
+  },
+  "unexpected_failures": [],
+  "known_limits": [
+    {
+      "mutation": "perfect_forgery",
+      "seed": 100022,
+      "verdict": "wrong_match",
+      "note": "bank_0125 forged onto setl_0123 at its exact net 40146524, bank_0123 blinded",
+      "detail": "leg 2: bank_0125 booked to setl_0123, truth says setl_0125",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery 100022"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100000,
+      "verdict": "wrong_match",
+      "note": "bank_0034 forged onto setl_0153 on every axis -- UTR, net 19222130, and value date",
+      "detail": "leg 2: bank_0034 booked to setl_0153, truth says setl_0034",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100000"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100001,
+      "verdict": "wrong_match",
+      "note": "bank_0087 forged onto setl_0056 on every axis -- UTR, net 3959952, and value date",
+      "detail": "leg 2: bank_0087 booked to setl_0056, truth says setl_0087",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100001"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100003,
+      "verdict": "wrong_match",
+      "note": "bank_0119 forged onto setl_0147 on every axis -- UTR, net 3692642, and value date",
+      "detail": "leg 2: bank_0119 booked to setl_0147, truth says setl_0119",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100003"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100004,
+      "verdict": "wrong_match",
+      "note": "bank_0012 forged onto setl_0109 on every axis -- UTR, net 27598682, and value date",
+      "detail": "leg 2: bank_0012 booked to setl_0109, truth says setl_0012",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100004"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100005,
+      "verdict": "wrong_match",
+      "note": "bank_0116 forged onto setl_0131 on every axis -- UTR, net 15169918, and value date",
+      "detail": "leg 2: bank_0116 booked to setl_0131, truth says setl_0116",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100005"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100006,
+      "verdict": "wrong_match",
+      "note": "bank_0070 forged onto setl_0017 on every axis -- UTR, net 27287876, and value date",
+      "detail": "leg 2: bank_0070 booked to setl_0017, truth says setl_0070",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100006"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100008,
+      "verdict": "wrong_match",
+      "note": "bank_0148 forged onto setl_0056 on every axis -- UTR, net 3959952, and value date",
+      "detail": "leg 2: bank_0148 booked to setl_0056, truth says setl_0148",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100008"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100009,
+      "verdict": "wrong_match",
+      "note": "bank_0093 forged onto setl_0059 on every axis -- UTR, net 26452863, and value date",
+      "detail": "leg 2: bank_0093 booked to setl_0059, truth says setl_0093",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100009"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100011,
+      "verdict": "wrong_match",
+      "note": "bank_0090 forged onto setl_0042 on every axis -- UTR, net 10494461, and value date",
+      "detail": "leg 2: bank_0090 booked to setl_0042, truth says setl_0090",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100011"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100012,
+      "verdict": "wrong_match",
+      "note": "bank_0015 forged onto setl_0041 on every axis -- UTR, net 13709175, and value date",
+      "detail": "leg 2: bank_0015 booked to setl_0041, truth says setl_0015",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100012"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100014,
+      "verdict": "wrong_match",
+      "note": "bank_0052 forged onto setl_0120 on every axis -- UTR, net 6963740, and value date",
+      "detail": "leg 2: bank_0052 booked to setl_0120, truth says setl_0052",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100014"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100016,
+      "verdict": "wrong_match",
+      "note": "bank_0018 forged onto setl_0090 on every axis -- UTR, net 30448991, and value date",
+      "detail": "leg 2: bank_0018 booked to setl_0090, truth says setl_0018",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100016"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100017,
+      "verdict": "wrong_match",
+      "note": "bank_0049 forged onto setl_0081 on every axis -- UTR, net 4650794, and value date",
+      "detail": "leg 2: bank_0049 booked to setl_0081, truth says setl_0049",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100017"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100020,
+      "verdict": "wrong_match",
+      "note": "bank_0012 forged onto setl_0116 on every axis -- UTR, net 1911910, and value date",
+      "detail": "leg 2: bank_0012 booked to setl_0116, truth says setl_0012",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100020"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100021,
+      "verdict": "wrong_match",
+      "note": "bank_0023 forged onto setl_0122 on every axis -- UTR, net 14179474, and value date",
+      "detail": "leg 2: bank_0023 booked to setl_0122, truth says setl_0023",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100021"
+    },
+    {
+      "mutation": "perfect_forgery_dated",
+      "seed": 100022,
+      "verdict": "wrong_match",
+      "note": "bank_0125 forged onto setl_0123 on every axis -- UTR, net 40146524, and value date",
+      "detail": "leg 2: bank_0125 booked to setl_0123, truth says setl_0125",
+      "replay": "python -m recoagent.audit.mutate --replay perfect_forgery_dated 100022"
+    }
+  ],
+  "declared_uncontained": [
+    "perfect_forgery",
+    "perfect_forgery_dated"
+  ]
+}

@@ -90,6 +90,27 @@ jobs:
           python -m recoagent.categorize.run --n 500 --seed 7 --profile dev --rung C2 \
             --out fresh_c2.txt > /dev/null
           diff fresh_c2.txt results/C2_dev.txt
+      # Seventeen attacks on the matcher, run on a machine that is not the
+      # author's. Exits non-zero on any wrong match that is not a declared
+      # limit, and on any crash -- so "0.00% false-match rate under adversarial
+      # input" is gated rather than asserted. The two declared forgeries print
+      # every run and deliberately do not fail the build; `test_mutation_audit`
+      # is what stops that disclaimer outliving the weakness.
+      - name: the matcher survives being attacked on purpose
+        run: python -m recoagent.audit.mutate --n 2000 --trials 25
+      # The published scorecard has to be what the code produces, same rule as
+      # every other artifact in results/.
+      - name: the published mutation scorecard still matches
+        run: |
+          python -m recoagent.audit.mutate --n 2000 --trials 25 --json > fresh_audit.json
+          python - <<'PY'
+          import json, sys
+          fresh = json.load(open("fresh_audit.json"))
+          published = json.load(open("results/mutation_audit.json"))
+          if fresh != published:
+              sys.exit("results/mutation_audit.json has drifted from the code")
+          print("scorecard matches")
+          PY
       # A recorded pull, so the Razorpay path is checked without a key. An
       # integration whose tests need credentials is an integration nobody finds
       # out has broken.

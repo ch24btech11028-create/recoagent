@@ -41,6 +41,34 @@ RULE_EXACT_UTR = "leg2.t0.exact_utr"
 #: that would silently match the wrong settlement.
 _UTR_RE = re.compile(r"\b(\d{12})\b")
 
+#: How far a bank credit may sit from the payout date and still be that payout's
+#: credit. A gateway settles on a T+2 cycle and the bank posts the credit the
+#: same day or the next banking day; a wider gap is a different cycle's money.
+#:
+#: Tier 1 has always enforced this when recovering a match *without* a key
+#: (`leg2_t1.AMOUNT_WINDOW_DAYS`, which now reads this constant). Tier 0 did
+#: not, because it had a UTR and trusted it -- which made the exact-key path the
+#: weaker of the two. `recoagent.audit.mutate`'s `perfect_forgery` walks through
+#: exactly that hole: a narration citing another batch's UTR, on a credit
+#: carrying that batch's exact net, joins uniquely and replays perfectly. Every
+#: signal the matcher consulted agreed, and every one of them was attacker-
+#: supplied. One window, enforced on both paths, is what narrows it.
+#:
+#: **Narrows, not closes, and the audit says so.** Measured over 24 forgeries on
+#: a 2,000-order book: without this check the attack booked the wrong batch
+#: 16 times, with it once. A sixteen-fold reduction, and the survivor is the
+#: case where both payouts fall inside the same window -- which, with 164
+#: settlements over 20 trading days, is a coincidence that turns up. A forger
+#: who also fakes the value date is unaffected at 16/24. Both are listed in
+#: `audit.mutate.KNOWN_UNCONTAINED` and printed on every run rather than being
+#: rounded off into a containment figure.
+#:
+#: The generator posts every credit on its settlement date, so the deterministic
+#: corpus cannot exercise this bound -- it costs nothing there and proves
+#: nothing there. `results/B2_*.json` are byte-identical either way. The
+#: mutation audit is the only thing that exercises it.
+SETTLEMENT_WINDOW_DAYS = 1
+
 
 def extract_utr(narration: str) -> str | None:
     """Pull a UTR out of a raw bank narration, or None if it is not readable.
@@ -139,6 +167,29 @@ def match(sources: SourceBundle, tol: Tolerance, result: ReconResult) -> set[str
 
         settlement = candidates[0]
         adjudicated.add(settlement.settlement_id)
+
+        # A key is a claim about identity; the date is an independent one about
+        # the cycle. Checking both means a forged narration has to agree with a
+        # fact the forger does not control, instead of only with itself.
+        lag = abs((line.value_date - settlement.settled_at.date()).days)
+        if lag > SETTLEMENT_WINDOW_DAYS:
+            result.exceptions.append(
+                ReconException(
+                    exception_id=xid,
+                    leg=2,
+                    entity_kind="bank_line",
+                    entity_id=line.bank_line_id,
+                    related_id=settlement.settlement_id,
+                    reason=(
+                        f"UTR joins {settlement.settlement_id} but the credit is "
+                        f"dated {lag} days from the payout, outside the "
+                        f"{SETTLEMENT_WINDOW_DAYS}-day settlement window"
+                    ),
+                    suspected_class=None,
+                )
+            )
+            continue
+
         members = sources.payments_by_settlement(settlement.settlement_id)
         linked = sources.adjustments_by_settlement(settlement.settlement_id)
         proof = prove_leg2(line, settlement, members, linked, tol)

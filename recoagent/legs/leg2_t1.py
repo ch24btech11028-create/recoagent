@@ -47,6 +47,7 @@ from ..schemas import (
 )
 from ..validate import Tolerance, prove_leg2
 from . import repricing, ssmp
+from .leg2 import SETTLEMENT_WINDOW_DAYS
 
 TIER = "T1"
 RULE_RATE_NOTICE = "leg2.t1.rate_notice"
@@ -60,7 +61,9 @@ RULE_SSMP_RESIDUAL = "leg2.t1.ssmp_residual"
 ORPHAN_WINDOW = timedelta(days=4)
 
 #: Tolerance for matching a clipped line to a settlement on amount alone.
-AMOUNT_WINDOW_DAYS = 1
+#: One constant, read by both tiers, so the exact-key path and the recovery
+#: path cannot drift apart on what counts as the same settlement cycle.
+AMOUNT_WINDOW_DAYS = SETTLEMENT_WINDOW_DAYS
 
 #: Confidence priors. Hand-set at B2 and honest about being priors: exact keys
 #: are certain, a unique exact-sum explanation is nearly so, and a match made
