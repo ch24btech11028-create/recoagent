@@ -378,3 +378,32 @@ def test_published_results_are_served_only_from_the_results_directory(server):
         assert _get(server + "/api/results?file=" + sorted(names)[0])[0] == 200
     for escape in ("../STATE.md", "../.env", "/etc/passwd", "..%2f.env"):
         assert _get(server + "/api/results?file=" + escape)[0] == 404, escape
+
+
+def test_a_case_file_opens_by_either_identifier():
+    """A queue row carries two ids and the endpoint takes one of them.
+
+    `id` on the row is the entity (`bank_0030`); `xid` is the exception
+    (`x2_bank_0030`). The console sends the exception id under a parameter
+    named `id`, so anyone reading the queue payload and asking for the field it
+    calls `id` got a 404 that read as "this item no longer exists".
+    """
+    from recoagent import views
+    from recoagent.generator import DefectMix, GeneratorConfig, generate
+    from recoagent.pipeline import run_b2
+
+    batch = generate(GeneratorConfig(n_orders=500, seed=7, mix=DefectMix.dev()))
+    result = run_b2(batch.sources)
+    row = views.queue(result)[0]
+
+    assert row["id"] != row["xid"], "the two identifiers must stay distinguishable"
+    by_exception = views.exception_case(batch.sources, result, row["xid"])
+    by_entity = views.exception_case(batch.sources, result, row["id"])
+
+    assert by_exception is not None
+    assert by_entity is not None
+    assert by_entity == by_exception
+
+    # An id belonging to neither is still a miss, or the fallback would have
+    # turned the endpoint into one that always finds something.
+    assert views.exception_case(batch.sources, result, "no_such_row_anywhere") is None

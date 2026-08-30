@@ -253,6 +253,13 @@ recovery pass on each leg.
 
 Python 3.11+. The deterministic core has **no third-party dependencies**.
 
+If you are going to commit, turn on the credential guard first — git cannot
+install a hook for you, and this repository has published a key once already:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ```bash
 python3 -m recoagent.run --n 2000 --seed 7 --rung B2 --exceptions 5
 ```
@@ -512,6 +519,8 @@ recoagent/
   qa/                      the settlement Q&A agent and its graded bank
   pipeline.py              rung assembly
   ingest.py                your own CSVs — coverage only, no scorecard
+  llm.py                   one swap point for every model provider
+  budget.py                request-per-day throttle + on-disk reply cache
   razorpay/api.py          test-mode client: auth, pagination, backoff, recording
   razorpay/mapping.py      Razorpay JSON → SourceBundle, and what it refuses to invent
   razorpay/webhook.py      raw-body HMAC, idempotent event log (sqlite)
@@ -525,7 +534,7 @@ recoagent/
   eval/tolerance_sweep.py  evidence for the one hand-chosen number
   run.py                   CLI
 results/                   committed run artifacts
-tests/             298 tests
+tests/             312 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

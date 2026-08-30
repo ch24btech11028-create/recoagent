@@ -217,10 +217,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--profile", choices=sorted(MIXES), default="dev")
     ap.add_argument("--rung", choices=["B0", "B2"], default="B2")
+    # Every other command here takes --seed, and this one silently did not:
+    # `--seed 21` was rejected as an unrecognised argument, so the one book
+    # worth exporting -- the held-out one, on the mix nothing was tuned against
+    # -- could not be exported at all. Defaults to the profile's own seed, so
+    # the previous behaviour is what you get by leaving it off.
+    ap.add_argument("--seed", type=int, help="defaults to the profile's own seed")
     ap.add_argument("--out", default="queue.html")
     args = ap.parse_args(argv)
 
-    seed, mix_factory = MIXES[args.profile]
+    default_seed, mix_factory = MIXES[args.profile]
+    seed = default_seed if args.seed is None else args.seed
     batch = generate(GeneratorConfig(n_orders=args.n, seed=seed, mix=mix_factory()))
     result = run_b0(batch.sources) if args.rung == "B0" else run_b2(batch.sources)
     card = score(batch, result)

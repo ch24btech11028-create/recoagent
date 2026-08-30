@@ -88,5 +88,25 @@ jobs:
         run: |
           python -m recoagent.razorpay.run reconcile tests/fixtures/razorpay/pull.json \
             --bank tests/fixtures/razorpay/bank.csv
+      # A hook that has quietly stopped refusing is worse than no hook: it is
+      # a guard everybody believes in. Plant the exact mistake it exists to
+      # catch and require a non-zero exit.
+      - name: the pre-commit guard still refuses a planted key
+        run: |
+          git config core.hooksPath .githooks
+          git config user.email ci@example.com
+          git config user.name CI
+          # Assembled at runtime rather than written literally. A literal here
+          # would be a credential-shaped string committed to the repository,
+          # which this very hook refuses -- correctly, since it cannot tell a
+          # fixture from the real thing and should not try.
+          KEY="rzp""_test_A1b2C3d4E5f6G7"
+          printf 'RAZORPAY_KEY_ID= "%s"\n' "$KEY" >> .env.example
+          git add .env.example
+          if git commit -m "this must not succeed"; then
+            echo "the pre-commit hook let a credential through"
+            exit 1
+          fi
+          git reset --hard HEAD
       - name: the agent tier degrades instead of breaking
         run: python -m recoagent.eval.b3 --profile dev

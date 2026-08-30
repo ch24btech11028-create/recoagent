@@ -190,8 +190,18 @@ def exception_case(
     for a reason worth stating: if the packet is enough for a proposer to reason
     from, it is enough for a human to check the proposer with, and building a
     second, prettier version of it for the screen would let the two drift.
+
+    Accepts either identifier. A queue row carries both -- `id` is the entity
+    (`bank_0030`) and `xid` is the exception (`x2_bank_0030`) -- and the console
+    happens to send the second one under a parameter called `id`. Anyone reading
+    the queue payload and asking for the row it calls `id` got a 404 that looked
+    like the item had vanished. Resolving the entity too costs one fallback scan
+    and removes a trap; where an entity has more than one exception the first is
+    returned, since that is the one the queue shows.
     """
     exc = next((e for e in result.exceptions if e.exception_id == exception_id), None)
+    if exc is None:
+        exc = next((e for e in result.exceptions if e.entity_id == exception_id), None)
     if exc is None:
         return None
 

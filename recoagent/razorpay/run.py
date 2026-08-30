@@ -63,7 +63,31 @@ def cmd_pull(args) -> int:
 def cmd_reconcile(args) -> int:
     from ..ingest import report
 
-    payload = json.loads(Path(args.pull).read_text(encoding="utf-8"))
+    # Read before parse, and say which failed. A missing pull used to surface
+    # as a raw pathlib traceback -- the one command in this repository that
+    # answered a typo with a stack trace instead of a sentence.
+    path = Path(args.pull)
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        print(f"\nerror: {path}: no such file. Run `pull` first, or point this at "
+              f"a recorded pull.\n", file=sys.stderr)
+        return 2
+    except OSError as exc:
+        print(f"\nerror: {path}: {exc.strerror}\n", file=sys.stderr)
+        return 2
+
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        print(f"\nerror: {path} is not valid JSON ({exc}). A pull is written by "
+              f"`recoagent.razorpay.run pull`; this file was not.\n", file=sys.stderr)
+        return 2
+    if not isinstance(payload, dict):
+        print(f"\nerror: {path} holds a {type(payload).__name__}, not a pull object.\n",
+              file=sys.stderr)
+        return 2
+
     try:
         bank = _bank_lines(Path(args.bank) if args.bank else None, args.money)
     except IngestError as exc:
