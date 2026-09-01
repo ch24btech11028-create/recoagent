@@ -114,8 +114,3 @@ PROPOSABLE = frozenset({
     Category.BANK_CHARGE,
     Category.NOT_A_TRANSACTION,
 })
-
-#: Rows that reduce what the merchant is owed. Kept as a set rather than a
-#: sign convention on the amount, because a negative number in a report is
-#: ambiguous about whose perspective it is written from.
-CONTRA = frozenset({Category.REFUND, Category.CHARGEBACK, Category.DISPUTE_FEE})

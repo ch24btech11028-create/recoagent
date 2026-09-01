@@ -880,7 +880,7 @@ recoagent/
   worklist/store.py        the exception queue: idempotent, carry-forward
   run.py                   CLI
 results/                   committed run artifacts
-tests/             375 tests
+tests/             376 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

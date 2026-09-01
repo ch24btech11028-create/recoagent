@@ -54,9 +54,6 @@ METHOD = {
     ("emi", False): "emi",
 }
 
-#: Recon-report row types that reduce a settlement rather than fund it.
-DEBIT_TYPES = {"refund", "adjustment", "dispute"}
-
 
 def _ts(value: Any) -> datetime:
     """Razorpay timestamps are unix seconds. Anything else is a bug, loudly."""

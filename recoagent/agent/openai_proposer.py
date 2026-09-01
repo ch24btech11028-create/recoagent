@@ -30,6 +30,7 @@ import re
 import time
 
 from ..env import require_key
+from ..llm import is_retryable
 from .contracts import Proposal, ProposerError, Usage
 from .evidence import EvidencePacket
 from .proposer import SYSTEM_PROMPT, _parse_tool_call
@@ -100,16 +101,6 @@ def _extract_json(text: str) -> dict:
     return json.loads(match.group(0))
 
 
-#: Names rather than classes: the SDK exception hierarchy differs across
-#: versions and hosts, and a proposer must never crash on an unexpected one.
-_RETRYABLE = ("RateLimitError", "APITimeoutError", "APIConnectionError", "InternalServerError")
-
-
-def _is_retryable(exc: Exception) -> bool:
-    if type(exc).__name__ in _RETRYABLE:
-        return True
-    status = getattr(exc, "status_code", None)
-    return status == 429 or (isinstance(status, int) and status >= 500)
 
 
 def endpoint_for(
@@ -209,7 +200,7 @@ class OpenAICompatibleProposer:
                 break
             except Exception as exc:
                 last = exc
-                if attempt == self._max_retries or not _is_retryable(exc):
+                if attempt == self._max_retries or not is_retryable(exc):
                     return (
                         ProposerError("transport", f"{type(exc).__name__}: {exc}"),
                         usage,

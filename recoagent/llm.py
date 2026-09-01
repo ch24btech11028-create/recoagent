@@ -114,7 +114,8 @@ class Chat(Protocol):
     def send(self, system: str, user: str, *, max_tokens: int = 4000) -> Reply: ...
 
 
-def _is_retryable(exc: Exception) -> bool:
+def is_retryable(exc: Exception) -> bool:
+    """Shared with the agent tier, which used to keep its own narrower copy."""
     if type(exc).__name__ in _RETRYABLE:
         return True
     status = getattr(exc, "status_code", None)
@@ -200,7 +201,7 @@ class OpenAICompatibleChat:
                 )
                 break
             except Exception as exc:
-                if attempt == self._max_retries or not _is_retryable(exc):
+                if attempt == self._max_retries or not is_retryable(exc):
                     return Reply(usage=usage, error=f"{type(exc).__name__}: {exc}")
                 # Jitter matters once callers run concurrently: without it, every
                 # worker that hits the limit retries in lockstep and hits it again.

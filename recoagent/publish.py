@@ -33,6 +33,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
+from .money import format_inr
+
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
 
@@ -57,9 +59,6 @@ def _text(name: str) -> str | None:
     return path.read_text(encoding="utf-8") if path.exists() else None
 
 
-def _rupees(paise: int) -> str:
-    sign = "-" if paise < 0 else ""
-    return f"{sign}Rs {abs(paise) / 100:,.2f}"
 
 
 def _pct(x: float) -> str:
@@ -99,7 +98,7 @@ def _headline(dev: dict | None, holdout: dict | None) -> str:
          f"held-out {_pct(h['auto_match_rate'])}", False),
         ("Credit value matched", _pct(d["value_share"]),
          f"held-out {_pct(h['value_share'])}", False),
-        ("Variance carried, not absorbed", _rupees(abs(dev["documented_variance_paise"])),
+        ("Variance carried, not absorbed", format_inr(abs(dev["documented_variance_paise"])),
          "on the match records, reported not hidden", False),
     ]
     out = ['<section class="panel"><h2>Reconciliation</h2>', '<div class="cards">']

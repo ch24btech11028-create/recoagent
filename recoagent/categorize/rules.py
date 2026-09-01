@@ -82,12 +82,6 @@ class Ledger:
             out[a.rung] = out.get(a.rung, 0) + 1
         return out
 
-    def by_category(self) -> dict[Category, int]:
-        out: dict[Category, int] = {}
-        for a in self.assignments.values():
-            out[a.category] = out.get(a.category, 0) + 1
-        return out
-
     @property
     def needs_review(self) -> list[Assignment]:
         return [a for a in self.assignments.values() if a.category is Category.NEEDS_REVIEW]

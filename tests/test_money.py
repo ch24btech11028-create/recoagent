@@ -81,3 +81,31 @@ def test_per_step_rounding_differs_from_single_step():
 def test_unknown_method_is_loud():
     with pytest.raises(KeyError):
         FeeSchedule.default().mdr_for("carrier_billing")
+
+
+def test_only_one_module_formats_rupees():
+    """Every surface must print money the same way, and the Indian way.
+
+    `journal/post.py` and `publish.py` each grew a private `_rupees` that used
+    Western digit grouping, so the ledger reported Rs 12,082,700.56 where every
+    other screen in an Indian merchant's product said Rs 1,20,82,700.56. The
+    whole suite passed while that was true, which is why this is a structural
+    check rather than a value one: the failure is a second formatter existing
+    at all, and it is invisible to any test that only reads the first.
+    """
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "recoagent"
+    offenders = []
+    for path in sorted(root.rglob("*.py")):
+        if path.name == "money.py":
+            continue
+        for lineno, line in enumerate(path.read_text().splitlines(), 1):
+            # Dividing paise by 100 into a format string is the shape of a
+            # money formatter, and it is also a float touching money.
+            if "/ 100" in line and ":," in line:
+                offenders.append(f"{path.relative_to(root.parent)}:{lineno}")
+    assert not offenders, (
+        "these format rupees themselves instead of calling money.format_inr: "
+        + ", ".join(offenders)
+    )

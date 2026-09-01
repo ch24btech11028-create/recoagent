@@ -65,18 +65,6 @@ def _repriced_net(payment: PGPayment, mdr_bps: int, gst_bps: int = GST_BPS) -> P
     return payment.net_paise + (reported - charged)
 
 
-def _fx_adjusted_net(payment: PGPayment, rate_pct_of_gross: float) -> Paise:
-    """The net after the conversion slip the bank advised.
-
-    The advice quotes the slip as a share of gross, which is the same unit the
-    agent tier's `FxClaim` uses, so the two are checkable against each other.
-    The multiplication happens once, here, and is floored the same way the
-    conversion is.
-    """
-    slip = int(payment.gross_paise * rate_pct_of_gross / 100)
-    return payment.net_paise - slip
-
-
 def corrections(sources: SourceBundle, settlement: Settlement) -> Correction:
     """What the paperwork says this batch's payments actually netted.
 
