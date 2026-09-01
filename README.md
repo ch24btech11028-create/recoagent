@@ -319,6 +319,21 @@ python3 -m recoagent.run --n 2000 --seed 7 --rung B2 --exceptions 5
 python3 -m recoagent.ui
 ```
 
+Add `-v` to any of these to watch what a run is doing — one line per event on
+stderr, never stdout, so an artifact being written stays an artifact:
+
+```bash
+python3 -m recoagent.run --n 2000 --seed 7 --rung B2 -v
+```
+
+```
+run.complete rung=B2 orders=2000 payments=2036 matches=2151 exceptions=40 seconds=0.148
+model.call model=gemini-3.5-flash-lite outcome=ok tokens_in=329 tokens_out=128 seconds=2.0
+worklist.transition fp=2:bank_line:bank_0001 change="open -> resolved" actor=asha
+```
+
+`RECOAGENT_LOG=info` does the same without a flag, for the console and for CI.
+
 The operator console — a dashboard rather than a page. An **overview** of where
 the money is, the **exception queue** with a case file behind every row — the credit,
 the batch it joined, every payment and adjustment inside it, and the arithmetic
@@ -692,6 +707,30 @@ A written-off item is never reopened by a later run either: somebody decided
 that money was not worth chasing, and a machine silently reversing that is
 worse than leaving it.
 
+### Working it from the console
+
+The queue is also the console's, so an item can be taken, resolved or written
+off from the screen that shows it. Open any row and the case file carries an
+**Ownership and outcome** panel: assignee, notes, the moves that are legal from
+where the item currently is, and the full history of who moved it and why.
+
+```
+bank_0001   Rs 2,03,466.97   DUPLICATE_UTR
+  17:36  filed open           pipeline   UTR 568218474460 appears on 2 statement lines
+  17:38  open -> investigating  asha     waiting on the bank
+```
+
+Three things the screen does not let you do, because the store refuses them and
+the console reports the refusal rather than writing its own copy of the rule:
+reopen a closed item (409, quoting the transition it declined), act on an item
+that is not in the queue (404), or lose what you typed by reconciling again —
+`tests/test_ui.py` plants that last mistake in the pipeline's own UPDATE and
+requires the test to fail.
+
+Each book gets its own queue file under `--worklist` (default `data/worklist/`),
+because `order_00033` exists in the dev book and the held-out book as two
+different transactions and one queue across both would merge them.
+
 ---
 
 ## Posting to the ledger
@@ -880,7 +919,7 @@ recoagent/
   worklist/store.py        the exception queue: idempotent, carry-forward
   run.py                   CLI
 results/                   committed run artifacts
-tests/             376 tests
+tests/             385 tests
 ```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the design decisions, the tolerance

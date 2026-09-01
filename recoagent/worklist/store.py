@@ -55,7 +55,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .. import trace
 from ..schemas import ReconException, ReconResult, SourceBundle
+
+_log = trace.logger("worklist")
 
 OPEN = "open"
 INVESTIGATING = "investigating"
@@ -326,6 +329,10 @@ class Worklist:
             )
         item = self.get(fp)
         if to not in ALLOWED[item.status]:
+            trace.problem(
+                _log, "worklist.refused", fp=fp, entity=item.entity_id,
+                attempted=f"{item.status} -> {to}", actor=actor,
+            )
             raise WorklistError(
                 f"{ILLEGAL}: {item.status} -> {to} for {fp}. "
                 f"From {item.status} you may go to: "
@@ -339,6 +346,10 @@ class Worklist:
         )
         self._log(fp, None, now, item.status, to, actor, detail)
         self.db.commit()
+        trace.event(
+            _log, "worklist.transition", fp=fp, entity=item.entity_id,
+            change=f"{item.status} -> {to}", actor=actor, detail=detail,
+        )
         return self.get(fp)
 
     def annotate(self, fp: str, *, assignee: str | None = None,

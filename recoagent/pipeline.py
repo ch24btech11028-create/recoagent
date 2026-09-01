@@ -13,9 +13,14 @@ four scripts that happen to print similar-looking numbers.
 
 from __future__ import annotations
 
+import time
+
+from . import trace
 from .legs import leg1, leg2, leg2_t1
 from .schemas import ReconResult, SourceBundle
 from .validate import Tolerance
+
+_log = trace.logger("pipeline")
 
 RUNGS = ("B0", "B2", "B3")
 
@@ -45,6 +50,7 @@ def _compose(
     that a later tier then silently invalidates by matching the credit -- an
     exception queue that still lists items the system has already resolved.
     """
+    started = time.perf_counter()
     result = ReconResult(rung=rung)
 
     leg1.match(sources, tol, result, with_t1=with_recovery)
@@ -58,6 +64,16 @@ def _compose(
 
     result.exceptions.extend(
         leg2.unmatched_settlements(sources, result, adjudicated)
+    )
+    trace.event(
+        _log, "run.complete", rung=rung,
+        orders=len(sources.orders), payments=len(sources.payments),
+        settlements=len(sources.settlements), bank_lines=len(sources.bank_lines),
+        matches=len(result.matches), exceptions=len(result.exceptions),
+        leg1_exceptions=len(result.exceptions_for_leg(1)),
+        leg2_exceptions=len(result.exceptions_for_leg(2)),
+        tolerance_paise=tol.leg2_paise,
+        seconds=f"{time.perf_counter() - started:.3f}",
     )
     return result
 

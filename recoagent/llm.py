@@ -31,7 +31,10 @@ import time
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from . import trace
 from .env import require_key
+
+_log = trace.logger("llm")
 
 DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
 
@@ -185,6 +188,7 @@ class OpenAICompatibleChat:
 
     def send(self, system: str, user: str, *, max_tokens: int = 4000) -> Reply:
         self.check_ready()
+        started = time.perf_counter()
         usage = Usage()
         messages = [
             {"role": "system", "content": system},
@@ -202,7 +206,20 @@ class OpenAICompatibleChat:
                 break
             except Exception as exc:
                 if attempt == self._max_retries or not is_retryable(exc):
+                    # A warning, not an event: this is the outcome somebody
+                    # needs to see on a run they were not watching, and it is
+                    # the difference between "the model could not answer" and
+                    # "the model was never asked".
+                    trace.problem(
+                        _log, "model.failed", model=self._model,
+                        error=type(exc).__name__, attempts=attempt + 1,
+                        seconds=f"{time.perf_counter() - started:.1f}",
+                    )
                     return Reply(usage=usage, error=f"{type(exc).__name__}: {exc}")
+                trace.event(
+                    _log, "model.retry", model=self._model,
+                    error=type(exc).__name__, attempt=attempt + 1,
+                )
                 # Jitter matters once callers run concurrently: without it, every
                 # worker that hits the limit retries in lockstep and hits it again.
                 time.sleep(min(2**attempt, 20) + random.uniform(0, 1.5))
@@ -221,6 +238,11 @@ class OpenAICompatibleChat:
             return Reply(
                 usage=usage, error=f"empty content (finish={choice.finish_reason})"
             )
+        trace.event(
+            _log, "model.call", model=self._model, outcome="ok",
+            tokens_in=usage.input_tokens, tokens_out=usage.output_tokens,
+            seconds=f"{time.perf_counter() - started:.1f}",
+        )
         return Reply(text=text, usage=usage)
 
 

@@ -104,6 +104,11 @@ def test_the_queue_never_carries_the_answer_key(run):
         "xid", "id", "leg", "kind", "related", "residual_paise", "amount",
         "direction", "severity", "severity_hint", "suspected", "reason",
         "stopped_at",
+        # `fp` is the worklist's key for this problem, and it is exactly
+        # "{leg}:{kind}:{id}" -- three fields already on this row. It adds no
+        # information at all, which is why it is safe; it is here so that a
+        # click on a row can take, resolve or write off the right item.
+        "fp",
     }
     for row in d["queue"]:
         assert set(row) == allowed, f"unexpected field on a queue row: {set(row) - allowed}"
@@ -212,8 +217,12 @@ def test_declining_is_scored_as_a_cost_not_a_failure(run):
 
 
 @pytest.fixture(scope="module")
-def server():
-    httpd = serve("127.0.0.1", 0, "nvidia/nemotron-3-ultra-550b-a55b")
+def server(tmp_path_factory):
+    # The worklist directory is a temp one on purpose: `serve` defaults it to
+    # `data/worklist`, and a test suite that quietly wrote sqlite files into the
+    # working tree would be a test suite nobody could run twice and trust.
+    desk = tmp_path_factory.mktemp("worklist")
+    httpd = serve("127.0.0.1", 0, "nvidia/nemotron-3-ultra-550b-a55b", desk)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     yield f"http://127.0.0.1:{httpd.server_address[1]}"
@@ -440,3 +449,138 @@ def test_a_case_file_opens_by_either_identifier():
     # An id belonging to neither is still a miss, or the fallback would have
     # turned the endpoint into one that always finds something.
     assert views.exception_case(batch.sources, result, "no_such_row_anywhere") is None
+
+
+# ── the desk: acting on an item, and what must survive doing so ──────────
+
+# Each test reconciles a book of its own size. That is not decoration: the desk
+# keeps one database per (profile, seed, n, rung), so a distinct `n` gives a
+# test a private queue and these stop depending on the order they run in. An
+# earlier version shared one book, and a test that moved an item to a status it
+# already held passed only because nothing asserted the refusal.
+
+
+def _book(n):
+    return {"n": n, "seed": 7, "profile": "dev", "rung": "B2"}
+
+
+def _reconcile(server, n):
+    """Reconcile a book and hand back the queue's first fingerprint."""
+    status, run = _post(server + "/api/run", _book(n))
+    assert status == 200, run
+    assert run["queue"], "expected a defective book to leave something open"
+    return run["queue"][0]["fp"], run
+
+
+def _wl(server, n):
+    return _get(server + f"/api/worklist?n={n}&seed=7&profile=dev&rung=B2")
+
+
+def test_every_queue_row_carries_the_key_the_desk_acts_on(server):
+    """A row a person cannot act on is a row that only looks like a queue."""
+    _, run = _reconcile(server, 801)
+    for row in run["queue"]:
+        # Not an opaque id: the fingerprint is the business identity of the
+        # failure, so it is readable and stable across runs and across tiers.
+        assert row["fp"] == f"{row['leg']}:{row['kind']}:{row['id']}"
+
+
+def test_the_queue_is_filed_by_reconciling_and_can_be_read_back(server):
+    fp, run = _reconcile(server, 802)
+    status, d = _wl(server, 802)
+    assert status == 200
+    assert len(d["items"]) == len(run["queue"])
+    assert d["counts"]["open"] == len(run["queue"])
+    assert d["items"][fp]["status"] == "open"
+    assert d["items"][fp]["can_move_to"] == ["investigating", "resolved", "written_off"]
+
+
+def test_taking_an_item_records_who_and_why(server):
+    fp, _ = _reconcile(server, 803)
+    status, d = _post(server + "/api/worklist", {
+        **_book(803), "fp": fp, "to": "investigating",
+        "assignee": "asha", "notes": "chased the bank",
+        "actor": "asha", "detail": "waiting on the bank",
+    })
+    assert status == 200, d
+    assert d["item"]["status"] == "investigating"
+    assert d["item"]["assignee"] == "asha"
+    assert d["item"]["notes"] == "chased the bank"
+    # The history is the point: a queue that records the state but not who
+    # moved it cannot answer "why is this closed?" three months later.
+    last = d["history"][-1]
+    assert (last["from_status"], last["to_status"]) == ("open", "investigating")
+    assert last["actor"] == "asha" and last["detail"] == "waiting on the bank"
+
+
+def test_a_persons_work_survives_reconciling_the_book_again(server):
+    """The whole reason the queue is separate from the engine.
+
+    The pipeline owns the reason, the residual and the timestamps. It must never
+    write status, assignee or notes -- a queue that loses an analyst's note on
+    the next run is a queue nobody uses twice.
+    """
+    fp, _ = _reconcile(server, 804)
+    status, _ = _post(server + "/api/worklist", {
+        **_book(804), "fp": fp, "to": "investigating",
+        "assignee": "priya", "notes": "do not touch this",
+    })
+    assert status == 200
+    # Reconcile the same book again, exactly the way clicking Reconcile does.
+    assert _post(server + "/api/run", _book(804))[0] == 200
+
+    status, d = _wl(server, 804)
+    assert status == 200
+    assert d["items"][fp]["status"] == "investigating"
+    assert d["items"][fp]["assignee"] == "priya"
+    assert d["items"][fp]["notes"] == "do not touch this"
+
+
+def test_an_illegal_move_is_refused_with_the_rule_that_refused_it(server):
+    """A closed item stays closed, and the console does not invent the reason."""
+    fp, _ = _reconcile(server, 805)
+    assert _post(server + "/api/worklist", {
+        **_book(805), "fp": fp, "to": "written_off", "detail": "not worth chasing",
+    })[0] == 200
+
+    status, d = _post(server + "/api/worklist", {**_book(805), "fp": fp, "to": "open"})
+    # 409, not 400: the request was well formed and the queue said no.
+    assert status == 409, d
+    assert "illegal transition" in d["error"]
+    assert "written_off" in d["error"]
+
+
+def test_a_written_off_item_offers_no_further_move(server):
+    fp, _ = _reconcile(server, 806)
+    status, d = _post(server + "/api/worklist", {
+        **_book(806), "fp": fp, "to": "written_off", "detail": "immaterial",
+    })
+    assert status == 200
+    assert d["item"]["can_move_to"] == []
+    assert d["item"]["is_open"] is False
+    assert d["item"]["closed_reason"] == "immaterial"
+
+
+def test_an_unknown_item_is_a_404_not_a_crash(server):
+    _reconcile(server, 807)
+    status, d = _post(server + "/api/worklist", {
+        **_book(807), "fp": "2:bank_line:bank_99999", "to": "resolved",
+    })
+    assert status == 404 and "error" in d
+
+
+def test_acting_without_saying_which_item_is_refused(server):
+    status, d = _post(server + "/api/worklist", {**_book(808), "to": "resolved"})
+    assert status == 400 and "fp" in d["error"]
+
+
+def test_two_books_do_not_share_one_queue(tmp_path):
+    """`order_00033` exists in the dev book and the held-out book as two
+    different transactions. One queue across both would merge two unrelated
+    problems on the strength of a shared id."""
+    from recoagent.ui import Desk
+
+    desk = Desk(tmp_path)
+    dev = RunKey(n=800, seed=7, profile="dev", rung="B2")
+    held = RunKey(n=800, seed=21, profile="holdout", rung="B2")
+    assert desk.path_for(dev) != desk.path_for(held)

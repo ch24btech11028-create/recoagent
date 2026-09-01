@@ -18,7 +18,8 @@ const n = (x) => (x == null ? "—" : Number(x).toLocaleString());
 
 const state = {
   run: null, model: null, busy: false, route: "overview", arg: "",
-  filters: { sev: "", leg: "", text: "" },
+  filters: { sev: "", leg: "", text: "", status: "" },
+  worklist: null, desking: false,
   matches: { leg: "", tier: "", q: "", page: 1 },
   source: { kind: "payments", q: "", page: 1 },
   selected: null, answer: null, bank: null, resultFile: null,
@@ -197,10 +198,14 @@ VIEWS.overview = {
 
 function filteredQueue() {
   const f = state.filters, needle = f.text.trim().toLowerCase();
-  return state.run.queue.filter(e =>
-    (!f.sev || e.severity === f.sev) &&
-    (!f.leg || String(e.leg) === f.leg) &&
-    (!needle || (e.id + " " + e.reason + " " + e.suspected).toLowerCase().includes(needle)));
+  return state.run.queue.filter(e => {
+    const it = wlItem(e.fp);
+    const status = it ? it.status : "open";
+    return (!f.sev || e.severity === f.sev) &&
+      (!f.leg || String(e.leg) === f.leg) &&
+      (!f.status || (f.status === "mine" ? (it && it.assignee) : status === f.status)) &&
+      (!needle || (e.id + " " + e.reason + " " + e.suspected).toLowerCase().includes(needle));
+  });
 }
 
 VIEWS.exceptions = {
@@ -224,7 +229,14 @@ VIEWS.exceptions = {
              value="${esc(f.text)}" autocomplete="off">
       ${seg("sev", [["", "all severities"], ["critical", "critical"], ["warn", "warn"], ["minor", "minor"], ["structural", "structural"]])}
       ${seg("leg", [["", "both legs"], ["1", "leg 1"], ["2", "leg 2"]])}
-      <span class="ctx"><b>${n(rows.length)}</b> of ${n(state.run.queue.length)} shown</span>
+      ${seg("status", [["", "any state"], ["open", "open"], ["investigating", "taken"],
+                       ["resolved", "resolved"], ["written_off", "written off"]])}
+      <span class="ctx"><b>${n(rows.length)}</b> of ${n(state.run.queue.length)} shown${
+        state.worklist && state.worklist.counts && state.worklist.counts.resolved != null
+          ? ` <span class="sep">·</span> ${n(state.worklist.counts.open)} open, ${
+              n(state.worklist.counts.investigating)} taken, ${
+              n(state.worklist.counts.resolved + state.worklist.counts.written_off)} closed`
+          : ""}</span>
     </div>
 
     <div class="split">
@@ -233,7 +245,7 @@ VIEWS.exceptions = {
           <span class="chip chip--${e.severity}" title="${esc(e.severity_hint)}"></span>
           <span class="who">${esc(e.id)}</span>
           <span class="amt">${esc(e.amount)}</span>
-          <span class="sub">Leg ${e.leg} · ${esc(e.suspected)} — ${esc(e.reason)}</span>
+          <span class="sub">${wlTag(e.fp)}Leg ${e.leg} · ${esc(e.suspected)} — ${esc(e.reason)}</span>
         </button>`).join("") : `<div class="empty">Nothing matches this filter.</div>`}</div>
 
       <div class="detail" id="detail">${state.selected
@@ -289,7 +301,19 @@ async function openCase(xid) {
   try {
     const d = await getJSON("/api/exception", { id: xid });
     if (state.selected !== xid) return;
-    host.innerHTML = caseFile(d);
+    const row = (state.run.queue || []).find(e => e.xid === xid);
+    // The history is only fetched when an item is actually opened: the queue
+    // snapshot carries state for every row, and every row's whole story would
+    // be a great deal of it for a screen nobody has looked at yet.
+    if (row && wlItem(row.fp) && !wlItem(row.fp).history) {
+      try {
+        const h = await getJSON("/api/worklist", { fp: row.fp });
+        state.worklist.items[row.fp] = { ...h.item, history: h.history };
+      } catch (e) { /* the case file is still worth showing without it */ }
+    }
+    if (state.selected !== xid) return;
+    host.innerHTML = caseFile(d) + deskPanel(xid);
+    wireDesk();
   } catch (e) {
     host.innerHTML = `<div class="err">${esc(e.message)}</div>`;
   }
@@ -478,6 +502,117 @@ VIEWS.matches = {
     loadMatches();
   },
 };
+
+// ── the desk ────────────────────────────────────────────────────────────────
+// The queue is persistent and the engine is not. Everything below is about the
+// half a person owns: who has an item, what they wrote on it, and whether it is
+// still open. The pipeline never writes any of it.
+
+const WL_LABEL = { open: "open", investigating: "taken", resolved: "resolved", written_off: "written off" };
+const WL_ACTION = {
+  investigating: ["Take", "primary"],
+  resolved: ["Resolve", "primary"],
+  written_off: ["Write off", "ghost"],
+  open: ["Release", "ghost"],
+};
+
+async function loadWorklist() {
+  try {
+    state.worklist = await getJSON("/api/worklist");
+  } catch (e) {
+    // A queue that cannot be reached must not take the console down with it:
+    // the reconciliation is still worth reading without it.
+    state.worklist = { items: {}, counts: {}, unavailable: e.message };
+  }
+}
+
+const wlItem = (fp) => (state.worklist && state.worklist.items[fp]) || null;
+
+function wlTag(fp) {
+  const it = wlItem(fp);
+  if (!it || it.status === "open") return "";
+  return `<span class="wl wl--${esc(it.status)}">${esc(WL_LABEL[it.status] || it.status)}${
+    it.assignee ? " · " + esc(it.assignee) : ""}</span>`;
+}
+
+function deskPanel(xid) {
+  const row = (state.run.queue || []).find(e => e.xid === xid);
+  if (!row) return "";
+  const it = wlItem(row.fp);
+  if (!it) {
+    return card("Ownership", `<p class="lede">This item is not in the queue yet. Reconcile the book
+      to file it.</p>`);
+  }
+  const moves = (it.can_move_to || []).map(to => {
+    const [label, kind] = WL_ACTION[to] || [to, "ghost"];
+    return `<button class="${kind}" data-wl="${esc(to)}" data-fp="${esc(it.fp)}">${esc(label)}</button>`;
+  }).join("");
+
+  return `<div class="card">
+    <div class="head"><div style="flex:1"><h3>Ownership and outcome</h3>
+      <div class="meta"><span>seen in runs ${n(it.first_seen_run)}–${n(it.last_seen_run)}</span>
+        <span>${it.age_in_runs === 0 ? "first run" : "open across " + n(it.age_in_runs + 1) + " runs"}</span></div></div>
+      <span class="wl wl--${esc(it.status)} wl--big">${esc(WL_LABEL[it.status] || it.status)}</span>
+    </div>
+    ${it.closed_reason ? `<p class="lede">Closed: ${esc(it.closed_reason)}</p>` : ""}
+    <div class="deskform">
+      <label>Assignee<input id="wl-assignee" value="${esc(it.assignee)}" placeholder="nobody yet"
+        autocomplete="off" ${it.is_open ? "" : "disabled"}></label>
+      <label>Notes<textarea id="wl-notes" rows="2" placeholder="what you found, what you are waiting on"
+        ${it.is_open ? "" : "disabled"}>${esc(it.notes)}</textarea></label>
+    </div>
+    ${it.is_open ? `<label class="deskwhy">Why<input id="wl-detail" placeholder="reason, kept on the record when this closes"
+       autocomplete="off"></label>` : ""}
+    <div class="chips" style="margin-top:12px">
+      ${moves || `<span class="lede">Closed. A later run will not reopen it — somebody decided this.</span>`}
+      ${it.is_open ? `<button class="ghost" data-wl-save="${esc(it.fp)}">Save note</button>` : ""}
+    </div>
+    <div id="wl-err"></div>
+    ${it.history ? "" : ""}
+  </div>
+  ${deskHistory(it.history)}`;
+}
+
+function deskHistory(rows) {
+  if (!rows || !rows.length) return "";
+  return card("What has happened to this item", `<div class="wlhist">${rows.map(h => `
+    <div><span class="when">${esc((h.at || "").replace("T", " ").slice(0, 16))}</span>
+    <span class="what">${h.from_status ? esc(h.from_status) + " → " : "filed "}<b>${esc(h.to_status)}</b></span>
+    <span class="who">${esc(h.actor)}</span>
+    ${h.detail ? `<span class="why">${esc(h.detail)}</span>` : ""}</div>`).join("")}</div>`);
+}
+
+async function deskAct(fp, to) {
+  if (state.desking) return;
+  state.desking = true;
+  const err = $("wl-err");
+  if (err) err.innerHTML = `<div class="meta"><span class="load"></span>saving…</div>`;
+  const a = $("wl-assignee"), nt = $("wl-notes"), why = $("wl-detail");
+  try {
+    const d = await post("/api/worklist", {
+      ...params(), fp,
+      ...(to ? { to } : {}),
+      assignee: a ? a.value : undefined,
+      notes: nt ? nt.value : undefined,
+      actor: (a && a.value) || "analyst",
+      detail: why ? why.value : "",
+    });
+    state.worklist.items[fp] = { ...d.item, history: d.history };
+    state.worklist.counts = d.counts;
+    render();
+  } catch (e) {
+    if (err) err.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+  } finally {
+    state.desking = false;
+  }
+}
+
+function wireDesk() {
+  document.querySelectorAll("[data-wl]").forEach(b =>
+    b.onclick = () => deskAct(b.dataset.fp, b.dataset.wl));
+  document.querySelectorAll("[data-wl-save]").forEach(b =>
+    b.onclick = () => deskAct(b.dataset.wlSave, null));
+}
 
 async function loadMatches() {
   const host = $("mout");
@@ -872,6 +1007,7 @@ async function doRun() {
   $("err").innerHTML = "";
   try {
     state.run = await post("/api/run", params());
+    await loadWorklist();
     state.selected = null;
     state.answer = state.bank = null;
     state.matches.page = 1;

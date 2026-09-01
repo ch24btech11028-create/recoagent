@@ -16,6 +16,7 @@ import json
 import sys
 from dataclasses import asdict
 
+from . import trace
 from .eval.scorer import render, score
 from .generator import DefectMix, GeneratorConfig, generate
 from .money import format_inr
@@ -107,7 +108,9 @@ def main(argv: list[str] | None = None) -> int:
         metavar="K",
         help="print the K largest-residual exceptions",
     )
+    trace.add_argument(ap)
     args = ap.parse_args(argv)
+    trace.from_args(args)
 
     batch = generate(
         GeneratorConfig(n_orders=args.n, seed=args.seed, mix=MIXES[args.profile]())

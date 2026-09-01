@@ -227,3 +227,35 @@ tbody td.num,thead th{white-space:nowrap}
   .view,.topbar,.runbar{padding-left:14px;padding-right:14px}
   .qlist{max-height:none}
 }
+
+/* ── the desk: the half of an item a person owns ────────────────────────────
+   Status is a word and a colour, never a colour alone -- the same rule the
+   severity chips follow, for the same reason. */
+.wl{display:inline-block;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:1px 6px;border-radius:3px;margin-right:7px;white-space:nowrap;
+  border:1px solid currentColor;vertical-align:1px}
+.wl--open{color:var(--flat);background:var(--flat-bg)}
+.wl--investigating{color:var(--warn);background:var(--warn-bg)}
+.wl--resolved{color:var(--ok);background:var(--ok-bg)}
+.wl--written_off{color:var(--muted);background:var(--surface-2)}
+.wl--big{font-size:11px;padding:4px 10px;margin:0}
+
+.deskform{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+@media (min-width:700px){.deskform{grid-template-columns:200px 1fr}}
+.deskform label,.deskwhy{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);
+  font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.deskwhy{margin-top:10px}
+.deskform input,.deskform textarea,.deskwhy input{font-family:var(--sans);font-size:13px;color:var(--ink);
+  background:var(--surface-3);border:1px solid var(--rule-2);border-radius:4px;padding:7px 9px;
+  letter-spacing:normal;text-transform:none;width:100%;resize:vertical}
+.deskform input:focus,.deskform textarea:focus,.deskwhy input:focus{outline:2px solid var(--ok);
+  outline-offset:-1px;border-color:var(--ok)}
+.deskform input:disabled,.deskform textarea:disabled{opacity:.6;cursor:not-allowed}
+
+.wlhist{display:flex;flex-direction:column;gap:7px}
+.wlhist>div{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:baseline;
+  font-size:12.5px;padding-bottom:7px;border-bottom:1px solid var(--rule)}
+.wlhist>div:last-child{border-bottom:0;padding-bottom:0}
+.wlhist .when{font-family:var(--mono);font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.wlhist .who{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.wlhist .why{grid-column:2/4;color:var(--ink-2);font-size:12px}

@@ -35,6 +35,10 @@ data/razorpay/
 # results/ -- a cached reply is the model's actual answer, not a run output.
 out/
 *.duckdb
+# The console's queues: one sqlite file per book, and they hold whatever an
+# operator typed. Reproducible from a run; not something to publish.
+data/worklist/
+*.db
 
 # Eval results are COMMITTED on purpose (they are the deliverable).
 # Only scratch runs are ignored:

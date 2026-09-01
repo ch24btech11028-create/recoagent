@@ -45,12 +45,19 @@ import sys
 import threading
 import time
 import webbrowser
+from contextlib import contextmanager
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import views
+from . import trace, views
+from .worklist.store import (
+    ALLOWED, ILLEGAL, Item, Worklist, WorklistError, fingerprint,
+)
+
+_log = trace.logger("ui")
 from .eval.scorer import Scorecard, score
 from .generator import DefectMix, GeneratorConfig, generate
 from .money import format_inr
@@ -66,6 +73,9 @@ MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean":
 #: Runs are pure functions of these four numbers, so they cache perfectly. The
 #: cap keeps a long demo session from holding every batch it ever generated.
 CACHE_LIMIT = 6
+
+#: Where the console keeps its queues. One database per book -- see `Desk`.
+DEFAULT_WORKLIST = "data/worklist"
 
 
 @dataclass(frozen=True)
@@ -150,6 +160,17 @@ def _recovered_payload(result: ReconResult, limit: int = 40) -> list[dict]:
     } for m in picked]
 
 
+def _queue_order(result: ReconResult) -> list:
+    """The exceptions `views.queue` returns, in its order.
+
+    Zipping two independently sorted lists would pair the wrong fingerprint to
+    the wrong row the first time either sort changed, so the order is taken
+    from the view itself rather than re-derived here.
+    """
+    by_xid = {e.exception_id: e for e in result.exceptions}
+    return [by_xid[row["xid"]] for row in views.queue(result)]
+
+
 def run_payload(run: Run) -> dict:
     card, result = run.card, run.result
     unexplained = sum(abs(e.residual_paise or 0) for e in result.exceptions)
@@ -187,9 +208,120 @@ def run_payload(run: Run) -> dict:
             "unattributed": card.unattributed_exceptions,
             "injected_total": sum(a.injected for a in card.accounting),
         },
-        "queue": views.queue(result),
+        # The worklist's own key, attached here rather than in `views` so that
+        # module keeps taking a SourceBundle and a ReconResult and nothing else.
+        "queue": [dict(row, fp=fingerprint(exc))
+                  for row, exc in zip(views.queue(result), _queue_order(result))],
         "shape": views.shape(run.batch.sources, result),
         "recovered": _recovered_payload(result),
+    }
+
+
+# ── the desk: where a person actually acts on an item ────────────────────────
+
+class Desk:
+    """The console's link to the persistent queue in `recoagent.worklist`.
+
+    Until this existed the console could show you an exception and nothing
+    else: no way to take one, close one, or write one off, and nothing you did
+    survived a refresh. The queue itself was already persistent and already
+    knew how to carry an item forward -- what was missing was the screen.
+
+    **One database per book.** The worklist keys on the business identity of the
+    failing entity, and `order_00033` exists in the dev book and in the held-out
+    book as two entirely different transactions. Pointing both at one queue
+    would merge two unrelated problems on the strength of a shared id, so each
+    (profile, seed, n, rung) gets its own file.
+
+    **Opened per request, under a lock.** sqlite connections have thread
+    affinity and this server is threaded. A reconciliation queue sees a click
+    every few seconds, not a thousand a second, so the simple thing is also the
+    correct one -- and it means a crash cannot leave a connection open.
+    """
+
+    def __init__(self, directory: str | Path) -> None:
+        self.directory = Path(directory)
+        self._lock = threading.Lock()
+
+    def path_for(self, key: RunKey) -> Path:
+        return self.directory / f"{key.profile}-seed{key.seed}-n{key.n}-{key.rung}.db"
+
+    @contextmanager
+    def _open(self, key: RunKey):
+        self.directory.mkdir(parents=True, exist_ok=True)
+        with self._lock:
+            book = Worklist(self.path_for(key))
+            try:
+                yield book
+            finally:
+                book.close()
+
+    def sync(self, key: RunKey, run: Run) -> dict[str, int]:
+        """Fold this book's exceptions into its queue.
+
+        Called when the operator asks for a run, not when a page loads. That
+        distinction is the whole of it: pressing Reconcile is a run and belongs
+        in the `runs` table, while rendering a screen from a cached result is
+        not and would inflate `carried_forward` -- the number an ops team
+        actually feels -- into noise.
+
+        Recording again is safe and is the point. `Worklist.record` updates the
+        reason, the residual and the timestamps, and deliberately does not touch
+        status, assignee or notes; an item that has since been matched closes
+        itself. An earlier version of this method recorded only once per server
+        lifetime, which meant pressing Reconcile never re-filed the queue and
+        carry-forward could not happen at all.
+        """
+        with self._open(key) as book:
+            changed = book.record(
+                run.batch.sources, run.result,
+                label=f"console {key.profile} seed={key.seed} n={key.n} {key.rung}",
+            )
+        trace.event(_log, "desk.sync", book=self.path_for(key).name, **changed)
+        return changed
+
+    def ensure(self, key: RunKey, run: Run) -> None:
+        """File the book if it has never been filed, so an action has a target."""
+        if self.path_for(key).exists():
+            return
+        self.sync(key, run)
+
+    def snapshot(self, key: RunKey) -> dict:
+        with self._open(key) as book:
+            items = {i.fingerprint: _item_payload(i) for i in book.items()}
+            counts = book.counts()
+        return {"items": items, "counts": counts, "allowed": {k: list(v) for k, v in ALLOWED.items()}}
+
+    def act(self, key: RunKey, fp: str, *, to: str | None, assignee: str | None,
+            notes: str | None, actor: str, detail: str) -> dict:
+        with self._open(key) as book:
+            if assignee is not None or notes is not None:
+                book.annotate(fp, assignee=assignee, notes=notes)
+            if to:
+                book.transition(fp, to, actor=actor or "analyst", detail=detail)
+            return {"item": _item_payload(book.get(fp)), "history": book.history(fp),
+                    "counts": book.counts()}
+
+    def history(self, key: RunKey, fp: str) -> dict:
+        with self._open(key) as book:
+            return {"item": _item_payload(book.get(fp)), "history": book.history(fp)}
+
+
+def _item_payload(item: Item) -> dict:
+    return {
+        "fp": item.fingerprint,
+        "status": item.status,
+        "assignee": item.assignee,
+        "notes": item.notes,
+        "entity_id": item.entity_id,
+        "leg": item.leg,
+        "first_seen_run": item.first_seen_run,
+        "last_seen_run": item.last_seen_run,
+        "closed_run": item.closed_run,
+        "closed_reason": item.closed_reason,
+        "age_in_runs": item.age_in_runs,
+        "is_open": item.is_open,
+        "can_move_to": list(ALLOWED.get(item.status, ())),
     }
 
 
@@ -364,6 +496,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._matches(query)
             else:
                 self._source(query)
+        elif path == "/api/worklist":
+            query = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+            self._worklist(query)
         elif path == "/api/results":
             query = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
             self._results(query)
@@ -374,20 +509,26 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         payload = self._body()
         if path == "/api/run":
-            self._run(payload)
+            self._run(payload, reconciling=True)
         elif path == "/api/ask":
             self._ask(payload)
         elif path == "/api/bank":
             self._bank(payload)
+        elif path == "/api/worklist":
+            self._act(payload)
         else:
             self._json({"error": "not found"}, 404)
 
-    def _run(self, payload: dict) -> None:
+    def _run(self, payload: dict, *, reconciling: bool = False) -> None:
         try:
             key = RunKey.parse(payload)
         except ValueError as exc:
             return self._json({"error": str(exc)}, 400)
-        self._json(run_payload(self.cache.get(key)))
+        run = self.cache.get(key)
+        # A POST is the operator pressing Reconcile, which is a run. A GET is a
+        # screen rendering itself, which is not.
+        self.desk.sync(key, run) if reconciling else self.desk.ensure(key, run)
+        self._json(run_payload(run))
 
     def _int(self, payload: dict, name: str, default: int) -> int:
         try:
@@ -406,6 +547,48 @@ class Handler(BaseHTTPRequestHandler):
         if found is None:
             return self._json({"error": "no such exception in this run"}, 404)
         self._json(found)
+
+    def _worklist(self, payload: dict) -> None:
+        try:
+            key = RunKey.parse(payload)
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
+        fp = str(payload.get("fp", ""))
+        if fp:
+            try:
+                return self._json(self.desk.history(key, fp))
+            except WorklistError as exc:
+                return self._json({"error": str(exc)}, 404)
+        self._json(self.desk.snapshot(key))
+
+    def _act(self, payload: dict) -> None:
+        """Take, resolve, write off, release -- or refuse, and say why.
+
+        The store owns which moves are legal and the message explaining a
+        refusal, so this returns that message verbatim at 409 rather than
+        writing a second, drifting copy of the rule.
+        """
+        try:
+            key = RunKey.parse(payload)
+        except ValueError as exc:
+            return self._json({"error": str(exc)}, 400)
+        fp = str(payload.get("fp", ""))
+        if not fp:
+            return self._json({"error": "which item? no fp given"}, 400)
+        # The run has to be in the queue before anybody can act on it.
+        self.desk.ensure(key, self.cache.get(key))
+        try:
+            self._json(self.desk.act(
+                key, fp,
+                to=(str(payload["to"]) if payload.get("to") else None),
+                assignee=(str(payload["assignee"]) if "assignee" in payload else None),
+                notes=(str(payload["notes"]) if "notes" in payload else None),
+                actor=str(payload.get("actor") or "analyst"),
+                detail=str(payload.get("detail") or ""),
+            ))
+        except WorklistError as exc:
+            # 409, not 400: the request was well formed and the queue said no.
+            self._json({"error": str(exc)}, 409 if ILLEGAL in str(exc) else 404)
 
     def _matches(self, payload: dict) -> None:
         try:
@@ -487,8 +670,13 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": f"{type(exc).__name__}: {exc}"}, 502)
 
 
-def serve(host: str, port: int, model_spec: str) -> ThreadingHTTPServer:
-    handler = type("BoundHandler", (Handler,), {"cache": RunCache(), "model": Model(model_spec)})
+def serve(host: str, port: int, model_spec: str,
+          worklist: str | Path = DEFAULT_WORKLIST) -> ThreadingHTTPServer:
+    handler = type("BoundHandler", (Handler,), {
+        "cache": RunCache(),
+        "model": Model(model_spec),
+        "desk": Desk(worklist),
+    })
     return ThreadingHTTPServer((host, port), handler)
 
 
@@ -502,12 +690,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--no-open", action="store_true", help="do not open a browser")
+    ap.add_argument(
+        "--worklist", default=DEFAULT_WORKLIST,
+        help="directory for the persistent queues, one database per book",
+    )
+    trace.add_argument(ap)
     args = ap.parse_args(argv)
+    trace.from_args(args)
 
-    httpd = serve(args.host, args.port, args.model)
+    httpd = serve(args.host, args.port, args.model, args.worklist)
     url = f"http://{args.host}:{args.port}/"
     print(f"\n  RecoAgent console  {url}")
     print(f"  model: {args.model}")
+    print(f"  worklist: {args.worklist}/")
     status = httpd.RequestHandlerClass.model.status()  # type: ignore[attr-defined]
     if status["ready"]:
         print("  model ready — the ask box and the scored bank are both live")
