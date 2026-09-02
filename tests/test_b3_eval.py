@@ -173,3 +173,93 @@ def test_a_model_string_picks_its_own_endpoint():
     assert endpoint_for("nvidia/x", "http://localhost:8000/v1", "MY_KEY") == (
         "nvidia/x", "http://localhost:8000/v1", "MY_KEY"
     )
+
+
+# ── hypothesis precision ─────────────────────────────────────────────────
+
+
+class _CitingProposer:
+    """Cites evidence that genuinely explains the residual, or declines.
+
+    Reuses `tests/test_agent._correct_citation`, which searches for an
+    applicable rule the way an analyst would and never reads ground truth.
+    """
+
+    def __init__(self, batch) -> None:
+        self.batch = batch
+
+    def propose(self, packet, *_a, **_kw):
+        from test_agent import _correct_citation
+
+        return _correct_citation(self.batch, packet), Usage()
+
+
+def test_a_held_hypothesis_is_still_graded():
+    """The measurement `resolved` cannot make.
+
+    A strict gate on a book with nothing left to prove reports zero
+    resolutions whatever the model said, so `provenance` -- which grades only
+    what was booked -- has nothing to look at. That is a fact about the gate.
+    Whether the model named the right rows is a fact about the model, and it
+    stays measurable: a held-for-approval case carries its citations.
+    """
+    batch = build("dev", 2000, paperwork=False)
+    out = run("dev", n_orders=2000, paperwork=False,
+              proposer_factory=lambda: _CitingProposer(batch))
+
+    assert out.report.needs_approval > 0, "nothing was held, so nothing to grade"
+    assert out.report.resolved == 0
+    assert out.provenance == (0, 0)
+
+    correct, checked = out.hypothesis
+    assert checked > 0, "citations were produced but never graded"
+    assert correct == checked, "a correct proposer cited inapplicable evidence"
+
+
+def test_the_grade_can_actually_fail():
+    """The metric has to be able to report a wrong answer, or it is decoration.
+
+    A hypothesis citing rows from another batch never reaches this number --
+    the arithmetic does not close, so the gate rejects it before it can be
+    graded, which is the gate working. The way to make the metric fail is
+    therefore to keep the citations and move the answer: grade the same run
+    against a truth map that expects different evidence. Same cases, same
+    counts, every one of them now wrong.
+    """
+    batch = build("dev", 2000, paperwork=False)
+    out = run("dev", n_orders=2000, paperwork=False,
+              proposer_factory=lambda: _CitingProposer(batch))
+
+    truth = truth_ids_for(batch)
+    assert out.hypothesis == out.report.hypothesis_precision(truth)
+
+    elsewhere = {line_id: {"pay_does_not_exist"} for line_id in truth}
+    correct, checked = out.report.hypothesis_precision(elsewhere)
+    assert checked == out.hypothesis[1], "the same cases must still be graded"
+    assert checked > 0
+    assert correct == 0
+
+
+def test_a_refusal_is_never_graded_as_a_wrong_answer():
+    """Declining is not a wrong explanation, and must not be counted as one.
+
+    A model that says "I cannot explain this" is giving the answer this design
+    prefers. Scoring it alongside hypotheses would make refusal look like
+    failure and reward guessing, which is the whole thing being argued against.
+    """
+    out = run("dev", n_orders=2000, paperwork=False,
+              proposer_factory=lambda: _Scripted(Refusal(reason="no")))
+    assert out.report.refused > 0
+    assert out.hypothesis == (0, 0)
+
+
+def test_the_render_reports_the_model_even_when_the_gate_books_nothing():
+    batch = build("dev", 2000, paperwork=False)
+    text = render(run("dev", n_orders=2000, paperwork=False,
+                      proposer_factory=lambda: _CitingProposer(batch)))
+    assert "WAS THE MODEL RIGHT ABOUT WHY" in text
+    assert "explanations named applicable evidence" in text
+
+    silent = render(run("dev", n_orders=2000, paperwork=False,
+                        proposer_factory=lambda: _Scripted(Refusal(reason="no"))))
+    assert "the model produced no citable explanation" in silent

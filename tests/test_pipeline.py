@@ -6,7 +6,15 @@ from recoagent.eval.scorer import score
 from recoagent.generator import DefectMix, GeneratorConfig, generate
 from recoagent.pipeline import run_b0
 
-PROFILES = [DefectMix.dev(), DefectMix.holdout(), DefectMix.clean()]
+PROFILES = [
+    DefectMix.dev(),
+    DefectMix.holdout(),
+    DefectMix.clean(),
+    # Carries three classes no tier in this repository handles. Every
+    # invariant below is asserted on it too, which is the point: the
+    # safety claims have to survive a defect nobody wrote code for.
+    DefectMix.unknown(),
+]
 
 
 def _score(mix, n=1200, seed=7):

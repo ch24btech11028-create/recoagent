@@ -24,6 +24,7 @@ import pathlib
 from datetime import date, datetime
 from typing import Any, Iterable
 
+from . import plain
 from .agent import evidence
 from .money import FeeSchedule, Paise, format_inr
 from .schemas import ReconException, ReconResult, SourceBundle
@@ -84,7 +85,7 @@ def _when(value: datetime | date | None) -> str:
 # ── the exception queue ──────────────────────────────────────────────────────
 
 
-def queue_row(exc: ReconException) -> dict[str, Any]:
+def queue_row(exc: ReconException, sources: SourceBundle | None = None) -> dict[str, Any]:
     """One row of the operator's work queue.
 
     Every field here is either the system's own output or arithmetic over the
@@ -109,10 +110,18 @@ def queue_row(exc: ReconException) -> dict[str, Any]:
         "suspected": exc.suspected_class.value if exc.suspected_class else "not classified",
         "reason": exc.reason,
         "stopped_at": exc.escalated_from_tier or "T0",
+        # The same finding for the person whose money it is. Generated from the
+        # sources by `recoagent.plain`, never from a model, and carried
+        # alongside `reason` rather than instead of it -- the desk needs the
+        # ids, the merchant needs the sentence, and neither reading is the
+        # other's summary.
+        "plain": (
+            plain.account_for(exc, sources).to_dict() if sources is not None else None
+        ),
     }
 
 
-def queue(result: ReconResult) -> list[dict[str, Any]]:
+def queue(result: ReconResult, sources: SourceBundle | None = None) -> list[dict[str, Any]]:
     """The whole queue, biggest money at stake first.
 
     Sorted, not paged: an analyst deciding what to work on wants the shape of
@@ -120,7 +129,7 @@ def queue(result: ReconResult) -> list[dict[str, Any]]:
     rather than a new request to the server.
     """
     ordered = sorted(result.exceptions, key=lambda e: (-abs(e.residual_paise or 0), e.entity_id))
-    return [queue_row(e) for e in ordered]
+    return [queue_row(e, sources) for e in ordered]
 
 
 # ── the case file behind one queue row ───────────────────────────────────────
@@ -313,7 +322,7 @@ def exception_case(
                 ),
             }
 
-    return {"item": queue_row(exc), "exception_id": exc.exception_id, "case": case}
+    return {"item": queue_row(exc, sources), "exception_id": exc.exception_id, "case": case}
 
 
 # ── the match log ────────────────────────────────────────────────────────────

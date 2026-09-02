@@ -114,7 +114,9 @@ class CaseOutcome:
     failure_kind: str = ""
     detail: str = ""
     usage: Usage = field(default_factory=Usage)
-    #: Source ids the accepted explanation rests on. Empty unless resolved.
+    #: Source ids the explanation rests on. Set whenever the model produced a
+    #: hypothesis the gate could price -- so on `needs_approval` as well as on
+    #: `resolved`, because a rate nobody confirmed still names its evidence.
     cited_ids: tuple[str, ...] = ()
 
 
@@ -206,6 +208,43 @@ class AgentReport:
         correct = checked = 0
         for c in self.cases:
             if c.outcome != "resolved":
+                continue
+            expected = truth_ids_for.get(c.entity_id)
+            if expected is None:
+                continue
+            checked += 1
+            if set(c.cited_ids) & expected:
+                correct += 1
+        return correct, checked
+
+    #: Outcomes that carry a worked explanation with citations behind it.
+    #: `resolved` is booked; `needs_approval` is not, and the difference is a
+    #: policy about what may be trusted rather than a claim about which is
+    #: better reasoned.
+    HYPOTHESIS_OUTCOMES = ("resolved", "needs_approval")
+
+    def hypothesis_precision(
+        self, truth_ids_for: dict[str, set[str]]
+    ) -> tuple[int, int]:
+        """How often a *hypothesis* named the right evidence. Returns (correct, checked).
+
+        `provenance` above asks a narrower question -- did an explanation the
+        tier actually booked cite the right rows -- and on a book where the
+        deterministic tiers have already closed everything provable, it asks it
+        about nothing at all. Zero resolutions is the honest outcome of a strict
+        gate, but reporting only that leaves the tier's real work unmeasured: a
+        held-for-approval case is a residual turned into a worked account of
+        itself, with rows named, and whether those rows are the right ones is a
+        fact about the model rather than about the gate.
+
+        So this grades every case that produced citations, booked or not. It is
+        the number that separates "the model reasons well and we decline to
+        trust it" from "the model reasons badly and the gate is covering for
+        it". Those look identical when the only metric is `resolved`.
+        """
+        correct = checked = 0
+        for c in self.cases:
+            if c.outcome not in self.HYPOTHESIS_OUTCOMES or not c.cited_ids:
                 continue
             expected = truth_ids_for.get(c.entity_id)
             if expected is None:

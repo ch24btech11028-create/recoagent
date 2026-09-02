@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 
 from ..defects import DefectClass
 from ..money import Paise, format_inr
+from ..unknown import UNKNOWN_SPECS, UnknownDefectClass
 from ..schemas import GroundTruth, LabelledBatch, ReconResult
 
 
@@ -68,7 +69,7 @@ class ClassAccounting:
     Both are silent failures, and silent is the only kind that matters here.
     """
 
-    defect: DefectClass
+    defect: DefectClass | UnknownDefectClass
     injected: int
     flagged: int = 0
     resolved: int = 0
@@ -102,6 +103,11 @@ class Scorecard:
     seed: int
     legs: dict[int, LegScore] = field(default_factory=dict)
     accounting: list[ClassAccounting] = field(default_factory=list)
+    #: Accounting for classes the engine has no tier for, kept apart from the
+    #: table above so the taxonomy it was written against stays readable and
+    #: so its own verdict cannot be diluted by twelve rows that always pass.
+    #: Empty on every profile but `unknown`. See `recoagent.unknown`.
+    unknown_accounting: list[ClassAccounting] = field(default_factory=list)
     unattributed_exceptions: int = 0
     value: ValueCoverage | None = None
 
@@ -125,6 +131,47 @@ class Scorecard:
     @property
     def mishandled_total(self) -> int:
         return sum(a.mishandled for a in self.accounting)
+
+
+    # ── Unknown classes: the taxonomy the engine was not written for ─────
+
+    @property
+    def unknown_injected(self) -> int:
+        return sum(a.injected for a in self.unknown_accounting)
+
+    @property
+    def unknown_contained(self) -> int:
+        """Filed as an exception: the system met something new and said so."""
+        return sum(a.flagged for a in self.unknown_accounting)
+
+    @property
+    def unknown_absorbed(self) -> int:
+        """Matched anyway, and the match happened to be right.
+
+        Not a success. It means a discrepancy the engine cannot explain passed
+        through a gate without being noticed -- usually swallowed by tolerance.
+        The money was booked to the correct settlement, so the false-match rate
+        cannot see it, which is exactly why it is counted here.
+        """
+        return sum(a.resolved for a in self.unknown_accounting)
+
+    @property
+    def unknown_mishandled(self) -> int:
+        """Wrong-matched, or walked past entirely. The number that must be 0."""
+        return sum(a.mishandled for a in self.unknown_accounting)
+
+    @property
+    def unknown_containment_rate(self) -> float:
+        return (
+            self.unknown_contained / self.unknown_injected
+            if self.unknown_injected
+            else 0.0
+        )
+
+    @property
+    def unknown_holds(self) -> bool:
+        """The safety property survived contact with an unwritten defect class."""
+        return self.unknown_mishandled == 0
 
 
 def _reverse(mapping: dict[str, str]) -> dict[str, str]:
@@ -210,7 +257,7 @@ def score(batch: LabelledBatch, result: ReconResult) -> Scorecard:
         else:
             falsely_matched |= {left, right}
 
-    buckets: dict[DefectClass, ClassAccounting] = {}
+    buckets: dict[DefectClass | UnknownDefectClass, ClassAccounting] = {}
     explained_entities: set[str] = set()
 
     for d in truth.defects:
@@ -235,7 +282,14 @@ def score(batch: LabelledBatch, result: ReconResult) -> Scorecard:
             # Neither noticed nor resolved: the system walked past it.
             acc.mishandled += 1
 
-    card.accounting = sorted(buckets.values(), key=lambda a: a.defect.value)
+    card.accounting = sorted(
+        (a for a in buckets.values() if isinstance(a.defect, DefectClass)),
+        key=lambda a: a.defect.value,
+    )
+    card.unknown_accounting = sorted(
+        (a for a in buckets.values() if isinstance(a.defect, UnknownDefectClass)),
+        key=lambda a: a.defect.value,
+    )
 
     # Exceptions on entities no injected defect can explain. Should be zero at
     # every rung: complaints about clean records are matcher bugs, not data.
@@ -307,5 +361,55 @@ def render(card: Scorecard) -> str:
         f"  Ground-truth accounting: {verdict}"
         f"   (mishandled: {card.mishandled_total})"
     )
+
+    if card.unknown_accounting:
+        lines.append("")
+        lines.append("-" * w)
+        lines.append("  DEFECT CLASSES THE ENGINE HAS NO TIER FOR")
+        lines.append("-" * w)
+        lines.append(
+            "  Injected from `recoagent.unknown`, which no matcher may import."
+        )
+        lines.append(
+            "  Nothing here has a rule, a tolerance or a solver behind it, so a"
+        )
+        lines.append(
+            "  recall of 0% is the expected result and is not the number to read."
+        )
+        lines.append("")
+        lines.append(
+            f"{'  CLASS':<34}{'INJECTED':>9}{'CONTAINED':>11}"
+            f"{'ABSORBED':>10}{'WRONG':>8}"
+        )
+        for a in card.unknown_accounting:
+            mark = "" if a.mishandled == 0 else "  <-"
+            lines.append(
+                f"  {a.defect.value:<32}{a.injected:>9}{a.flagged:>11}"
+                f"{a.resolved:>10}{a.mishandled:>8}{mark}"
+            )
+        lines.append("")
+        lines.append(
+            f"  CONTAINMENT           {card.unknown_containment_rate:>8.2%}"
+            f"     ({card.unknown_contained} of {card.unknown_injected}"
+            " filed as exceptions)"
+        )
+        lines.append(
+            f"  WRONG OR UNNOTICED    {card.unknown_mishandled:>8}"
+            "     <- lead metric for this section"
+        )
+        held = "HOLDS" if card.unknown_holds else "DOES NOT HOLD"
+        lines.append("")
+        lines.append(f"  Safety property beyond the written taxonomy: {held}")
+        if card.unknown_absorbed:
+            lines.append("")
+            lines.append(
+                f"  {card.unknown_absorbed} absorbed: matched to the right"
+                " settlement without the"
+            )
+            lines.append(
+                "  discrepancy being noticed. The false-match rate cannot see"
+            )
+            lines.append("  these, which is why they are counted separately.")
+
     lines.append("=" * w)
     return "\n".join(lines)

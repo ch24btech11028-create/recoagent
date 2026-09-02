@@ -28,11 +28,12 @@ by 26-41 percentage points.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 
 from .defects import DefectClass
 from .money import FeeSchedule, Paise, bps_of
+from .unknown import UNKNOWN_INJECTORS, UnknownDefectClass
 from .schemas import (
     BankLine,
     FxAdvice,
@@ -84,6 +85,11 @@ class DefectMix:
 
     rates: dict[DefectClass, float]
     label: str
+    #: Rates for classes the matcher has no handling for at all. Kept in a
+    #: separate field rather than merged into `rates` so that a profile cannot
+    #: acquire one by accident, and so the scorer can report them apart from
+    #: the taxonomy the engine was written against. See `recoagent.unknown`.
+    unknown_rates: dict[UnknownDefectClass, float] = field(default_factory=dict)
 
     @classmethod
     def clean(cls) -> DefectMix:
@@ -148,6 +154,32 @@ class DefectMix:
                 # Leg 1 -- same ~0.046 total, inverted
                 DefectClass.PARTIAL_CAPTURE: 0.016,
                 DefectClass.DUPLICATE_PAYMENT: 0.030,
+            },
+        )
+
+    @classmethod
+    def unknown(cls) -> DefectMix:
+        """The held-out mix, plus three classes the engine has no tier for.
+
+        `holdout` varies the proportions inside a vocabulary the matcher was
+        written against. This varies the vocabulary. The known rates are
+        deliberately identical to `holdout` so the two profiles differ by
+        exactly one thing -- the presence of defects nobody taught it -- and
+        the comparison is a controlled one rather than two unrelated books.
+
+        Expect leg-2 recall to fall here. That is the honest cost of meeting
+        something new and is not the number to read. The number to read is the
+        false-match rate: a system whose safety property was an artefact of its
+        author's imagination will start booking coincidences at this point.
+        """
+        base = cls.holdout()
+        return cls(
+            label="unknown",
+            rates=dict(base.rates),
+            unknown_rates={
+                UnknownDefectClass.TDS_194O_WITHHELD: 0.030,
+                UnknownDefectClass.BANK_CHARGE_DEBIT: 0.030,
+                UnknownDefectClass.SPLIT_PAYOUT: 0.024,
             },
         )
 
@@ -896,6 +928,28 @@ def _apply_defects(w: _World, mix: DefectMix) -> None:
         w.rng.shuffle(candidates)
         w.target_count = target_count
 
+        injected = 0
+        for candidate in candidates:
+            if injected >= target_count:
+                break
+            if injector(w, candidate):
+                injected += 1
+
+    # Classes with no tier behind them, injected last so they can only ever
+    # take settlements the known classes did not want. That ordering keeps the
+    # known-class counts identical to the `holdout` profile, which is what
+    # makes the two books comparable.
+    for unknown in UnknownDefectClass:
+        rate = mix.unknown_rates.get(unknown, 0.0)
+        if rate <= 0:
+            continue
+        injector = UNKNOWN_INJECTORS[unknown]
+        target_count = int(round(rate * len(settlement_ids)))
+        if target_count == 0:
+            continue
+        candidates = [c for c in settlement_ids if c not in w.claimed]
+        w.rng.shuffle(candidates)
+        w.target_count = target_count
         injected = 0
         for candidate in candidates:
             if injected >= target_count:

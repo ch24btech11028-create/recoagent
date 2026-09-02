@@ -52,7 +52,7 @@ from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from . import trace, views
+from . import plain, trace, views
 from .worklist.store import (
     ALLOWED, ILLEGAL, Item, Worklist, WorklistError, fingerprint,
 )
@@ -68,7 +68,15 @@ from .schemas import LabelledBatch, ReconResult
 from .views import RULE_LABEL
 from .webassets import asset_for
 
-MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean": (7, DefectMix.clean)}
+#: Seed 21 for both held-out profiles, so `unknown` is `holdout` plus three
+#: defect classes the engine has no tier for and nothing else. See
+#: `recoagent.unknown`.
+MIXES = {
+    "dev": (7, DefectMix.dev),
+    "holdout": (21, DefectMix.holdout),
+    "clean": (7, DefectMix.clean),
+    "unknown": (21, DefectMix.unknown),
+}
 
 #: Runs are pure functions of these four numbers, so they cache perfectly. The
 #: cap keeps a long demo session from holding every batch it ever generated.
@@ -202,6 +210,24 @@ def run_payload(run: Run) -> dict:
             "resolved": a.resolved,
             "mishandled": a.mishandled,
         } for a in card.accounting],
+        # Classes with no tier behind them. Empty on every profile but
+        # `unknown`, so the screen shows the panel only when there is a result
+        # to show. See `recoagent.unknown`.
+        "unknown_accounting": [{
+            "defect": a.defect.value,
+            "injected": a.injected,
+            "contained": a.flagged,
+            "absorbed": a.resolved,
+            "mishandled": a.mishandled,
+        } for a in card.unknown_accounting],
+        "unknown": {
+            "injected": card.unknown_injected,
+            "contained": card.unknown_contained,
+            "absorbed": card.unknown_absorbed,
+            "mishandled": card.unknown_mishandled,
+            "containment_rate": card.unknown_containment_rate,
+            "holds": card.unknown_holds,
+        },
         "verdict": {
             "fully_reconciles": card.fully_reconciles,
             "mishandled_total": card.mishandled_total,
@@ -211,7 +237,7 @@ def run_payload(run: Run) -> dict:
         # The worklist's own key, attached here rather than in `views` so that
         # module keeps taking a SourceBundle and a ReconResult and nothing else.
         "queue": [dict(row, fp=fingerprint(exc))
-                  for row, exc in zip(views.queue(result), _queue_order(result))],
+                  for row, exc in zip(views.queue(result, run.batch.sources), _queue_order(result))],
         "shape": views.shape(run.batch.sources, result),
         "recovered": _recovered_payload(result),
     }
@@ -377,6 +403,15 @@ def ask_payload(model: Model, run: Run, text: str) -> dict:
     return {
         "question": text,
         "answer": answer.given,
+        # The same answer as money, when it is money. The Q&A contract keeps
+        # the model in integer paise so `qa.bank.is_correct` can grade by exact
+        # comparison -- that rule is load-bearing for the wrong-answer rate and
+        # is not being relaxed. It is converted here, at the edge, by the one
+        # formatter this repository has. A merchant reading "-118632" off a
+        # screen is a contract leaking into a product.
+        "answer_money": plain.rupees(answer.given)
+                        if isinstance(answer.given, int) and not isinstance(answer.given, bool)
+                        else None,
         "basis": answer.basis,
         "confidence": answer.confidence,
         "declined": answer.declined,

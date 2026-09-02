@@ -42,7 +42,15 @@ from .views import RULE_LABEL, severity as _severity
 
 CSS = _read_asset("base.css")
 
-MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout), "clean": (7, DefectMix.clean)}
+#: Seed 21 for both held-out profiles, so `unknown` is `holdout` plus three
+#: defect classes the engine has no tier for and nothing else. See
+#: `recoagent.unknown`.
+MIXES = {
+    "dev": (7, DefectMix.dev),
+    "holdout": (21, DefectMix.holdout),
+    "clean": (7, DefectMix.clean),
+    "unknown": (21, DefectMix.unknown),
+}
 
 
 def _esc(text: object) -> str:

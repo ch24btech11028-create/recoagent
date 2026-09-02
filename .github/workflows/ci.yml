@@ -63,6 +63,15 @@ jobs:
           python -m recoagent.run --n 2000 --seed 7  --profile dev     --rung B2
           python -m recoagent.run --n 2000 --seed 21 --profile holdout --rung B2
           python -m recoagent.run --n 2000 --seed 7  --profile clean   --rung B2
+      # Three defect classes no tier in this repository handles, injected from
+      # a module no matcher may import. Recall falls; the false-match rate must
+      # not. Exits non-zero if any of them is wrong-matched or walked past.
+      - name: the safety property survives a defect class nobody wrote code for
+        run: |
+          python -m recoagent.run --n 2000 --seed 21 --profile unknown --rung B2 --out fresh_unknown.json > fresh_unknown.txt
+          diff fresh_unknown.json results/B2_unknown.json
+          grep -q "WRONG OR UNNOTICED           0" fresh_unknown.txt
+          grep -q "Safety property beyond the written taxonomy: HOLDS" fresh_unknown.txt
       - name: the same seed produces the same run, byte for byte
         run: |
           python -m recoagent.run --n 2000 --seed 7 --out a.json > /dev/null

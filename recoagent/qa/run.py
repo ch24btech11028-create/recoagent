@@ -1,6 +1,7 @@
 """CLI: score the Q&A agent over a generated question bank.
 
     python -m recoagent.qa.run --model nvidia/nemotron-3-ultra-550b-a55b
+    python -m recoagent.qa.run --out results/qa_dev.txt
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+from .. import trace
 from ..eval.scorer import score
 from ..generator import DefectMix, GeneratorConfig, generate
 from ..llm import DEFAULT_MODEL, client_for
@@ -26,7 +28,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--limit", type=int, default=0, help="cap questions, 0 = all")
+    ap.add_argument("--out", help="write the rendered scorecard here")
+    trace.add_argument(ap)
     args = ap.parse_args(argv)
+    trace.from_args(args)
 
     seed, mix = MIXES[args.profile]
     batch = generate(GeneratorConfig(n_orders=args.n, seed=seed, mix=mix()))
@@ -66,7 +71,12 @@ def main(argv: list[str] | None = None) -> int:
         report.answers = list(pool.map(work, questions))
     report.seconds = time.time() - started
 
-    print(agent.render(report, questions))
+    text = agent.render(report, questions)
+    print(text)
+    if args.out:
+        with open(args.out, "w") as fh:
+            fh.write(text)
+        print(f"  wrote {args.out}\n")
     return 0 if (report.wrong_answer_rate == 0 and report.hallucinated == 0) else 1
 
 

@@ -83,6 +83,10 @@ class B3Run:
     report: AgentReport
     seconds: float = 0.0
     provenance: tuple[int, int] = (0, 0)
+    #: (correct, checked) over every case that produced citations, booked or
+    #: not. `provenance` covers only what was booked, which on a book with
+    #: nothing left to book is a metric over an empty set.
+    hypothesis: tuple[int, int] = (0, 0)
     open_before: int = 0
 
     @property
@@ -185,6 +189,7 @@ def run(
         report=report,
         seconds=seconds,
         provenance=report.provenance(truth_ids_for(batch)),
+        hypothesis=report.hypothesis_precision(truth_ids_for(batch)),
         open_before=open_before,
     )
 
@@ -193,6 +198,7 @@ def render(run: B3Run) -> str:
     w = 72
     r, before, after = run.report, run.before, run.after
     correct, checked = run.provenance
+    h_correct, h_checked = run.hypothesis
     book = "with the merchant's paperwork" if run.paperwork else "paperwork withheld"
 
     out = [
@@ -247,6 +253,31 @@ def render(run: B3Run) -> str:
         "  pairing that came from the UTR join, so an explanation can name the"
     )
     out.append("  wrong rows, close the arithmetic, and still score perfectly.")
+
+    out += ["", "-" * w, "  WAS THE MODEL RIGHT ABOUT WHY", "-" * w]
+    if h_checked:
+        out.append(
+            f"  hypothesis          {h_correct}/{h_checked} explanations named "
+            f"applicable evidence ({h_correct / h_checked:.0%})"
+        )
+        out.append("")
+        out.append(
+            "  Graded over every case the model worked, held-for-approval"
+        )
+        out.append(
+            "  included, because `resolved` measures the gate and this measures"
+        )
+        out.append(
+            "  the model. A tier that reasons correctly and is declined on"
+        )
+        out.append(
+            "  policy and one that reasons badly and is caught both report zero"
+        )
+        out.append("  resolutions; only this number tells them apart.")
+    else:
+        out.append(
+            "  hypothesis          the model produced no citable explanation"
+        )
 
     out += [
         "",

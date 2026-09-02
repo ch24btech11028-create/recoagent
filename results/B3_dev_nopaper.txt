@@ -9,9 +9,9 @@ paperwork withheld   model=nvidia/nemotron-3-ultra-550b-a55b
   needs approval                   4   arithmetic closed on a rate nothing confirms
   rejected by the gate             0   proposed confidently, did not add up
   cited unverifiable               0   named evidence that does not exist here
-  declined by the model            2
+  declined by the model            1
   below confidence floor           0
-  malformed reply                  1   answered, and the answer could not be used
+  malformed reply                  2   answered, and the answer could not be used
   endpoint failed                  0   rate limit, timeout or 5xx -- never reached the model
 
 ------------------------------------------------------------------------
@@ -31,22 +31,33 @@ paperwork withheld   model=nvidia/nemotron-3-ultra-550b-a55b
   wrong rows, close the arithmetic, and still score perfectly.
 
 ------------------------------------------------------------------------
+  WAS THE MODEL RIGHT ABOUT WHY
+------------------------------------------------------------------------
+  hypothesis          4/4 explanations named applicable evidence (100%)
+
+  Graded over every case the model worked, held-for-approval
+  included, because `resolved` measures the gate and this measures
+  the model. A tier that reasons correctly and is declined on
+  policy and one that reasons badly and is caught both report zero
+  resolutions; only this number tells them apart.
+
+------------------------------------------------------------------------
   WHAT IT COST
 ------------------------------------------------------------------------
-  tokens              24,818 in / 37,935 out
-  wall clock          428s over 7 cases
-  spend               $0.0377
+  tokens              22,477 in / 34,595 out
+  wall clock          297s over 7 cases
+  spend               $0.0342
   per resolved        n/a -- nothing was resolved
 
 ------------------------------------------------------------------------
   CASE BY CASE
 ------------------------------------------------------------------------
-    bank_0006     needs_approval       -Rs 20.98  The residual of -2,098 paise matches 1.94% o
+    bank_0006     needs_approval       -Rs 20.98  The residual of -2,098 paise equals approxim
     bank_0031     needs_approval        -Rs 6.90  The residual of -690 paise equals 1.2585% of
-    bank_0158     needs_approval        -Rs 1.84  The residual of -184 paise matches exactly a
-    bank_0159     refused               -Rs 1.65  All three MDR-bearing payments (pay_00126 ne
-    bank_0160     needs_approval    -Rs 1,186.32  The residual of -118,632 paise corresponds t
-    bank_0161     refused               -Rs 8.58  The residual of -858 paise cannot be explain
+    bank_0158     refused               -Rs 1.84  The residual is -184 paise. Both MDR-bearing
+    bank_0159     failed                -Rs 1.65  malformed: Expecting value: line 1 column 42
+    bank_0160     needs_approval    -Rs 1,186.32  The residual of -118,632 paise equals -0.806
+    bank_0161     needs_approval        -Rs 8.58  The two card_domestic payments (pay_01124 an
     bank_0162     failed              -Rs 114.46  malformed: no JSON object in response: 'Let 
 
   Read `resolved` first, and note that zero is a legitimate answer. An

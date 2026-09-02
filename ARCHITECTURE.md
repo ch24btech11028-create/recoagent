@@ -331,8 +331,12 @@ is recorded as one rather than glossed.
   credits sit in the denominator with no correct answer available.
 - The FX defect models a rate slip, not the full multi-currency settlement
   lifecycle.
-- No persistence layer. Runs are in-memory and reproducible from a seed, which
-  suits evaluation and would not suit production.
+- The engine has no persistence and is not meant to: a run is a pure function
+  of its sources, in memory and reproducible from a seed. Reconciliation *work*
+  does persist -- `recoagent/worklist/` keeps status, assignee, notes and
+  history in sqlite, and the console writes to it. What is still missing for
+  production is everything around that: no authentication, no write-back to any
+  system of record, and single-tenant throughout.
 - The Leg 2 tolerance is calibrated against a ROUNDING_DRIFT class this
   repository also defines. The magnitude chosen (1-9 paise) is plausible for
   per-step rounding differences between a gateway and a merchant, but it is

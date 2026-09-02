@@ -109,6 +109,12 @@ def test_the_queue_never_carries_the_answer_key(run):
         # information at all, which is why it is safe; it is here so that a
         # click on a row can take, resolve or write off the right item.
         "fp",
+        # The merchant-register account of the same row. Built by
+        # `recoagent.plain` from the SourceBundle and this exception, both of
+        # which the desk already has; it is a rewording of fields on this row,
+        # not a new fact. `plain.py` is in tests/test_independence.py under the
+        # same fence as every other screen.
+        "plain",
     }
     for row in d["queue"]:
         assert set(row) == allowed, f"unexpected field on a queue row: {set(row) - allowed}"

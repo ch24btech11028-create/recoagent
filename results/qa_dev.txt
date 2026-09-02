@@ -1,0 +1,22 @@
+========================================================================
+SETTLEMENT Q&A
+========================================================================
+
+  WRONG-ANSWER RATE      0.00%   <- lead metric
+  coverage              88.24%   (15 of 17 answered)
+  accuracy             100.00%   (correct out of all questions)
+
+  HALLUCINATED               0   (answered a question the factsheet cannot support)
+
+  correct 17   wrong 0   declined 2   call failed 0
+  tokens 24,912 in / 3,456 out   61s
+
+------------------------------------------------------------------------
+  WHAT IT GOT WRONG, DECLINED, OR FAILED
+------------------------------------------------------------------------
+    nothing
+------------------------------------------------------------------------
+  A wrong answer is worse than a declined one: the operator acts on the
+  number either way. That is why the wrong-answer rate leads and why
+  declining is scored as a cost, not a failure.
+========================================================================

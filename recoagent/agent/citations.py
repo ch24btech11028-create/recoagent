@@ -96,6 +96,14 @@ class ResolvedRow:
     cited_ids: tuple[str, ...]
     amount_paise: Paise
     derivation: str
+    #: The numbers behind `derivation`, kept structured as well as prose.
+    #: `derivation` is an audit string and reads like one; anything that needs
+    #: to *say* what happened in another register -- `recoagent.plain`, for the
+    #: merchant -- would otherwise have to parse it back out, and a sentence
+    #: assembled by re-reading a sentence is one edit away from being wrong.
+    #: Keys are per `source`: fee_variance carries `method`, `claimed_bps` and
+    #: `schedule_bps`; fx carries `pct`.
+    detail: dict = field(default_factory=dict)
     #: True when the row rests entirely on data that already existed. False when
     #: a parameter came from the model -- a claimed MDR or FX rate. The
     #: arithmetic is computed by code either way, but an unverified rate is a
@@ -201,6 +209,11 @@ def resolve(
                     cited_ids=tuple(p.payment_id for p in targets),
                     amount_paise=delta,
                     verified=confirmed,
+                    detail={
+                        "method": method,
+                        "claimed_bps": c.actual_mdr_bps,
+                        "schedule_bps": fees.mdr_for(method),
+                    },
                     derivation=(
                         f"{len(targets)} {method} payments repriced at "
                         f"{c.actual_mdr_bps} bps + {fees.gst_bps} bps GST, "
@@ -242,6 +255,7 @@ def resolve(
                 cited_ids=(p.payment_id,),
                 amount_paise=amount,
                 verified=confirmed,
+                detail={"pct": c.actual_rate_pct_of_gross},
                 derivation=(
                     f"{c.actual_rate_pct_of_gross:+.4f}% of {p.payment_id} gross "
                     f"({p.gross_paise} paise), "

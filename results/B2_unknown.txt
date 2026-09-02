@@ -1,0 +1,58 @@
+
+  sources: orders=2000  payments=2060  adjustments=31  settlements=167  bank_lines=168  rate_notices=6  fx_advices=3  defects=144
+
+========================================================================
+RUNG B2   profile=unknown   seed=21
+========================================================================
+
+  FALSE-MATCH RATE         0.00%     <- lead metric
+  Auto-match rate         96.31%
+  Credit value matched    87.30%     (Rs 2,21,53,687.26 of Rs 2,53,77,143.64)
+
+------------------------------------------------------------------------
+LEG      POP  MATCHED   TRUE  FALSE     FMR   RECALL    EXC
+------------------------------------------------------------------------
+1       2000     1940   1940      0   0.00%   97.00%     60
+2        168      148    148      0   0.00%   88.10%     20
+
+------------------------------------------------------------------------
+DEFECT ACCOUNTING                  INJECTED  FLAGGED  RESOLVED MISHANDLED
+------------------------------------------------------------------------
+ADJUSTMENT_ENTRY                          6        0         6          0
+CHARGEBACK_NETTED                         5        0         5          0
+DUPLICATE_PAYMENT                        60       60         0          0
+DUPLICATE_UTR                             1        1         0          0
+FEE_TAX_VARIANCE                          7        0         7          0
+FX_CONVERSION                             2        0         2          0
+MISSING_BANK_LINE                         4        4         0          0
+NARRATION_TRUNCATION                      2        0         2          0
+PARTIAL_CAPTURE                          32        0        32          0
+REFUND_NETTED                             3        0         3          0
+ROUNDING_DRIFT                            2        0         2          0
+TIMING_SPILL                              6        0         6          0
+------------------------------------------------------------------------
+exceptions with no injected cause                  0                     
+
+  Ground-truth accounting: RECONCILES   (mishandled: 0)
+
+------------------------------------------------------------------------
+  DEFECT CLASSES THE ENGINE HAS NO TIER FOR
+------------------------------------------------------------------------
+  Injected from `recoagent.unknown`, which no matcher may import.
+  Nothing here has a rule, a tolerance or a solver behind it, so a
+  recall of 0% is the expected result and is not the number to read.
+
+  CLASS                            INJECTED  CONTAINED  ABSORBED   WRONG
+  BANK_CHARGE_DEBIT                       5          5         0       0
+  SPLIT_PAYOUT                            4          4         0       0
+  TDS_194O_WITHHELD                       5          5         0       0
+
+  CONTAINMENT            100.00%     (14 of 14 filed as exceptions)
+  WRONG OR UNNOTICED           0     <- lead metric for this section
+
+  Safety property beyond the written taxonomy: HOLDS
+========================================================================
+  Documented variance      -Rs 2,40,111.98     (32 matches carry a declared gap; matched, not reconciled away)
+
+
+  wrote results/B2_unknown.json

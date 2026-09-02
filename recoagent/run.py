@@ -27,6 +27,10 @@ MIXES = {
     "dev": DefectMix.dev,
     "holdout": DefectMix.holdout,
     "clean": DefectMix.clean,
+    # The held-out mix plus three classes no tier in this repository handles.
+    # Recall falls here by design; the false-match rate is the thing being
+    # tested. See `recoagent.unknown`.
+    "unknown": DefectMix.unknown,
 }
 
 

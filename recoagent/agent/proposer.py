@@ -75,7 +75,16 @@ arithmetic and a proposal that does not close is discarded, so guessing wastes \
 the attempt and tells the operator nothing.
 
 State your confidence honestly. It is recorded and audited against whether the \
-arithmetic actually closed."""
+arithmetic actually closed.
+
+A note on how to write the `reason`, because a person reads it and that person \
+is usually not an analyst. The money in it is converted to rupees and the \
+citations are priced by code -- so you never need to state an amount, and you \
+should not. Say what happened in the words the merchant would use: "three card \
+payments were charged at a higher rate than the rate card" rather than "the \
+residual of -947 paise equals 1.9979% of the card_domestic gross". Do not put \
+row ids in the sentence; they are already in your citations, where the desk \
+expects them."""
 
 PROPOSE_TOOL = {
     "name": "propose_hypothesis",
@@ -109,7 +118,13 @@ PROPOSE_TOOL = {
             },
             "reason": {
                 "type": "string",
-                "description": "One or two sentences an operator could act on.",
+                "description": (
+                    "One or two sentences an operator could act on. Write it "
+                    "for a merchant reading their own book: rupees, not paise; "
+                    "no row ids -- the citations already carry those; say 'a "
+                    "card payment' rather than 'card_domestic'. State what "
+                    "happened, not what you computed."
+                ),
             },
             "confidence": {
                 "type": "number",
@@ -133,7 +148,13 @@ FLAG_TOOL = {
         "properties": {
             "reason": {
                 "type": "string",
-                "description": "What is missing or ambiguous, for the operator.",
+                "description": (
+                    "What is missing or ambiguous. This is the one place a "
+                    "person reads your own words with nothing generated from "
+                    "the ledger beside them, so write it for a merchant: "
+                    "rupees not paise, no row ids, and say what they would "
+                    "have to find out for this to be answerable."
+                ),
             }
         },
         "required": ["reason"],

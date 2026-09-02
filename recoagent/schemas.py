@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import asdict, dataclass, field
+from enum import Enum
 from datetime import date, datetime
 from typing import Any
 
@@ -262,7 +263,12 @@ class InjectedDefect:
     exactly where the data is most interesting.
     """
 
-    defect: DefectClass
+    #: `DefectClass` for the taxonomy the engine was written against, or
+    #: `recoagent.unknown.UnknownDefectClass` for one it was not. Annotated
+    #: structurally rather than by importing that module: every matcher imports
+    #: this file, and an import here would put the unknown taxonomy within
+    #: reach of the tiers whose ignorance of it is the whole measurement.
+    defect: DefectClass | Enum
     entity_kind: str  # order | payment | settlement | bank_line
     entity_id: str
     note: str

@@ -56,6 +56,11 @@ MATCHER_MODULES = [
     # would show an analyst answers no real book comes with, and the difference
     # is invisible from a screenshot.
     ROOT / "views.py",
+    # The merchant-register renderer. It exists to say what happened in plain
+    # language, which makes it the module where a leaked label would be least
+    # visible and most convincing: a fluent sentence carrying a fact no real
+    # book comes with reads exactly like the ones that do not.
+    ROOT / "plain.py",
 ]
 
 FORBIDDEN = "generator"

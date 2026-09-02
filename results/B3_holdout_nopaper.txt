@@ -6,12 +6,12 @@ paperwork withheld   model=nvidia/nemotron-3-ultra-550b-a55b
   RESOLVED (source-backed)         0   <- lead metric
   attempted                        9   (of 9 residual-bearing leg-2 items)
 
-  needs approval                   5   arithmetic closed on a rate nothing confirms
+  needs approval                   7   arithmetic closed on a rate nothing confirms
   rejected by the gate             0   proposed confidently, did not add up
   cited unverifiable               0   named evidence that does not exist here
-  declined by the model            3
+  declined by the model            2
   below confidence floor           0
-  malformed reply                  1   answered, and the answer could not be used
+  malformed reply                  0   answered, and the answer could not be used
   endpoint failed                  0   rate limit, timeout or 5xx -- never reached the model
 
 ------------------------------------------------------------------------
@@ -31,25 +31,36 @@ paperwork withheld   model=nvidia/nemotron-3-ultra-550b-a55b
   wrong rows, close the arithmetic, and still score perfectly.
 
 ------------------------------------------------------------------------
+  WAS THE MODEL RIGHT ABOUT WHY
+------------------------------------------------------------------------
+  hypothesis          7/7 explanations named applicable evidence (100%)
+
+  Graded over every case the model worked, held-for-approval
+  included, because `resolved` measures the gate and this measures
+  the model. A tier that reasons correctly and is declined on
+  policy and one that reasons badly and is caught both report zero
+  resolutions; only this number tells them apart.
+
+------------------------------------------------------------------------
   WHAT IT COST
 ------------------------------------------------------------------------
-  tokens              28,952 in / 39,961 out
-  wall clock          377s over 9 cases
-  spend               $0.0413
+  tokens              28,952 in / 42,348 out
+  wall clock          258s over 9 cases
+  spend               $0.0428
   per resolved        n/a -- nothing was resolved
 
 ------------------------------------------------------------------------
   CASE BY CASE
 ------------------------------------------------------------------------
     bank_0069     needs_approval        -Rs 9.47  The residual of -947 paise equals 1.9979% of
-    bank_0102     needs_approval      -Rs 162.11  The residual of -16,211 paise equals approxi
-    bank_0158     refused               -Rs 3.44  The residual of -344 paise is very small (~₹
-    bank_0159     refused              -Rs 12.36  All payment fees and taxes match the publish
+    bank_0102     needs_approval      -Rs 162.11  The residual of -16,211 paise equals 1.796% 
+    bank_0158     refused               -Rs 3.44  The residual of -344 paise cannot be explain
+    bank_0159     needs_approval       -Rs 12.36  The residual of -1,236 paise matches exactly
     bank_0160     needs_approval      -Rs 543.92  The residual of -54,392 paise matches exactl
     bank_0161     needs_approval    -Rs 1,183.98  The residual of -118,398 paise equals exactl
-    bank_0162     refused              -Rs 16.05  The residual of -1,605 paise cannot be expla
-    bank_0163     failed                -Rs 7.15  malformed: no JSON object in response: 'Let 
-    bank_0166     needs_approval       -Rs 70.81  The residual of -7,081 paise matches a 50 bp
+    bank_0162     needs_approval       -Rs 16.05  The three card_domestic payments (pay_00316,
+    bank_0163     refused               -Rs 7.15  All payment fees match the published schedul
+    bank_0166     needs_approval       -Rs 70.81  The residual of -7,081 paise equals approxim
 
   Read `resolved` first, and note that zero is a legitimate answer. An
   explanation that closes the arithmetic on a rate nobody issued is a
