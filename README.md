@@ -409,7 +409,7 @@ recoagent/
   eval/                    the scorers, BenchRec, throughput, repeatability
   ui.py, web/              the operator console
 results/                   committed run artifacts
-tests/             433 tests
+tests/             439 tests
 ```
 
 - [EVIDENCE.md](EVIDENCE.md) — how each tier earns its place, the adversarial

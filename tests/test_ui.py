@@ -590,3 +590,72 @@ def test_two_books_do_not_share_one_queue(tmp_path):
     dev = RunKey(n=800, seed=7, profile="dev", rung="B2")
     held = RunKey(n=800, seed=21, profile="holdout", rung="B2")
     assert desk.path_for(dev) != desk.path_for(held)
+
+
+# ── facing the internet ──────────────────────────────────────────────────
+
+
+@pytest.fixture(scope="module")
+def public_server(tmp_path_factory):
+    """A server started the way a public deployment would start it."""
+    httpd = serve("127.0.0.1", 0, "nvidia/nemotron-3-ultra-550b-a55b",
+                  tmp_path_factory.mktemp("public-wl"),
+                  allow_origin="https://frontend.example", public=True)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    httpd.shutdown()
+    httpd.server_close()
+
+
+def test_public_mode_refuses_what_costs_money_or_writes(public_server):
+    """A stranger must not be able to spend the operator's key or edit a queue."""
+    for route in ("/api/ask", "/api/bank", "/api/worklist"):
+        code, body = _post(public_server + route, {"question": "anything", "n": 300})
+        assert code == 403, route
+        assert body["public"] is True
+        assert "disabled on a public deployment" in body["error"]
+    # GET on a guarded route is refused too -- the worklist is readable state.
+    assert _get(public_server + "/api/worklist?n=300")[0] == 403
+
+
+def test_public_mode_still_reconciles_and_serves_evidence(public_server):
+    """Everything that is safe to show still works, or the demo is pointless."""
+    status, run = _post(public_server + "/api/run", {"n": 400, "seed": 7})
+    assert status == 200 and run["headline"]["false_match_rate"] == 0.0
+    for path in ("/api/matches?n=400&seed=7", "/api/source?n=400&seed=7&kind=payments",
+                 "/api/results", "/api/model"):
+        assert _get(public_server + path)[0] == 200, path
+
+
+def test_the_named_origin_is_allowed_and_it_is_never_a_wildcard(public_server):
+    with urllib.request.urlopen(public_server + "/api/model", timeout=30) as r:
+        origin = r.headers.get("Access-Control-Allow-Origin")
+    assert origin == "https://frontend.example"
+    assert origin != "*", "a wildcard would let any page spend the operator's key"
+
+
+def test_the_browser_preflight_is_answered(public_server):
+    req = urllib.request.Request(public_server + "/api/run", method="OPTIONS")
+    with urllib.request.urlopen(req, timeout=30) as r:
+        assert r.status == 204
+        assert r.headers.get("Access-Control-Allow-Origin") == "https://frontend.example"
+        assert "POST" in r.headers.get("Access-Control-Allow-Methods", "")
+
+
+def test_a_loopback_console_sends_no_cors_header_at_all(server):
+    """The default is a console for one person. It should not invite a browser in."""
+    with urllib.request.urlopen(server + "/api/model", timeout=30) as r:
+        assert r.headers.get("Access-Control-Allow-Origin") is None
+    req = urllib.request.Request(server + "/api/run", method="OPTIONS")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            assert False, f"preflight answered with {r.status} when no origin was allowed"
+    except urllib.error.HTTPError as exc:
+        assert exc.code == 405
+
+
+def test_ask_and_bank_still_work_on_a_private_console(server):
+    """--public is the switch. Without it the console keeps its own tools."""
+    code, _ = _post(server + "/api/ask", {"question": "how many items are open?"})
+    assert code != 403, "a loopback console refused its own ask box"

@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import threading
 import time
@@ -76,6 +77,15 @@ MIXES = {
     "holdout": (21, DefectMix.holdout),
     "clean": (7, DefectMix.clean),
     "unknown": (21, DefectMix.unknown),
+}
+
+#: Routes that either spend the operator's API key or write to their worklist.
+#: On loopback that is the product. Facing the internet it is somebody else's
+#: bill and somebody else's queue, so `--public` refuses them and says why.
+GUARDED = {
+    "/api/ask": "the model costs money per call",
+    "/api/bank": "the scored bank costs money per question",
+    "/api/worklist": "the worklist is this operator's record, not a shared one",
 }
 
 #: Runs are pure functions of these four numbers, so they cache perfectly. The
@@ -479,6 +489,10 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "recoagent"
     cache: RunCache
     model: Model
+    #: Empty unless an origin was named on the command line.
+    allow_origin: str = ""
+    #: True when this process is reachable by someone other than its operator.
+    public: bool = False
 
     def log_message(self, fmt: str, *args) -> None:  # quieter console
         sys.stderr.write("  %s\n" % (fmt % args))
@@ -495,6 +509,12 @@ class Handler(BaseHTTPRequestHandler):
         # after a restart shows an operator the previous version of the console
         # with none of the fixes in it.
         self.send_header("Cache-Control", "no-store")
+        # A named origin or nothing. `*` would let any page anyone visits read
+        # this book and, worse, spend the key behind /api/ask, so the origin has
+        # to be typed on the command line by the person taking the risk.
+        if self.allow_origin:
+            self.send_header("Access-Control-Allow-Origin", self.allow_origin)
+            self.send_header("Vary", "Origin")
         self.end_headers()
         self.wfile.write(body)
 
@@ -513,8 +533,32 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return {}
 
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """The browser's preflight. Answered only when an origin was allowed."""
+        if not self.allow_origin:
+            return self._json({"error": "cross-origin requests are not enabled"}, 405)
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", self.allow_origin)
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Max-Age", "600")
+        self.send_header("Vary", "Origin")
+        self.end_headers()
+
+    def _refused_in_public(self, path: str) -> bool:
+        """Say no, and say why, rather than failing in a way nobody can read."""
+        if self.public and path in GUARDED:
+            self._json({
+                "error": f"{path} is disabled on a public deployment: {GUARDED[path]}",
+                "public": True,
+            }, 403)
+            return True
+        return False
+
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        if self._refused_in_public(path):
+            return
         asset = asset_for(path)
         if asset is not None:
             body, content_type = asset
@@ -542,6 +586,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
+        if self._refused_in_public(path):
+            return
         payload = self._body()
         if path == "/api/run":
             self._run(payload, reconciling=True)
@@ -706,11 +752,14 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def serve(host: str, port: int, model_spec: str,
-          worklist: str | Path = DEFAULT_WORKLIST) -> ThreadingHTTPServer:
+          worklist: str | Path = DEFAULT_WORKLIST,
+          *, allow_origin: str = "", public: bool = False) -> ThreadingHTTPServer:
     handler = type("BoundHandler", (Handler,), {
         "cache": RunCache(),
         "model": Model(model_spec),
         "desk": Desk(worklist),
+        "allow_origin": allow_origin,
+        "public": public,
     })
     return ThreadingHTTPServer((host, port), handler)
 
@@ -722,7 +771,18 @@ def main(argv: list[str] | None = None) -> int:
     # Loopback by default and on purpose: this serves a generated book and holds
     # an API key. Binding it to 0.0.0.0 should be a decision, not a default.
     ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8000)
+    # Every host that runs a process for you names the port in the environment.
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8000)))
+    ap.add_argument(
+        "--allow-origin", default="",
+        help="allow browser requests from this exact origin, e.g. "
+             "https://your-frontend.example. One origin, never '*'",
+    )
+    ap.add_argument(
+        "--public", action="store_true",
+        help="this process is reachable by strangers: refuse the routes that "
+             "spend the API key or write the worklist",
+    )
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--no-open", action="store_true", help="do not open a browser")
     ap.add_argument(
@@ -733,11 +793,21 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     trace.from_args(args)
 
-    httpd = serve(args.host, args.port, args.model, args.worklist)
+    httpd = serve(args.host, args.port, args.model, args.worklist,
+                  allow_origin=args.allow_origin, public=args.public)
     url = f"http://{args.host}:{args.port}/"
     print(f"\n  RecoAgent console  {url}")
     print(f"  model: {args.model}")
     print(f"  worklist: {args.worklist}/")
+    if args.allow_origin:
+        print(f"  cross-origin: {args.allow_origin}")
+    if args.public:
+        print("  public mode: /api/ask, /api/bank and /api/worklist are refused")
+    elif args.host not in ("127.0.0.1", "localhost", "::1"):
+        # Not an error -- there are good reasons to bind wider on a private
+        # network -- but the operator should know what they just exposed.
+        print(f"  WARNING: bound to {args.host}, not loopback, without --public.")
+        print("           /api/ask and /api/bank will spend your API key for anyone who can reach this.")
     status = httpd.RequestHandlerClass.model.status()  # type: ignore[attr-defined]
     if status["ready"]:
         print("  model ready — the ask box and the scored bank are both live")
