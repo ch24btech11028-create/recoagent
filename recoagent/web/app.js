@@ -50,6 +50,47 @@ async function post(path, body) {
   return d;
 }
 
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+/* A figure settles into its new value rather than cutting to it, so that
+   re-reconciling shows you which numbers actually moved. The digits are
+   tabular, so nothing reflows while it counts. Anything without a number in it
+   is written straight out. */
+function settle(el, text) {
+  const m = String(text).match(/-?[\d,]+\.?\d*/);
+  if (!m || REDUCED.matches) { el.textContent = text; return; }
+  const raw = m[0].replace(/,/g, "");
+  const target = parseFloat(raw);
+  if (!isFinite(target)) { el.textContent = text; return; }
+  const decimals = (raw.split(".")[1] || "").length;
+  const head = String(text).slice(0, m.index), tail = String(text).slice(m.index + m[0].length);
+  const write = (v) => el.textContent = head + v.toLocaleString("en-IN", {
+    minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + tail;
+
+  // A hidden tab does not run animation frames at all. Without this the figure
+  // sits at its final value and then snaps back to zero to count up the moment
+  // the tab is looked at again, which is worse than not animating.
+  if (document.hidden) { el.textContent = text; return; }
+
+  const from = 0, started = performance.now(), ms = 520;
+  cancelAnimationFrame(el._raf || 0);
+  // Write the starting value now rather than on the first frame, so the element
+  // never shows the answer and then rewinds.
+  write(from);
+  const step = (now) => {
+    const t = Math.min(1, (now - started) / ms);
+    // Ease out cubic: fast to nearly-there, then a slow approach, the way a
+    // needle arrives rather than a slot machine stopping.
+    write(from + (target - from) * (1 - Math.pow(1 - t, 3)));
+    if (t < 1) el._raf = requestAnimationFrame(step); else write(target);
+  };
+  el._raf = requestAnimationFrame(step);
+}
+
+function settleFigures(host) {
+  host.querySelectorAll(".fig").forEach(el => settle(el, el.textContent.trim()));
+}
+
 const ladder = (stop) => `<span class="ladder">` + ["T0", "T1", "T2"].map((t, i) => {
   const at = ["T0", "T1", "T2"].indexOf(stop);
   return `<span class="rung rung--${i < at ? "done" : (i === at ? "stop" : "skip")}">${t}</span>`;
@@ -60,8 +101,10 @@ const SEV_LABEL = { critical: "over Rs 10,000", warn: "over Rs 100", minor: "und
 
 function distrow(label, value, total, tone) {
   const share = total ? (value / total) * 100 : 0;
+  // A count of zero gets no bar. The 2px minimum that keeps a tiny share
+  // visible would otherwise paint a mark against nothing.
   return `<div class="distrow">
-    <span class="bar ${tone || ""}" style="width:${share.toFixed(1)}%"></span>
+    ${value ? `<span class="bar ${tone || ""}" style="--w:${share.toFixed(1)}%"></span>` : ""}
     <span class="lbl">${esc(label)}</span><span class="val">${n(value)}</span></div>`;
 }
 
@@ -95,8 +138,16 @@ function route() {
   state.route = VIEWS[name] ? name : "overview";
   state.arg = decodeURIComponent(rest.join("/") || "");
   if (was !== state.route) window.scrollTo({ top: 0 });
-  document.querySelectorAll(".nav a").forEach(a =>
-    a.classList.toggle("on", a.getAttribute("href") === "#/" + state.route));
+  document.querySelectorAll(".nav a").forEach(a => {
+    const on = a.getAttribute("href") === "#/" + state.route;
+    a.classList.toggle("on", on);
+    a.setAttribute("aria-current", on ? "page" : "false");
+    // On a narrow screen the sidebar is a horizontal strip that scrolls, and
+    // the item you are on can sit outside it.
+    if (on && window.matchMedia("(max-width: 820px)").matches) {
+      a.scrollIntoView({ block: "nearest", inline: "center" });
+    }
+  });
   render();
 }
 
@@ -111,6 +162,7 @@ function render() {
   }
   host.innerHTML = view.html();
   if (view.wire) view.wire();
+  settleFigures(host);
 }
 
 /* ── overview ─────────────────────────────────────────────────────────── */
@@ -141,21 +193,21 @@ VIEWS.overview = {
     </div>
 
     <dl class="stats">
-      <div class="stat stat--hero"><dt>False-match rate</dt><dd>${pct(h.false_match_rate)}
+      <div class="stat stat--hero"><dt>False-match rate</dt><dd><span class="fig">${pct(h.false_match_rate)}</span>
         <small>money filed against the wrong entry</small></dd></div>
-      <div class="stat"><dt>Auto-matched</dt><dd>${pct(h.auto_match_rate)}</dd></div>
-      <div class="stat"><dt>Leg 2 recall</dt><dd>${pct(leg2.recall)}</dd></div>
-      <div class="stat"><dt>Value cleared</dt><dd>${pct(h.value_share)}</dd></div>
-      <div class="stat ${atRisk ? "stat--money" : ""}"><dt>Unexplained</dt><dd>${esc(h.unexplained)}
+      <div class="stat"><dt>Auto-matched</dt><dd><span class="fig">${pct(h.auto_match_rate)}</span></dd></div>
+      <div class="stat"><dt>Leg 2 recall</dt><dd><span class="fig">${pct(leg2.recall)}</span></dd></div>
+      <div class="stat"><dt>Value cleared</dt><dd><span class="fig">${pct(h.value_share)}</span></dd></div>
+      <div class="stat ${atRisk ? "stat--money" : ""}"><dt>Unexplained</dt><dd><span class="fig">${esc(h.unexplained)}</span>
         <small>${n(h.open_items)} open items</small></dd></div>
-      <div class="stat"><dt>Reconciled in</dt><dd>${d.seconds}s</dd></div>
+      <div class="stat"><dt>Reconciled in</dt><dd><span class="fig">${d.seconds}s</span></dd></div>
     </dl>
 
     <div class="cols-2">
       ${block("Where the money is", `
         <div class="split-bar">
-          <span style="width:${cleared}%;background:var(--ok)"></span>
-          <span style="width:${(100 - cleared).toFixed(1)}%;background:var(--crit)"></span>
+          <span style="--w:${cleared}%;background:var(--ok)"></span>
+          <span style="--w:${(100 - cleared).toFixed(1)}%;background:var(--crit)"></span>
         </div>
         <div class="splitkey">
           <span><i style="background:var(--ok)"></i>cleared ${esc(c.matched)}</span>
@@ -189,7 +241,7 @@ VIEWS.overview = {
       <h3>The book this ran on</h3>
       <dl class="stats">
         ${Object.entries(d.counts).map(([k, v]) =>
-          `<div class="stat"><dt>${esc(k.replace(/_/g, " "))}</dt><dd>${n(v)}</dd></div>`).join("")}
+          `<div class="stat"><dt>${esc(k.replace(/_/g, " "))}</dt><dd><span class="fig">${n(v)}</span></dd></div>`).join("")}
       </dl>
     </div>`;
   },
@@ -293,6 +345,13 @@ function select(xid) {
   const row = document.querySelector(`.qitem[data-x="${CSS.escape(xid)}"]`);
   if (row) row.scrollIntoView({ block: "nearest" });
   openCase(xid);
+  // Below 1080px the split stacks, so the case file opens off-screen under the
+  // list and picking a row looks like it did nothing. Take the reader there.
+  if (window.matchMedia("(max-width: 1080px)").matches) {
+    const pane = $("detail");
+    if (pane) pane.scrollIntoView({ block: "start",
+      behavior: REDUCED.matches ? "auto" : "smooth" });
+  }
 }
 
 function moveSelection(step) {

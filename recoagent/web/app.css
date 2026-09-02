@@ -52,6 +52,45 @@
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 @media (prefers-reduced-motion:reduce){.live{animation:none}}
 
+
+/* ── motion ────────────────────────────────────────────────────────────────
+   Every animation here answers something a person did, and shows what changed
+   as a result. There are no scroll reveals, no staggered section entrances and
+   no hover transitions on containers: this is a screen an analyst keeps open
+   all day, and decoration that replays on every navigation becomes noise by
+   about the third look.
+
+   Four things move. A bar grows to the share it represents. A case file arrives
+   when you pick one. A proof unfolds when you open the row. A figure settles
+   into its new value, which is the only one that is really about the data: it
+   is how you see which numbers a re-run actually moved. */
+:root{--ease:cubic-bezier(.22,.61,.36,1)}
+
+@keyframes grow{from{width:0}to{width:var(--w)}}
+.distrow .bar,.split-bar span{width:var(--w);animation:grow .5s var(--ease) both}
+/* Stagger only across a single distribution, and only barely -- enough to read
+   as one object being drawn rather than five things arriving separately. */
+.dist .distrow:nth-child(2) .bar{animation-delay:40ms}
+.dist .distrow:nth-child(3) .bar{animation-delay:80ms}
+.dist .distrow:nth-child(4) .bar{animation-delay:120ms}
+.dist .distrow:nth-child(5) .bar{animation-delay:160ms}
+
+@keyframes arrive{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.detail>*{animation:arrive .16s var(--ease) both}
+.detailwrap{animation:arrive .14s var(--ease) both}
+
+/* Interactive parts acknowledge the pointer; containers do not. */
+.qitem,.nav a,button,.tabs button,.seg button{transition:background-color .12s ease,
+  border-color .12s ease,color .12s ease}
+button:active:not(:disabled){transform:translateY(.5px)}
+.qitem{transition:background-color .12s ease,border-left-color .18s var(--ease)}
+
+@media (prefers-reduced-motion:reduce){
+  .distrow .bar,.split-bar span{animation:none;width:var(--w)}
+  .detail>*,.detailwrap{animation:none}
+  *{transition:none!important}
+}
+
 /* ── the green budget ──────────────────────────────────────────────────────
    base.css spends green freely, which is right on a white page and wrong here:
    on near-black it would put a green badge on all 2,124 rows of the match log,
@@ -98,12 +137,13 @@
 
 .main{min-width:0;display:flex;flex-direction:column}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-        padding:0 24px;height:44px;background:var(--ground);border-bottom:1px solid var(--rule)}
+        padding:0 clamp(14px,2.4vw,24px);min-height:44px;background:var(--ground);border-bottom:1px solid var(--rule)}
 .ctx{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);
      font-size:11.5px;color:var(--muted)}
 .ctx b{color:var(--ink);font-weight:500}
 .ctx .sep{opacity:.35}
-.view{padding:22px 24px 72px;display:flex;flex-direction:column;gap:26px;max-width:1320px;width:100%}
+.view{padding:22px clamp(14px,2.4vw,26px) 72px;display:flex;flex-direction:column;
+      gap:clamp(18px,2.2vw,26px);max-width:1320px;width:100%}
 
 /* One line of orientation per screen, then the data. A paragraph under every
    heading is a screen that does not trust itself. */
@@ -112,7 +152,7 @@
 .viewhead p{margin:0;color:var(--muted);font-size:.85rem;max-width:80ch}
 
 /* ── run bar ───────────────────────────────────────────────────────────── */
-.runbar{display:none;gap:9px;align-items:flex-end;flex-wrap:wrap;padding:11px 24px;
+.runbar{display:none;gap:9px;align-items:flex-end;flex-wrap:wrap;padding:11px clamp(14px,2.4vw,24px);
         background:var(--surface);border-bottom:1px solid var(--rule)}
 .runbar.open{display:flex}
 .field{display:flex;flex-direction:column;gap:3px}
@@ -137,6 +177,9 @@ button.tiny{font-family:var(--mono);font-size:11px;padding:3px 7px}
 .cols{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(272px,1fr))}
 .cols-2{display:grid;gap:22px;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 @media (max-width:1080px){.cols-2{grid-template-columns:1fr}}
+/* Two figures a row beats six squeezed to nothing. */
+@media (max-width:680px){.stat{flex-basis:calc(50% - 1px)}
+  .stat--hero{flex-basis:100%}}
 
 /* A block, not a card: a heading, a hairline, and the thing itself. The border
    is doing no work that the rule and the gap are not already doing. */
@@ -200,6 +243,9 @@ button.tiny{font-family:var(--mono);font-size:11px;padding:3px 7px}
 
 /* ── master / detail ───────────────────────────────────────────────────── */
 .split{display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:22px;align-items:start}
+/* The queue list gives ground before the case file does: the list is scannable
+   at any width, the evidence is not. */
+@media (max-width:1240px){.split{grid-template-columns:minmax(240px,290px) minmax(0,1fr);gap:16px}}
 @media (max-width:1080px){.split{grid-template-columns:1fr}}
 .qlist{border:1px solid var(--rule);border-radius:4px;background:var(--surface);overflow:hidden;
        max-height:calc(100vh - 190px);overflow-y:auto}
