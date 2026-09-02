@@ -9,13 +9,71 @@
    the numbers are the largest thing on any screen; and a control is quiet until
    it is the one you want. */
 
+/* ── palette: the instrument ────────────────────────────────────────────────
+   Terminal-derived, near-black with a faint green cast. The green is a signal
+   that means "measured and live", not a theme: it appears on the primary
+   action, the active nav item, the lead metric, and the credit that cleared,
+   and nowhere else. Under 5% of any screen.
+
+   Declared on :root:root so it beats base.css's own light and dark blocks,
+   which are (0,2,0) selectors. The static export keeps that neutral palette --
+   it is a page somebody mails and prints, and near-black is wrong for both. */
+:root:root {
+  --bg-0:oklch(0.16 0.008 160); --bg-1:oklch(0.20 0.008 160); --bg-2:oklch(0.24 0.008 160);
+  --border:oklch(0.30 0.010 160); --border-hi:oklch(0.38 0.012 160);
+  --fg-0:oklch(0.94 0.005 160); --fg-1:oklch(0.72 0.006 160);
+  /* Specified at 0.55, raised to 0.64. The brief required WCAG AA and 0.55
+     measures 3.93:1 on --bg-0 and 3.50:1 on a panel; 0.64 clears both at
+     5.32:1 and 4.73:1. The instruction to verify beat the stated value. */
+  --fg-2:oklch(0.64 0.006 160);
+  --acc:oklch(0.82 0.19 150); --acc-dim:oklch(0.62 0.14 150); --acc-bg:oklch(0.26 0.05 150);
+  --pos:oklch(0.82 0.19 150); --neg:oklch(0.72 0.17 25);
+  --warn:oklch(0.82 0.15 85); --info:oklch(0.78 0.10 220);
+
+  /* The names the rest of the stylesheet already speaks, pointed at the ramp. */
+  --ground:var(--bg-0); --surface:var(--bg-1); --surface-2:var(--bg-2);
+  --surface-3:oklch(0.18 0.008 160);
+  --ink:var(--fg-0); --ink-2:var(--fg-1); --muted:var(--fg-2);
+  --rule:var(--border); --rule-2:var(--border-hi);
+  --accent:var(--acc); --accent-ink:oklch(0.16 0.008 160);
+  --ok:var(--pos); --ok-bg:var(--acc-bg);
+  --crit:var(--neg); --crit-bg:oklch(0.26 0.06 25);
+  --warn-bg:oklch(0.26 0.05 85);
+  --flat:var(--fg-2); --flat-bg:var(--bg-2);
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Archivo",ui-sans-serif,system-ui,-apple-system,sans-serif;
+}
+
+/* The entire futurism budget: one 6px dot beside the figure that is current,
+   and tabular mono numerals inside 1px borders. Nothing else pulses, glows,
+   sweeps or types itself out. */
+.live{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acc);
+      box-shadow:0 0 12px oklch(0.82 0.19 150/.4);animation:pulse 2s ease-in-out infinite;flex:none}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.live{animation:none}}
+
+/* ── the green budget ──────────────────────────────────────────────────────
+   base.css spends green freely, which is right on a white page and wrong here:
+   on near-black it would put a green badge on all 2,124 rows of the match log,
+   a green residual column beside them, and a column of green zeros in the
+   audit. Green in bulk stops meaning anything. Overridden for the console
+   only -- the static export keeps its own palette.
+
+   What is left green: the primary action, the active nav item, the lead
+   metric, the credit that cleared, and the live dot. Six or so per screen. */
+.rung--done{background:var(--bg-2);color:var(--fg-1)}
+.proof{color:var(--fg-1)}
+.verdict--ok{color:var(--fg-0)}
+/* A small residual is not a positive signal, it is a small residual. */
+.chip--minor{background:var(--info)}
+
 /* ── shell ─────────────────────────────────────────────────────────────── */
 .app{display:grid;grid-template-columns:206px minmax(0,1fr);min-height:100vh}
 
 .side{position:sticky;top:0;align-self:start;height:100vh;display:flex;flex-direction:column;
       padding:14px 10px;background:var(--surface);border-right:1px solid var(--rule)}
 .brand{display:flex;align-items:center;gap:8px;padding:2px 8px 16px}
-.brand .mark{width:20px;height:20px;border-radius:4px;background:var(--accent);color:var(--accent-ink);
+.brand .mark{width:20px;height:20px;border-radius:3px;background:var(--bg-2);color:var(--fg-0);border:1px solid var(--border-hi);
      display:grid;place-items:center;font-family:var(--mono);font-size:11px;font-weight:600;flex:none}
 .brand b{font-size:13px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
 .brand small{display:block;font-size:10.5px;color:var(--muted);letter-spacing:0}
@@ -228,7 +286,7 @@ button.tiny{font-family:var(--mono);font-size:11px;padding:3px 7px}
 /* The plain-English read on an item, at the top of its case file. The person
    deciding whether this matters should not have to parse an id to find out what
    happened, so this panel leads and everything below it stays technical. */
-.plainsay{background:var(--surface-3);border-left:2px solid var(--accent);gap:6px}
+.plainsay{background:var(--surface-3);border-left:2px solid var(--border-hi);gap:6px}
 .plainsay .eyebrow{font-size:10.5px;color:var(--muted);font-family:var(--sans)}
 .plainsay h3{font-size:13.5px;font-weight:600;line-height:1.4}
 .plainsay p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.55;max-width:76ch}

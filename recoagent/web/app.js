@@ -1096,17 +1096,6 @@ function paintContext() {
 $("go").onclick = doRun;
 $("toggle").onclick = () => $("runbar").classList.toggle("open");
 $("profile").onchange = () => { $("seed").value = $("profile").value === "holdout" ? 21 : 7; };
-$("theme").onchange = () => {
-  const v = $("theme").value;
-  if (v === "auto") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", v);
-  try { localStorage.setItem("recoagent-theme", v); } catch (_) {}
-};
-try {
-  const saved = localStorage.getItem("recoagent-theme");
-  if (saved) { $("theme").value = saved; $("theme").onchange(); }
-} catch (_) {}
-
 window.addEventListener("hashchange", route);
 document.addEventListener("keydown", (e) => {
   // `e.target` is not always an Element -- a key delivered to the document

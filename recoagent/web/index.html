@@ -6,7 +6,7 @@
 <title>RecoAgent</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;450;500;550;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="/base.css">
 <link rel="stylesheet" href="/app.css">
 <script src="/app.js" defer></script>
@@ -48,6 +48,7 @@
 
   <main class="main">
     <div class="topbar">
+      <span class="live" id="live" title="showing the current run"></span>
       <span class="ctx" id="ctx">no run yet</span>
       <span class="spacer"></span>
       <button class="ghost" id="toggle">Run settings</button>
@@ -70,12 +71,6 @@
           <option value="B0">B0 — exact keys</option>
         </select></div>
       <span class="spacer"></span>
-      <div class="field"><label for="theme">Theme</label>
-        <select id="theme">
-          <option value="auto">auto</option>
-          <option value="light">light</option>
-          <option value="dark">dark</option>
-        </select></div>
     </div>
 
     <div id="err"></div>
