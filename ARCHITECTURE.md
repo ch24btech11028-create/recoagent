@@ -179,10 +179,32 @@ one, and it would make the LLM tier look far more valuable than it is.
 
 ## The agent tier (B3)
 
-Built, tested, and measured against live models — see `results/B3_*.txt`. The
-numbers are directional, not conclusive: n is 7 on dev and 11 held out, and
-three repeat runs resolved 2, 3 and 4 of 7, so the tier is reported as a range
-rather than a point estimate.
+Built, and measured against a live model — see `results/B3_*.txt`. **It resolves
+nothing, and that is the result rather than a shortfall.**
+
+With the merchant's paperwork in the book the deterministic tiers close
+everything provable and **zero cases reach the tier at all**. Withholding the
+paperwork puts it back in its designed territory — 7 residual-bearing leg-2
+items on dev, 9 held out — and there it resolves **0**, holds 4 and 7
+respectively for approval, and declines or fumbles the rest. Every rupee it
+might have booked rested on a rate nobody issued.
+
+Read that with the provenance row beside it: over every case that produced
+citations, booked or not, the model named applicable evidence **4 of 4** on dev
+and **7 of 7** held out. So the tier reasons correctly about *why* a residual
+exists and is refused permission to act on it, which is a different fact from
+reasoning badly and being caught — and reporting only `resolved` cannot tell
+the two apart.
+
+**B3 is therefore not a recall mechanism and must not be presented as one.** It
+is an exception-resolution assistant with a human approval boundary: it turns a
+bare residual into a worked, cited account of itself, and only an authoritative
+document — a repricing notice, an FX advice — can authorise the money to move.
+
+An earlier version of this section quoted 7 attempted with 2, 3 and 4 resolved
+across repeat runs. Those runs predate both the citation contract and the rate
+book, they describe a book that no longer exists, and they are quarantined in
+`results/void/`. Do not quote them.
 
 The design is one asymmetry, and the first version of it was unsound. A proposer
 used to return rows *with amounts*, so it could name the residual itself --

@@ -727,3 +727,113 @@ def test_an_expired_notice_does_not_verify_a_claim():
     }
     if stale.mdr_bps not in live_rates:
         assert not book.confirms_mdr(stale.method, stale.mdr_bps)
+
+
+# ── two ways a verified row could still rest on an unconfirmed rate ──────
+
+
+def _one_settlement_with(methods):
+    """A settlement whose payments use the methods given, in order."""
+    from datetime import datetime, timezone
+
+    from recoagent.schemas import BankLine, PGPayment, Settlement, SourceBundle
+
+    when = datetime(2026, 7, 3, tzinfo=timezone.utc)
+    payments = tuple(
+        PGPayment(
+            payment_id=f"pay_{i}", order_id=f"order_{i}", gross_paise=100_000,
+            fee_paise=1_950, tax_paise=351, method=m, status="captured",
+            settlement_id="setl_1", captured_at=when,
+            currency="USD" if m == "card_international" else "INR",
+            fx_rate=83.2 if m == "card_international" else None,
+        )
+        for i, m in enumerate(methods)
+    )
+    settlement = Settlement(
+        settlement_id="setl_1", utr="U1", settled_at=when,
+        net_paise=sum(p.gross_paise - p.fee_paise - p.tax_paise for p in payments),
+        status="processed",
+    )
+    sources = SourceBundle(
+        orders=(), payments=payments, adjustments=(), settlements=(settlement,),
+        bank_lines=(BankLine(bank_line_id="bank_1", value_date=when.date(),
+                             amount_paise=settlement.net_paise,
+                             narration="X", bank_ref="U1"),),
+    )
+    return sources, settlement
+
+
+def test_a_fee_claim_is_not_confirmed_by_a_notice_for_a_different_method():
+    """The attack: hide a method the rate book has never confirmed.
+
+    A repricing notice covers one method. A claim naming payments across two
+    means one MDR is being asserted for both, and UPI carries zero MDR by
+    regulation -- so a card notice at 195 bps must not confirm a UPI payment
+    repriced at 195 bps. Verifying only the *first* cited payment's method let
+    exactly that through, and a verified row books money.
+    """
+    from recoagent.agent.citations import FeeVarianceClaim, RateBook, resolve
+
+    sources, settlement = _one_settlement_with(["card_domestic", "upi"])
+    book = RateBook(mdr_bps={"card_domestic": {195}})  # nothing at all for upi
+
+    out = resolve(sources, settlement,
+                  [FeeVarianceClaim(("pay_0", "pay_1"), 195, "repriced")],
+                  rate_book=book)
+
+    assert out.rows, out.errors
+    assert out.rows[0].verified is False, (
+        "a UPI payment was confirmed by a card notice: "
+        f"{out.rows[0].derivation}"
+    )
+
+
+def test_a_fee_claim_is_confirmed_only_when_every_method_is():
+    from recoagent.agent.citations import FeeVarianceClaim, RateBook, resolve
+
+    sources, settlement = _one_settlement_with(["card_domestic", "card_international"])
+    both = RateBook(mdr_bps={"card_domestic": {195}, "card_international": {195}})
+
+    out = resolve(sources, settlement,
+                  [FeeVarianceClaim(("pay_0", "pay_1"), 195, "repriced")],
+                  rate_book=both)
+    assert out.rows[0].verified is True, out.rows[0].derivation
+
+
+def test_a_confirmed_fx_row_books_the_authoritative_rate_not_the_claimed_one():
+    """Tolerance decides whether a claim *matches* the advice. It must not
+    decide what gets booked.
+
+    The bank advised -1.600%. The model said -1.595%, which is inside the
+    matching tolerance and so the row is verified -- and the row was then priced
+    at the model's number. A verified row is one the system books, so that is
+    money moved on a figure nobody issued, which is the single thing the
+    citation contract exists to prevent.
+    """
+    from recoagent.agent.citations import FxClaim, RateBook, resolve
+
+    sources, settlement = _one_settlement_with(["card_international"])
+    book = RateBook(fx_pct={"pay_0": -1.600})
+
+    out = resolve(sources, settlement, [FxClaim("pay_0", -1.595, "converted")],
+                  rate_book=book)
+
+    row = out.rows[0]
+    assert row.verified is True, row.derivation
+    authoritative = round(100_000 * -1.600 / 100)
+    assert row.amount_paise == authoritative, (
+        f"booked {row.amount_paise} from the model's -1.595%, not {authoritative} "
+        "from the bank's -1.600%"
+    )
+
+
+def test_an_unconfirmed_fx_row_still_prices_the_claim_it_was_given():
+    """With no advice on file there is nothing authoritative to prefer, so the
+    claimed rate is priced and the row is simply not verified."""
+    from recoagent.agent.citations import FxClaim, RateBook, resolve
+
+    sources, settlement = _one_settlement_with(["card_international"])
+    out = resolve(sources, settlement, [FxClaim("pay_0", -1.595, "converted")],
+                  rate_book=RateBook())
+    assert out.rows[0].verified is False
+    assert out.rows[0].amount_paise == round(100_000 * -1.595 / 100)

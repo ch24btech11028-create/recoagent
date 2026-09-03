@@ -84,8 +84,20 @@ class RateBook:
         return bps in self.mdr_bps.get(method, set())
 
     def confirms_fx(self, payment_id: str, pct: float) -> bool:
+        return self.authoritative_fx(payment_id, pct) is not None
+
+    def authoritative_fx(self, payment_id: str, pct: float) -> float | None:
+        """The advised rate, when the claim is close enough to be about it.
+
+        The tolerance decides whether the model is *talking about* this advice.
+        It must not decide what gets booked: the number that moves money is the
+        one the bank issued, and the caller gets it from here rather than
+        keeping the claimed figure once the two have been matched.
+        """
         known = self.fx_pct.get(payment_id)
-        return known is not None and abs(known - pct) <= self.fx_tolerance_pct
+        if known is None or abs(known - pct) > self.fx_tolerance_pct:
+            return None
+        return known
 
 
 @dataclass(frozen=True)
@@ -200,24 +212,31 @@ def resolve(
                     fee = bps_of(p.gross_paise, c.actual_mdr_bps)
                     charged = fee + bps_of(fee, fees.gst_bps)
                     delta += (p.fee_paise + p.tax_paise) - charged
-                method = targets[0].method
-                confirmed = bool(
-                    rate_book and rate_book.confirms_mdr(method, c.actual_mdr_bps)
+                # Every cited payment answers for its own method. A repricing
+                # notice covers one method, so a claim naming payments across
+                # two is asserting one MDR for both -- and UPI carries no MDR
+                # at all by regulation. Confirming against `targets[0].method`
+                # let a card notice at 195 bps verify a UPI payment repriced at
+                # 195 bps, and a verified row is a row that books money.
+                methods = sorted({p.method for p in targets})
+                confirmed = bool(rate_book) and all(
+                    rate_book.confirms_mdr(m, c.actual_mdr_bps) for m in methods
                 )
+                named = methods[0] if len(methods) == 1 else "/".join(methods)
                 rows.append(ResolvedRow(
                     source="fee_variance",
                     cited_ids=tuple(p.payment_id for p in targets),
                     amount_paise=delta,
                     verified=confirmed,
                     detail={
-                        "method": method,
+                        "methods": methods,
                         "claimed_bps": c.actual_mdr_bps,
-                        "schedule_bps": fees.mdr_for(method),
+                        "schedule_bps": {m: fees.mdr_for(m) for m in methods},
                     },
                     derivation=(
-                        f"{len(targets)} {method} payments repriced at "
+                        f"{len(targets)} {named} payments repriced at "
                         f"{c.actual_mdr_bps} bps + {fees.gst_bps} bps GST, "
-                        + ("confirmed by the rate book"
+                        + ("confirmed by the rate book for every method cited"
                            if confirmed else
                            "rate claimed by the model and not independently confirmed")
                     ),
@@ -245,21 +264,33 @@ def resolve(
             # gross is -1.6. The earlier version took abs() and then flipped,
             # which made a positive rate produce a positive amount against a
             # negative residual -- the two could never meet.
-            amount = round(p.gross_paise * c.actual_rate_pct_of_gross / 100)
-            confirmed = bool(
-                rate_book
-                and rate_book.confirms_fx(p.payment_id, c.actual_rate_pct_of_gross)
+            # The tolerance says whether the claim is *about* the bank's advice.
+            # What gets booked is the bank's own figure, never the model's: a
+            # claim of -1.595% against an advice of -1.600% is close enough to
+            # be the same event and is not close enough to be the same money,
+            # and a verified row is one the system books.
+            advised = (
+                rate_book.authoritative_fx(p.payment_id, c.actual_rate_pct_of_gross)
+                if rate_book else None
             )
+            confirmed = advised is not None
+            rate = advised if confirmed else c.actual_rate_pct_of_gross
+            amount = round(p.gross_paise * rate / 100)
             rows.append(ResolvedRow(
                 source="fx",
                 cited_ids=(p.payment_id,),
                 amount_paise=amount,
                 verified=confirmed,
-                detail={"pct": c.actual_rate_pct_of_gross},
+                detail={
+                    "pct": rate,
+                    "claimed_pct": c.actual_rate_pct_of_gross,
+                    "priced_from": "bank advice" if confirmed else "the model's claim",
+                },
                 derivation=(
-                    f"{c.actual_rate_pct_of_gross:+.4f}% of {p.payment_id} gross "
+                    f"{rate:+.4f}% of {p.payment_id} gross "
                     f"({p.gross_paise} paise), "
-                    + ("confirmed by the rate book"
+                    + (f"the bank's advised rate; the model claimed "
+                       f"{c.actual_rate_pct_of_gross:+.4f}% and it matched"
                        if confirmed else
                        "rate claimed by the model and not independently confirmed")
                 ),
