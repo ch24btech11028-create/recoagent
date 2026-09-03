@@ -195,12 +195,28 @@ for approval, never booked. That run **replays with no API key** from
 [`data/llm-cache/`](data/llm-cache/), which is the only way a reader can check
 a live-model claim rather than take it.
 
-**The agent tier (B3).** With the merchant's paperwork in the book, the
-deterministic tiers close everything provable and **zero cases reach the model
-at all**. Withholding the paperwork puts it back in its designed territory,
-and there it resolves **zero**, holds several for approval, and declines the
-rest. Every rupee it might have booked rests on a rate nobody issued, so it is
-a hypothesis with working attached rather than a reconciliation.
+**The agent tier (B3) — read what it is for before reading its numbers.**
+
+> The model explains exceptions. Only an authoritative document can authorise
+> money to move.
+
+That sentence is the whole design, and it is enforced in code rather than asked
+for in a prompt: a proposer cannot express an amount at all, only cite evidence
+(`agent/citations.py`), and a rate the model chose closes as `needs_approval` —
+never as `resolved` — unless the merchant's own paperwork confirms it. So B3 is
+an **auditable exception-resolution assistant with a human approval boundary**.
+It is not a recall mechanism and this repository does not claim it as one.
+
+Which is why its headline number is a zero, and why the zero is the design
+working rather than the model failing. With the merchant's paperwork in the
+book, the deterministic tiers close everything provable and **zero cases reach
+the model at all**. Withholding the paperwork puts it back in its designed
+territory — a residual with no document behind it — and there it resolves
+**zero**, holds several for approval, and declines the rest. Every rupee it
+might have booked rested on a rate nobody issued.
+
+What it produced instead is the product: a bare residual turned into a worked,
+cited account of itself, sitting in front of a person who can approve it.
 
 Reporting only `resolved` would be measuring the gate, not the model — a tier
 that reasons well and is declined on policy and one that reasons badly and gets
