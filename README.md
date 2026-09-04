@@ -10,6 +10,10 @@ of the accounting. A model is allowed to speak only about what is left, never
 without quoting the evidence, and nothing it says is booked until the
 arithmetic closes.
 
+**New here?** [docs/PROJECT.md](docs/PROJECT.md) explains the problem and the
+design in plain language, assuming no reconciliation background.
+[docs/USAGE.md](docs/USAGE.md) is how to run it on your own exports.
+
 ![The exception queue, with a case file open](docs/screens/case-file.png)
 
 *Every refusal opens into a case file: which tiers were tried, why it stopped,
@@ -437,6 +441,10 @@ results/                   committed run artifacts
 tests/             443 tests
 ```
 
+- [docs/PROJECT.md](docs/PROJECT.md) — the whole project in plain language, for
+  a reader with no reconciliation background.
+- [docs/USAGE.md](docs/USAGE.md) — running it on your own CSVs or a Razorpay
+  pull: the columns, the aliases, and what it deliberately will not tell you.
 - [EVIDENCE.md](EVIDENCE.md) — how each tier earns its place, the adversarial
   audit in full, the clearing account, and the bugs real data exposed.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — design decisions, the tolerance
