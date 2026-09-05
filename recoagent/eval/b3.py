@@ -336,12 +336,13 @@ def render(run: B3Run) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    from ..llm import DEFAULT_MODEL
+    from ..llm import default_model
 
     ap = argparse.ArgumentParser(prog="recoagent.eval.b3", description=__doc__)
     ap.add_argument("--profile", choices=sorted(MIXES), default="dev")
     ap.add_argument("--n", type=int, default=2000)
-    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--model", default=default_model(),
+                    help="provider/model; defaults to RECOAGENT_MODEL")
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument(
         "--no-paperwork", dest="paperwork", action="store_false",

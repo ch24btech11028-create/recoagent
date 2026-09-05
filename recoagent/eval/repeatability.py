@@ -171,7 +171,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="recoagent.eval.repeatability")
     ap.add_argument("--profile", choices=sorted(PROFILES), default="dev")
     ap.add_argument("--runs", type=int, default=3)
-    ap.add_argument("--model", default="nvidia/nemotron-3-ultra-550b-a55b")
+    from ..llm import default_model
+    ap.add_argument("--model", default=default_model())
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--n", type=int, default=2000)
     args = ap.parse_args(argv)

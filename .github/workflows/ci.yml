@@ -147,6 +147,10 @@ jobs:
             exit 1
           fi
           git reset --hard HEAD
+      # The model menu has to render on a machine with no credentials at
+      # all, or "the model is your choice" is a choice you cannot see.
+      - name: the provider list works with no keys and no SDKs
+        run: python -m recoagent.llm
       # The README's strongest caveat, re-derived rather than trusted: the
       # gate is removed and the false-match rate is shown not to move.
       - name: the gate probe still shows what holds the 0.00%

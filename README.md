@@ -80,6 +80,23 @@ Then open the console:
 python3 -m recoagent.ui
 ```
 
+**The model is a setting, not a dependency.** None of the three commands above
+uses one — the deterministic core never touches the network. A model is asked
+only to explain the residue, and which one is the operator's choice:
+
+```bash
+python3 -m recoagent.llm            # every provider this build can reach
+python3 -m recoagent.llm --check    # send one prompt, report what came back
+```
+
+Twelve providers via `<provider>/<model>`, anything else through
+`openai-compatible:<base_url>:<model>`, and **three that need no API key and no
+network at all** — `ollama`, `lmstudio`, `vllm`. Set `RECOAGENT_MODEL` once in
+`.env` and every entry point honours it; `--model` still wins per command. A
+local model means a settlement book never leaves the machine, and because
+nothing a model says is booked until the arithmetic closes, a weaker one
+produces *more exceptions to review*, never a wrong number.
+
 ---
 
 ## Results
@@ -493,7 +510,7 @@ recoagent/
   eval/                    the scorers, BenchRec, throughput, repeatability
   ui.py, web/              the operator console
 results/                   committed run artifacts
-tests/             465 tests
+tests/             486 tests
 ```
 
 - [merchant.md](merchant.md) — a manual for the person who owns the books:

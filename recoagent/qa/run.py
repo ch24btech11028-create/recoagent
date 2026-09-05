@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from .. import trace
 from ..eval.scorer import score
 from ..generator import DefectMix, GeneratorConfig, generate
-from ..llm import DEFAULT_MODEL, client_for
+from ..llm import client_for, default_model
 from ..pipeline import run_b2
 from . import agent, bank
 
@@ -23,7 +23,8 @@ MIXES = {"dev": (7, DefectMix.dev), "holdout": (21, DefectMix.holdout)}
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="recoagent.qa.run")
-    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--model", default=default_model(),
+                    help="provider/model; defaults to RECOAGENT_MODEL")
     ap.add_argument("--profile", choices=sorted(MIXES), default="dev")
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--workers", type=int, default=6)

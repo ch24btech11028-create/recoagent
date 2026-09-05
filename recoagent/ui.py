@@ -765,7 +765,7 @@ def serve(host: str, port: int, model_spec: str,
 
 
 def main(argv: list[str] | None = None) -> int:
-    from .llm import DEFAULT_MODEL
+    from .llm import default_model
 
     ap = argparse.ArgumentParser(prog="recoagent.ui", description="Live operator console.")
     # Loopback by default and on purpose: this serves a generated book and holds
@@ -783,7 +783,8 @@ def main(argv: list[str] | None = None) -> int:
         help="this process is reachable by strangers: refuse the routes that "
              "spend the API key or write the worklist",
     )
-    ap.add_argument("--model", default=DEFAULT_MODEL)
+    ap.add_argument("--model", default=default_model(),
+                    help="provider/model; defaults to RECOAGENT_MODEL")
     ap.add_argument("--no-open", action="store_true", help="do not open a browser")
     ap.add_argument(
         "--worklist", default=DEFAULT_WORKLIST,

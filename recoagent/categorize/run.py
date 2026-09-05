@@ -34,7 +34,9 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--profile", choices=sorted(MIXES), default="dev")
     ap.add_argument("--rung", choices=("C0", "C1", "C2"), default="C1")
-    ap.add_argument("--model", default="gemini/gemini-3.5-flash-lite")
+    from ..llm import default_model
+    ap.add_argument("--model", default=default_model("gemini/gemini-3.5-flash-lite"),
+                    help="provider/model; defaults to RECOAGENT_MODEL")
     ap.add_argument("--rpm", type=int, help="override the requests-per-minute limit")
     ap.add_argument("--rpd", type=int, help="override the requests-per-day budget")
     ap.add_argument(

@@ -36,7 +36,38 @@ from .env import require_key
 
 _log = trace.logger("llm")
 
-DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+#: What runs when nobody says otherwise. `default_model()` is the thing to
+#: call; this is only the last fallback.
+FALLBACK_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+
+#: A merchant chooses a model once, not per command. `RECOAGENT_MODEL` in the
+#: environment or in `.env` is read by every entry point, and an explicit
+#: `--model` still wins over it -- configuration should be overridable from the
+#: command line or it is a cage rather than a default.
+MODEL_ENV = "RECOAGENT_MODEL"
+
+
+def default_model(fallback: str | None = None) -> str:
+    """The configured model: RECOAGENT_MODEL, else the caller's own default.
+
+    Read at call time rather than import time. An argparse default evaluated
+    when the module loads cannot see a `.env` that has not been read yet, which
+    made the environment variable work from the shell and silently not from the
+    file most people would actually put it in.
+    """
+    chosen = os.environ.get(MODEL_ENV)
+    if not chosen:
+        try:
+            from .env import load_env
+
+            chosen = load_env().get(MODEL_ENV) or os.environ.get(MODEL_ENV)
+        except Exception:
+            chosen = None
+    return chosen or fallback or FALLBACK_MODEL
+
+
+#: Kept so existing imports keep working. Prefer `default_model()`.
+DEFAULT_MODEL = FALLBACK_MODEL
 
 #: Reasoning toggles by model family. Absent means "send nothing", which is the
 #: correct default for a host we have not characterised.
@@ -65,7 +96,23 @@ PROVIDERS = {
         False,
     ),
     "anthropic": (None, "ANTHROPIC_API_KEY", False),
+    "openai": ("https://api.openai.com/v1", "OPENAI_API_KEY", False),
+    "groq": ("https://api.groq.com/openai/v1", "GROQ_API_KEY", False),
+    "openrouter": ("https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", True),
+    "together": ("https://api.together.xyz/v1", "TOGETHER_API_KEY", True),
+    "mistral": ("https://api.mistral.ai/v1", "MISTRAL_API_KEY", False),
+    # Local hosts. `None` for the key variable means no credential is required
+    # -- which is the point of them: a merchant's settlement book never leaves
+    # the machine, and the agent tier still runs. Ports are each project's
+    # documented default.
+    "ollama": ("http://localhost:11434/v1", None, False),
+    "lmstudio": ("http://localhost:1234/v1", None, False),
+    "vllm": ("http://localhost:8000/v1", None, False),
 }
+
+#: Providers that need no API key. Used for reporting, not for control flow --
+#: the control flow is `key_env is None`.
+LOCAL_PROVIDERS = frozenset({"ollama", "lmstudio", "vllm"})
 
 _RETRYABLE = (
     "RateLimitError",
@@ -142,7 +189,12 @@ def _openai_client(*, base_url: str, api_key_env: str, timeout: float):
             "    pip install -r requirements.txt"
         ) from exc
 
-    return OpenAI(base_url=base_url, api_key=require_key(api_key_env), timeout=timeout)
+    # A local host wants no credential, but the SDK insists on a non-empty
+    # string, so send a visibly fake one rather than leaving it unset. Passing
+    # None here fails inside the SDK with an error about OPENAI_API_KEY, which
+    # is exactly the wrong thing to tell someone running Ollama.
+    key = require_key(api_key_env) if api_key_env else "no-key-required"
+    return OpenAI(base_url=base_url, api_key=key, timeout=timeout)
 
 
 class OpenAICompatibleChat:
@@ -257,27 +309,37 @@ class AnthropicChat:
         timeout: float = 300.0,
         client=None,
     ) -> None:
-        if client is None:
-            try:
-                import anthropic
-            except ImportError as exc:
-                raise RuntimeError(
-                    "The Anthropic path needs the Anthropic SDK, which is not "
-                    "installed.\n    pip install anthropic"
-                ) from exc
-
-            client = anthropic.Anthropic(timeout=timeout)
+        # Deferred to the first send, for the same reason the OpenAI-compatible
+        # path defers it: naming a model must not require the SDK that serves
+        # it. Otherwise `recoagent.llm` cannot list Anthropic among the
+        # providers it supports without the SDK installed, and a merchant
+        # comparing their options gets an import error instead of a menu.
         self._client = client
+        self._timeout = timeout
+        self._build = None if client is not None else self._make_client
         self._model = model
         self._effort = effort
         self.label = model
 
+    def _make_client(self):
+        try:
+            import anthropic
+        except ImportError as exc:
+            raise RuntimeError(
+                "The Anthropic path needs the Anthropic SDK, which is not "
+                "installed.\n    pip install anthropic"
+            ) from exc
+        return anthropic.Anthropic(timeout=self._timeout)
+
     def check_ready(self) -> None:
-        """Nothing deferred here: construction already decided it."""
+        """Build the SDK client now, so a caller can ask before it matters."""
+        if self._client is None:
+            self._client = self._build()
 
     def send(self, system: str, user: str, *, max_tokens: int = 4000) -> Reply:
         usage = Usage()
         try:
+            self.check_ready()
             r = self._client.messages.create(
                 model=self._model,
                 max_tokens=max_tokens,
@@ -360,3 +422,127 @@ def client_for(spec: str = DEFAULT_MODEL, **kw) -> Chat:
         f"unknown provider in {spec!r}. Known: {', '.join(sorted(PROVIDERS))}, "
         "or use openai-compatible:<base_url>:<model>"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Choosing a model, from the command line
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def describe() -> str:
+    """Every provider this build can reach, and what each one needs."""
+    rows = [
+        "=" * 72,
+        "  CHOOSING A MODEL",
+        "=" * 72,
+        "",
+        f"  currently configured   {default_model()}",
+        f"  set it once            {MODEL_ENV}=<provider>/<model>  (shell or .env)",
+        "  override per command   --model <provider>/<model>",
+        "",
+        "  The deterministic rungs need no model at all. Everything below is",
+        "  only for the tiers that ask one to explain a residual.",
+        "",
+        "-" * 72,
+        f"  {'provider':<14}{'needs':<24}{'example'}",
+        "-" * 72,
+    ]
+    examples = {
+        "nvidia": "nvidia/nemotron-3-ultra-550b-a55b",
+        "deepseek-ai": "deepseek-ai/deepseek-v4-flash-0731",
+        "gemini": "gemini/gemini-3.6-flash",
+        "anthropic": "anthropic/claude-opus-5",
+        "openai": "openai/gpt-5.1",
+        "groq": "groq/llama-3.3-70b-versatile",
+        "openrouter": "openrouter/meta-llama/llama-3.3-70b-instruct",
+        "together": "together/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "mistral": "mistral/mistral-large-latest",
+        "ollama": "ollama/llama3.1",
+        "lmstudio": "lmstudio/local-model",
+        "vllm": "vllm/my-model",
+    }
+    for name in sorted(PROVIDERS):
+        _, key_env, _ = PROVIDERS[name]
+        needs = key_env if key_env else "nothing (runs locally)"
+        rows.append(f"  {name:<14}{needs:<24}{examples.get(name, '')}")
+    rows += [
+        "-" * 72,
+        "",
+        "  Anything else that speaks the OpenAI protocol:",
+        "    openai-compatible:<base_url>:<model>",
+        "",
+        "  Local hosts need no API key and no network. That is the answer to",
+        "  'I do not want a settlement book leaving this machine' -- the",
+        "  reconciliation never calls out at all, and with a local model neither",
+        "  does the tier that explains what it could not match.",
+        "",
+        "  Check the configured model actually answers:",
+        "    python3 -m recoagent.llm --check",
+        "=" * 72,
+    ]
+    return "\n".join(rows)
+
+
+def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    ap = argparse.ArgumentParser(
+        prog="recoagent.llm",
+        description="Show which models this build can use, and test one.",
+    )
+    ap.add_argument("--model", help=f"override {MODEL_ENV} for this check")
+    ap.add_argument("--check", action="store_true",
+                    help="send one short prompt and report what came back")
+    args = ap.parse_args(argv)
+
+    spec = args.model or default_model()
+    if not args.check:
+        print(describe())
+        return 0
+
+    print(f"  model   {spec}")
+    try:
+        chat = client_for(spec)
+    except ValueError as exc:
+        print(f"  FAILED  {exc}")
+        return 2
+    try:
+        chat.check_ready()
+    except Exception as exc:
+        print(f"  FAILED  {type(exc).__name__}: {exc}")
+        return 2
+
+    try:
+        reply = chat.send(
+            "Answer with one word.",
+            "Reply with the single word: ready",
+            max_tokens=16,
+        )
+    except Exception as exc:
+        # A wrong model name, a dead local server and an expired key all land
+        # here, and the message from the far end is more useful than anything
+        # this layer could invent.
+        print(f"  FAILED  {type(exc).__name__}: {exc}")
+        return 2
+
+    # `send` reports failure in the reply rather than raising -- deliberately,
+    # so a batch of questions is not abandoned because one endpoint blinked.
+    # A check that ignores that field reports a dead local server as healthy,
+    # which is the one answer a merchant must never be given here.
+    if reply.error:
+        print(f"  FAILED  {reply.error}")
+        return 2
+    if not reply.text.strip():
+        print("  FAILED  the model answered with nothing")
+        return 2
+
+    print(f"  replied {reply.text.strip()[:60]!r}")
+    print(f"  tokens  {reply.usage.input_tokens} in / {reply.usage.output_tokens} out")
+    print("  OK -- this model is usable for the agent and Q&A tiers.")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys as _sys
+
+    _sys.exit(main())

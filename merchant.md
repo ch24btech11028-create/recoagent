@@ -168,7 +168,73 @@ check next.
 
 ---
 
-## 5. The one thing it will never show you
+## 5. Choosing the model — including not sending your data anywhere
+
+The reconciliation itself **never uses a model and never touches the network.**
+Matching, categorising and the exception list are pure arithmetic on your
+machine. A model is only asked to explain the handful of items the arithmetic
+could not close, and even then nothing it says is accepted unless the numbers
+agree.
+
+So the model is your choice, and one of the choices is *nothing*.
+
+### See your options
+
+```bash
+python3 -m recoagent.llm
+```
+
+| Provider | Needs | Example |
+|---|---|---|
+| `ollama` | **nothing — runs on your machine** | `ollama/llama3.1` |
+| `lmstudio` | **nothing — runs on your machine** | `lmstudio/local-model` |
+| `vllm` | **nothing — runs on your machine** | `vllm/my-model` |
+| `openai` | `OPENAI_API_KEY` | `openai/gpt-5.1` |
+| `anthropic` | `ANTHROPIC_API_KEY` | `anthropic/claude-opus-5` |
+| `gemini` | `GEMINI_API_KEY` | `gemini/gemini-3.6-flash` |
+| `groq` | `GROQ_API_KEY` | `groq/llama-3.3-70b-versatile` |
+| `nvidia` | `NVIDIA_API_KEY` | `nvidia/nemotron-3-ultra-550b-a55b` |
+| `openrouter`, `together`, `mistral` | their own key | see the command above |
+
+Anything else that speaks the OpenAI protocol:
+`openai-compatible:http://your-host:8000/v1:your-model`
+
+### Set it once
+
+Put one line in your `.env` and every command honours it:
+
+```
+RECOAGENT_MODEL=ollama/llama3.1
+```
+
+Or per command, which always wins over the setting:
+
+```bash
+python3 -m recoagent.qa.run --model openai/gpt-5.1
+```
+
+### Check it works before a long run
+
+```bash
+python3 -m recoagent.llm --check
+```
+
+It sends one short prompt and tells you what came back. A dead local server, a
+wrong model name and an expired key all report as failures with the reason —
+it will not tell you a model is fine when it is not.
+
+### If your data must not leave the building
+
+Install [Ollama](https://ollama.com), pull a model, and set
+`RECOAGENT_MODEL=ollama/llama3.1`. No API key, no network, no third party ever
+sees a settlement line. The trade is quality of explanation on the small
+residue — and because nothing a model says is accepted unless the arithmetic
+closes, a weaker local model produces *more items for you to review*, never a
+wrong number in your books.
+
+---
+
+## 6. The one thing it will never show you
 
 **There is no accuracy percentage on your data, and that is deliberate.**
 
@@ -182,7 +248,7 @@ each match, and every item it declined — all of which you can check yourself.
 
 ---
 
-## 6. Honest limits
+## 7. Honest limits
 
 - **Reconciliation and categorisation work on your files. The bookkeeping
   output does not, yet.** The double-entry journal and the persistent work queue
@@ -198,7 +264,7 @@ each match, and every item it declined — all of which you can check yourself.
 
 ---
 
-## 7. If something goes wrong
+## 8. If something goes wrong
 
 | What you see | What to do |
 |---|---|
@@ -210,7 +276,7 @@ each match, and every item it declined — all of which you can check yourself.
 
 ---
 
-## 8. A sensible first run
+## 9. A sensible first run
 
 1. Export one month, not one year.
 2. Run it and read the headline four lines.

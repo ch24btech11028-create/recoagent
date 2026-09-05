@@ -137,6 +137,22 @@ SQLite, so a replayed webhook cannot double-book anything.
 
 ---
 
+## Choosing the model
+
+The reconciliation uses none. A model is asked only to explain the residue, and
+which one is your choice:
+
+```bash
+python3 -m recoagent.llm            # list every provider, and what each needs
+python3 -m recoagent.llm --check    # verify the configured one actually answers
+```
+
+Set it once in `.env` — `RECOAGENT_MODEL=ollama/llama3.1` — or per command with
+`--model`, which wins. `ollama`, `lmstudio` and `vllm` need no key and no
+network, which is the answer when the data must not leave the machine.
+
+---
+
 ## What you get back
 
 Both doors print the same two things.
