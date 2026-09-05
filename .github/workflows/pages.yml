@@ -7,7 +7,10 @@ name: pages
 
 on:
   push:
-    branches: ["main", "finmind"]
+    # Only the default branch. Building from both meant two runs racing for one
+    # concurrency group, and the loser showed up in the run list as "cancelled"
+    # -- which reads as a failure to anyone glancing at the Actions tab.
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
