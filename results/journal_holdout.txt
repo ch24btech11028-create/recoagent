@@ -2,27 +2,27 @@
   GENERAL JOURNAL AND TRIAL BALANCE
 ========================================================================
 
-  entries posted                       3,575
-  rows not posted                          0
-  total debits                Rs 50,825,737.68
-  total credits               Rs 50,825,737.68
-  TRIAL BALANCE                     BALANCED   <- lead metric
-  entries that do not balance              0
+  entries posted                            3,575
+  rows not posted                               0
+  total debits                  Rs 5,08,25,737.68
+  total credits                 Rs 5,08,25,737.68
+  TRIAL BALANCE                          BALANCED   <- lead metric
+  entries that do not balance                   0
 
-  suspense (unclassified)            Rs 0.00
+  suspense (unclassified)                 Rs 0.00
 
 ------------------------------------------------------------------------
   TRIAL BALANCE
 ------------------------------------------------------------------------
-  account                 type                 debits          credits
-  bank                    asset      Rs 24,917,275.49          Rs 0.00
-  gateway_receivable      asset      Rs 25,649,491.67 Rs 25,176,246.01
-  gst_input_credit        asset          Rs 33,939.70          Rs 0.00
-  sales_revenue           income         Rs 35,727.03 Rs 25,641,097.67
-  gateway_fees            expense       Rs 188,553.79      Rs 8,394.00
-  dispute_fees            expense           Rs 750.00          Rs 0.00
+  account                 type                   debits            credits
+  bank                    asset       Rs 2,49,17,275.49            Rs 0.00
+  gateway_receivable      asset       Rs 2,56,49,491.67  Rs 2,51,76,246.01
+  gst_input_credit        asset            Rs 33,939.70            Rs 0.00
+  sales_revenue           income           Rs 35,727.03  Rs 2,56,41,097.67
+  gateway_fees            expense        Rs 1,88,553.79        Rs 8,394.00
+  dispute_fees            expense             Rs 750.00            Rs 0.00
   --------------------------------------------------------------------
-                                     Rs 50,825,737.68 Rs 50,825,737.68
+                                      Rs 5,08,25,737.68  Rs 5,08,25,737.68
 
 ------------------------------------------------------------------------
   DOES THE LOOP CLOSE
@@ -34,28 +34,28 @@
   engine that said so would be hiding something. It is that every rupee
   left in it is attributable to a named cause, with nothing left over.
 
-  receivable balance               Rs 473,245.66
-  batches fully cleared                       94
-  batches still open                          73
+  receivable balance               Rs 4,73,245.66
+  batches fully cleared                        94
+  batches still open                           73
 
-  cause                                                    batches            value
-  the gateway has not paid this batch out                        5    Rs 821,970.91
-  a payment in the batch never matched an order                 54   -Rs 247,983.28
-  a payment reported here was credited with another cycle        7   -Rs 102,722.31
-  an FX or repricing difference against the reported figure       6      Rs 1,980.33
-  sub-rupee rounding between the gateway and the bank            1          Rs 0.01
+  cause                                                    batches              value
+  the gateway has not paid this batch out                        5     Rs 8,21,970.91
+  a payment in the batch never matched an order                 54    -Rs 2,47,983.28
+  a payment reported here was credited with another cycle        7    -Rs 1,02,722.31
+  an FX or repricing difference against the reported figure       6        Rs 1,980.33
+  sub-rupee rounding between the gateway and the bank            1            Rs 0.01
   ------------------------------------------------------------------------
-  unattributed                                                              Rs 0.00   <- must be zero
+  unattributed                                                                Rs 0.00   <- must be zero
 
-  largest open batches           balance   cause
-  setl_0085          Rs 329,003.27   the gateway has not paid this batch out
-  setl_0117          Rs 230,407.44   the gateway has not paid this batch out
-  setl_0029          Rs 146,627.50   a payment reported here was credited with another cycle
-  setl_0030         -Rs 146,627.50   a payment reported here was credited with another cycle
-  setl_0012          Rs 134,332.21   the gateway has not paid this batch out
-  setl_0155         -Rs 107,740.25   a payment in the batch never matched an order
-  setl_0001          -Rs 98,036.00   a payment reported here was credited with another cycle
-  setl_0073           Rs 96,876.10   the gateway has not paid this batch out
+  largest open batches            balance   cause
+  setl_0085          Rs 3,29,003.27   the gateway has not paid this batch out
+  setl_0117          Rs 2,30,407.44   the gateway has not paid this batch out
+  setl_0029          Rs 1,46,627.50   a payment reported here was credited with another cycle
+  setl_0030         -Rs 1,46,627.50   a payment reported here was credited with another cycle
+  setl_0012          Rs 1,34,332.21   the gateway has not paid this batch out
+  setl_0155         -Rs 1,07,740.25   a payment in the batch never matched an order
+  setl_0001           -Rs 98,036.00   a payment reported here was credited with another cycle
+  setl_0073            Rs 96,876.10   the gateway has not paid this batch out
 
   Every cause but the first two is read off the matcher's own rule id:
   whatever Tier 1 had to do to close the credit is the reason the books

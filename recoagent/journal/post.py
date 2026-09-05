@@ -376,21 +376,21 @@ def render(journal: Journal, sources: SourceBundle, result: ReconResult) -> str:
         "  GENERAL JOURNAL AND TRIAL BALANCE",
         "=" * 72,
         "",
-        f"  entries posted              {len(journal.entries):>14,}",
-        f"  rows not posted             {len(journal.unposted):>14,}",
-        f"  total debits                {format_inr(journal.total_debits):>14}",
-        f"  total credits               {format_inr(journal.total_credits):>14}",
+        f"  entries posted              {len(journal.entries):>19,}",
+        f"  rows not posted             {len(journal.unposted):>19,}",
+        f"  total debits                {format_inr(journal.total_debits):>19}",
+        f"  total credits               {format_inr(journal.total_credits):>19}",
         f"  TRIAL BALANCE               "
-        f"{'BALANCED' if journal.balances else 'OUT BY ' + format_inr(journal.total_debits - journal.total_credits):>14}"
+        f"{'BALANCED' if journal.balances else 'OUT BY ' + format_inr(journal.total_debits - journal.total_credits):>19}"
         f"   <- lead metric",
-        f"  entries that do not balance {len(journal.unbalanced_entries):>14,}",
+        f"  entries that do not balance {len(journal.unbalanced_entries):>19,}",
         "",
-        f"  suspense (unclassified)     {format_inr(journal.suspense_paise):>14}",
+        f"  suspense (unclassified)     {format_inr(journal.suspense_paise):>19}",
         "",
         "-" * 72,
         "  TRIAL BALANCE",
         "-" * 72,
-        f"  {'account':<24}{'type':<10}{'debits':>17}{'credits':>17}",
+        f"  {'account':<24}{'type':<10}{'debits':>19}{'credits':>19}",
     ]
     for account in Account:
         if account not in tb:
@@ -398,12 +398,12 @@ def render(journal: Journal, sources: SourceBundle, result: ReconResult) -> str:
         d, c = tb[account]
         out.append(
             f"  {account.value:<24}{ACCOUNT_TYPES[account].value:<10}"
-            f"{format_inr(d):>17}{format_inr(c):>17}"
+            f"{format_inr(d):>19}{format_inr(c):>19}"
         )
     out += [
         "  " + "-" * 68,
-        f"  {'':<34}{format_inr(journal.total_debits):>17}"
-        f"{format_inr(journal.total_credits):>17}",
+        f"  {'':<34}{format_inr(journal.total_debits):>19}"
+        f"{format_inr(journal.total_credits):>19}",
     ]
 
     out += [
@@ -418,16 +418,16 @@ def render(journal: Journal, sources: SourceBundle, result: ReconResult) -> str:
         "  engine that said so would be hiding something. It is that every rupee",
         "  left in it is attributable to a named cause, with nothing left over.",
         "",
-        f"  receivable balance          {format_inr(journal.balance_of(Account.GATEWAY_RECEIVABLE)):>18}",
-        f"  batches fully cleared       {cleared:>18,}",
-        f"  batches still open          {len(open_batches):>18,}",
+        f"  receivable balance          {format_inr(journal.balance_of(Account.GATEWAY_RECEIVABLE)):>19}",
+        f"  batches fully cleared       {cleared:>19,}",
+        f"  batches still open          {len(open_batches):>19,}",
         "",
     ]
     if open_batches:
         by_cause: dict[str, list[OpenBatch]] = {}
         for ob in open_batches:
             by_cause.setdefault(ob.cause, []).append(ob)
-        out.append(f"  {'cause':<56}{'batches':>8}{'value':>17}")
+        out.append(f"  {'cause':<56}{'batches':>8}{'value':>19}")
         attributed = 0
         for cause in CAUSE_ORDER:
             group = by_cause.get(cause, [])
@@ -435,18 +435,18 @@ def render(journal: Journal, sources: SourceBundle, result: ReconResult) -> str:
                 continue
             total = sum(g.balance_paise for g in group)
             attributed += total
-            out.append(f"  {cause:<56}{len(group):>8,}{format_inr(total):>17}")
+            out.append(f"  {cause:<56}{len(group):>8,}{format_inr(total):>19}")
         leftover = journal.balance_of(Account.GATEWAY_RECEIVABLE) - attributed
         out += [
             "  " + "-" * 72,
-            f"  {UNATTRIBUTED:<56}{'':>8}{format_inr(leftover):>17}"
+            f"  {UNATTRIBUTED:<56}{'':>8}{format_inr(leftover):>19}"
             f"{'   <- must be zero' if leftover == 0 else '   <- NOT ZERO'}",
         ]
 
         biggest = sorted(open_batches, key=lambda b: -abs(b.balance_paise))[:8]
-        out += ["", f"  {'largest open batches':<14}{'balance':>18}   cause"]
+        out += ["", f"  {'largest open batches':<14}{'balance':>19}   cause"]
         for ob in biggest:
-            out.append(f"  {ob.batch_id:<14}{format_inr(ob.balance_paise):>18}   {ob.cause}")
+            out.append(f"  {ob.batch_id:<14}{format_inr(ob.balance_paise):>19}   {ob.cause}")
     else:
         out.append("  Every batch cleared to zero.")
 

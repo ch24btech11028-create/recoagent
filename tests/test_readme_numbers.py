@@ -202,3 +202,54 @@ def test_evidence_and_readme_agree_on_what_the_agent_tier_resolved():
         assert _b3_count(profile, r"RESOLVED \(source-backed\)".replace("\\", "")) == 0 \
             or _b3_count(profile, "RESOLVED (source-backed)") == 0
     assert "**0** | **0**" in EVIDENCE or "| **0** | **0** |" in EVIDENCE
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EVIDENCE.md's clearing-account table
+#
+# Same class as the B3 table above: prose quoting an artifact, with nothing
+# checking it. Pinned here because the journal artifacts have already drifted
+# once -- `format_inr` changed the rupee notation repository-wide and the
+# committed reports were not regenerated, so CI's own diff would have failed.
+# ─────────────────────────────────────────────────────────────────────────────
+
+CAUSE_ROWS = [
+    "The gateway has not paid this batch out",
+    "A payment in the batch never matched an order",
+    "A payment reported here was credited with another cycle",
+    "An FX or repricing difference against the reported figure",
+    "Sub-rupee rounding between the gateway and the bank",
+]
+
+
+def _journal_cause(profile: str, cause: str) -> str:
+    text = (ROOT / f"results/journal_{profile}.txt").read_text()
+    # Case-insensitive rather than lowercased: the artifact writes "an FX or
+    # repricing difference", and .lower() turned FX into fx and silently
+    # stopped matching the one row whose wording carries an acronym.
+    m = re.search(rf"^\s*{re.escape(cause)}\s+\d+\s+(-?Rs [\d,]+\.\d\d)\s*$",
+                  text, re.M | re.I)
+    assert m, f"journal_{profile}.txt no longer reports {cause!r}"
+    return m.group(1)
+
+
+@pytest.mark.parametrize("cause", CAUSE_ROWS, ids=[c[:28] for c in CAUSE_ROWS])
+def test_evidence_clearing_account_table_matches_the_artifacts(cause):
+    dev, holdout = _journal_cause("dev", cause), _journal_cause("holdout", cause)
+    pattern = rf"^\|\s*{re.escape(cause)}\s*\|\s*\**(-?Rs [\d,]+\.\d\d)\**\s*\|\s*\**(-?Rs [\d,]+\.\d\d)\**\s*\|"
+    m = re.search(pattern, EVIDENCE, re.M)
+    assert m, f"EVIDENCE.md no longer has a clearing-account row for {cause!r}"
+    assert (m.group(1), m.group(2)) == (dev, holdout), (
+        f"EVIDENCE.md says {cause} = {m.group(1)}/{m.group(2)}, the artifacts "
+        f"say {dev}/{holdout}."
+    )
+
+
+@pytest.mark.parametrize("profile", ["dev", "holdout"])
+def test_the_published_books_balance_and_leave_nothing_unattributed(profile):
+    """The two claims the journal exists to make, read off the artifact rather
+    than recomputed -- so a stale report fails here as loudly as a broken one."""
+    text = (ROOT / f"results/journal_{profile}.txt").read_text()
+    assert re.search(r"TRIAL BALANCE\s+BALANCED", text), f"{profile} does not balance"
+    assert re.search(r"entries that do not balance\s+0\s*$", text, re.M)
+    assert re.search(r"unattributed\s+Rs 0\.00", text), f"{profile} has unattributed money"
