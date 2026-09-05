@@ -253,3 +253,36 @@ def test_the_published_books_balance_and_leave_nothing_unattributed(profile):
     assert re.search(r"TRIAL BALANCE\s+BALANCED", text), f"{profile} does not balance"
     assert re.search(r"entries that do not balance\s+0\s*$", text, re.M)
     assert re.search(r"unattributed\s+Rs 0\.00", text), f"{profile} has unattributed money"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The caveat on the headline zero
+#
+# A 0.00% false-match rate is the first thing a reader sees and the easiest
+# thing in the repository to over-read. `recoagent.audit.gate` measures what
+# actually produces it -- forcing every failing proof open leaves it unchanged,
+# because the pairing comes from an identifier join and the gate only checks
+# the money. That finding is worth nothing if it can quietly leave the README.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_the_readme_says_what_the_zero_does_not_mean():
+    assert "What the 0.00% does not mean" in README
+    for probe in ("recoagent.audit.gate", "0.28%", "17 wrong",
+                  "DUPLICATE_PAYMENT"):
+        assert probe in README, probe
+
+
+@pytest.mark.parametrize("profile", ["dev", "holdout"])
+def test_the_gate_probe_artifact_still_shows_the_gate_is_not_what_holds_it(profile):
+    """If this ever stops being true, the README paragraph is wrong and must be
+    rewritten rather than left standing."""
+    text = (ROOT / f"results/gate_{profile}.txt").read_text()
+    rows = re.findall(r"^  (as shipped|every proof forced open)\s+([\d.]+)%",
+                      text, re.M)
+    assert len(rows) == 2, text[:400]
+    assert rows[0][1] == rows[1][1] == "0.0000", rows
+    forced = re.search(r"accepted anyway\s+([\d,]+)", text)
+    assert forced and int(forced.group(1).replace(",", "")) > 0, (
+        "no proofs were forced open, so the probe measured nothing"
+    )

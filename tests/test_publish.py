@@ -81,3 +81,13 @@ def test_the_page_calls_the_project_what_the_readme_calls_it(page):
     heading = _re.match(r"#\s+(\S+)", name.read_text()).group(1)
     assert f"<title>{heading}" in page, f"page title does not start with {heading!r}"
     assert f"<h1>{heading}</h1>" in page
+
+
+def test_the_zero_carries_its_caveat_on_the_same_page(page):
+    """A 0.00% false-match rate with the argument against it two clicks away is
+    the shape of an overclaim. The limits ship in the same panel as the number:
+    that the gate does not produce it, that the ambiguous population is refused
+    rather than solved, and the two places where it is not zero."""
+    for probe in ("does not produce it", "0.28%", "17 of 420",
+                  "recoagent.audit.gate"):
+        assert probe in page, probe

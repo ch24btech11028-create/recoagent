@@ -113,6 +113,41 @@ the principle directly — better to leave a transaction unmatched for manual
 review than to match it incorrectly. So false-match rate leads, throughput
 follows, and the exception list is published rather than summarised.
 
+### What the 0.00% does not mean
+
+A zero deserves suspicion, so here is the case against it, made with a command
+anyone can run:
+
+```bash
+python3 -m recoagent.audit.gate      # runs the pipeline with the gate removed
+```
+
+**The arithmetic gate does not produce this number.** Forcing **85 genuinely
+failing proofs** to close — accepting batches whose money does not add up —
+leaves the false-match rate at **0.00%, unchanged**. On both legs the *pairing*
+comes from an identifier join (97.1% of Leg 1 from `exact_order_id`, 80.0% of
+Leg 2 from `exact_utr`); the gate asks whether the money agrees, which is a
+different question from whether the rows belong together. So it cannot create a
+wrong pairing on a book whose join keys are clean — and this book's keys are
+clean because the generator wrote them.
+
+**The population where a wrong pairing was possible is refused, not solved.**
+81.8% of the dev exception list is `DUPLICATE_PAYMENT` and 9.1% is
+`DUPLICATE_UTR` — precisely the cases with no single right answer. Refusing them
+is correct, and it is also what holds the numerator at zero.
+
+**Where it is not zero:**
+
+| | Wrong-match rate |
+|---|---:|
+| This synthetic corpus | **0.00%** |
+| [BenchRec](#the-one-number-that-isnt-ours) — real, third-party, 32,048 rows | **0.28%** (77 of 27,037) |
+| [Adversarial audit](#attacking-the-inputs-what-the-adversarial-audit-found) | **17 wrong** in 420 cases |
+
+The gate's value is real and it is elsewhere: it refuses a wrong *explanation*
+for a correct pairing, which is what the defect accounting and the B3 agent tier
+measure. Full report: [`results/gate_dev.txt`](results/gate_dev.txt).
+
 **The variance row is not a rounding note.** B2 matches 56 orders on dev that
 B0 refuses, and every one is short: the gateway captured less than the order
 authorised. Matching them does not make that money agree, so the gap stays on
@@ -458,7 +493,7 @@ recoagent/
   eval/                    the scorers, BenchRec, throughput, repeatability
   ui.py, web/              the operator console
 results/                   committed run artifacts
-tests/             461 tests
+tests/             465 tests
 ```
 
 - [merchant.md](merchant.md) — a manual for the person who owns the books:

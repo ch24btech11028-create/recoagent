@@ -1,0 +1,57 @@
+========================================================================
+  WHAT THE ARITHMETIC GATE IS WORTH   profile=dev  n=2,000
+========================================================================
+
+                                  FMR     matches    wrong  exceptions
+  as shipped                  0.0000%       2,124        0          40
+  every proof forced open     0.0000%       2,124        0          40
+
+  proofs evaluated                2,124
+  proofs that FAILED and were accepted anyway          85
+
+------------------------------------------------------------------------
+  WHERE THE PAIRING ACTUALLY COMES FROM
+------------------------------------------------------------------------
+  leg 1  leg1.t0.exact_order_id              1908  ( 97.1%)
+  leg 1  leg1.t1.documented_partial_capture    56  (  2.9%)
+  leg 2  leg2.t0.exact_utr                    128  ( 80.0%)
+  leg 2  leg2.t1.ssmp_residual                 14  (  8.8%)
+  leg 2  leg2.t1.spill_pair                     8  (  5.0%)
+  leg 2  leg2.t1.rate_notice                    7  (  4.4%)
+  leg 2  leg2.t1.amount_window                  3  (  1.9%)
+
+------------------------------------------------------------------------
+  READ THIS BEFORE QUOTING THE 0.00%
+------------------------------------------------------------------------
+
+  Forcing 85 genuinely-failing proofs open moved the false-match
+  rate by +0.0000%. The gate is not what produces that number.
+
+  On both legs the pairing comes from an identifier join -- an order id,
+  a UTR read out of the bank narration. The gate asks whether the money
+  agrees, which is a different question from whether the rows belong
+  together, so removing it cannot create a wrong pairing on a book whose
+  join keys are clean. This book's keys are clean because the generator
+  wrote them.
+
+  The gate's value is real and it is elsewhere: it refuses a wrong
+  *explanation* for a correct pairing. That is what the defect
+  accounting and the B3 agent tier measure, and what the adversarial
+  audit attacks.
+
+  Where this number is not zero:
+    BenchRec, real third-party data      0.28% wrong-match
+    adversarial mutation audit           17 wrong matches in 420 cases
+
+  And what the 0.00% costs: the population where a wrong pairing was
+  even possible is refused rather than solved --
+
+    DUPLICATE_PAYMENT              36  (81.8% of refusals)
+    DUPLICATE_UTR                   4  ( 9.1% of refusals)
+    unclassified                    2  ( 4.5% of refusals)
+    MISSING_BANK_LINE               2  ( 4.5% of refusals)
+
+  A duplicate payment and a duplicate UTR are exactly the cases with no
+  single right answer. Refusing them is the correct call and it is also
+  what keeps the numerator at zero.
+========================================================================

@@ -147,6 +147,14 @@ jobs:
             exit 1
           fi
           git reset --hard HEAD
+      # The README's strongest caveat, re-derived rather than trusted: the
+      # gate is removed and the false-match rate is shown not to move.
+      - name: the gate probe still shows what holds the 0.00%
+        run: |
+          python -m recoagent.audit.gate --profile dev     --out fresh_gate_dev.txt     > /dev/null
+          python -m recoagent.audit.gate --profile holdout --out fresh_gate_holdout.txt > /dev/null
+          diff fresh_gate_dev.txt     results/gate_dev.txt
+          diff fresh_gate_holdout.txt results/gate_holdout.txt
       # The page is generated from the artifacts above, so it is built after
       # they have been checked rather than before.
       - name: the scorecard page builds from the artifacts

@@ -137,6 +137,21 @@ def _headline(dev: dict | None, holdout: dict | None) -> str:
         f"everything and is occasionally wrong books money against the wrong "
         f"transaction and hides it behind a green number.</p>"
     )
+    # The caveat travels with the claim. A zero on a summary page with the
+    # argument against it two clicks away is the shape of an overclaim, so the
+    # limits sit in the same panel as the number they qualify.
+    out.append(
+        '<p class="note warn"><strong>What the 0.00% does not mean.</strong> '
+        "The arithmetic gate does not produce it: forcing 85 genuinely failing "
+        "proofs to close leaves it unchanged, because the pairing comes from an "
+        "identifier join (97.1% of Leg 1, 80.0% of Leg 2) and the gate only asks "
+        "whether the money agrees. The population where a wrong pairing was "
+        "possible \u2014 duplicate payments and duplicate UTRs, 90.9% of the "
+        "exception list \u2014 is refused rather than solved. On real "
+        "third-party data (BenchRec) the wrong-match rate is <strong>0.28%</strong>, "
+        "and under adversarial attack <strong>17 of 420</strong> land. Run "
+        "<code>python3 -m recoagent.audit.gate</code> to reproduce this.</p>"
+    )
     return "".join(out) + "</section>"
 
 
