@@ -461,6 +461,8 @@ results/                   committed run artifacts
 tests/             461 tests
 ```
 
+- [merchant.md](merchant.md) — a manual for the person who owns the books:
+  what it does for you, how to run it, and how to read the exception list.
 - [docs/PROJECT.md](docs/PROJECT.md) — the whole project in plain language, for
   a reader with no reconciliation background.
 - [docs/USAGE.md](docs/USAGE.md) — running it on your own CSVs or a Razorpay
