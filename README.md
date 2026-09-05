@@ -89,6 +89,11 @@ Held-out runs use a different seed **and** a defect mix the matcher was never
 tuned on. Whole batch runs in **0.15s**, single-threaded, holding **~125,000
 records/sec across a 50× range**. Artifacts in [`results/`](results/).
 
+**Reproduce with `--seed 7` for dev and `--seed 21` for held-out.** The profile
+alone does not fix the book: `--profile holdout --seed 7` is a different book
+and reports 97.98% credit value against the 98.18% below, which looks like a
+fabricated table and is not one.
+
 | | B0 dev | B0 held-out | **B2 dev** | **B2 held-out** | clean (control) |
 |---|---:|---:|---:|---:|---:|
 | **False-match rate** | **0.00%** | **0.00%** | **0.00%** | **0.00%** | **0.00%** |
@@ -258,11 +263,26 @@ second model. A benchmark graded by a model is not a benchmark.
 |---|---:|---:|
 | **Wrong-answer rate** | **0.00%** | **0.00%** |
 | **Hallucinated** — answered what the factsheet cannot support | **0** | **0** |
-| Coverage | 88.24% | 88.24% |
-| Correct | 17 of 17 | 17 of 17 |
-| Declined | 2 | 2 |
+| Answered | 15 of 17 | 15 of 17 |
+| Declined — unanswerable by design | 2 | 2 |
+| **Correct** — 15 answered right **+** 2 correctly declined | **17 of 17** | **17 of 17** |
+| Coverage — answered ÷ asked | 88.24% | 88.24% |
 | Call failed | 0 | 0 |
 | Wall clock | 61s | 81s |
+
+**The three numbers are one arithmetic, spelled out because the short form reads
+like three denominators.** 17 questions are asked. 15 are answerable from the
+factsheet and all 15 are answered correctly. 2 are unanswerable by construction
+and are correctly declined. So coverage is 15/17 = 88.24%, and *correct* is 17
+of 17 because declining an unanswerable question is the right answer, not a
+miss. `tests/test_readme_numbers.py` now asserts those three agree.
+
+**These are one live run per profile, and the tier is not deterministic.** Unlike
+the C2 measurement, the Q&A harness has no reply cache, so it cannot be replayed
+without a key and a repeat run can shift a question between answered and
+declined. The wrong-answer rate and the hallucination count held at zero across
+every run made; the coverage split is a single observation, not a stable
+constant.
 
 The two declines are the point rather than a shortfall: the bank plants
 questions that **cannot** be answered from the book -- a bank credit that does
@@ -438,7 +458,7 @@ recoagent/
   eval/                    the scorers, BenchRec, throughput, repeatability
   ui.py, web/              the operator console
 results/                   committed run artifacts
-tests/             443 tests
+tests/             453 tests
 ```
 
 - [docs/PROJECT.md](docs/PROJECT.md) — the whole project in plain language, for

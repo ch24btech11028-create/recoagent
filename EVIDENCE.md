@@ -138,25 +138,27 @@ artifacts: [`results/B3_dev_nopaper.txt`](results/B3_dev_nopaper.txt) and
 | Residual-bearing leg-2 items | 7 | 9 |
 | Cases attempted | 7 of 7 | 9 of 9 |
 | **RESOLVED (source-backed)** | **0** | **0** |
-| needs approval | 4 | 5 |
-| declined by the model | 2 | 3 |
+| needs approval | 4 | 7 |
+| declined by the model | 1 | 2 |
 | rejected by the gate | 0 | 0 |
 | cited unverifiable evidence | 0 | 0 |
-| malformed reply | 1 | 1 |
+| malformed reply | 2 | 0 |
 | **endpoint failed** | **0** | **0** |
 | Leg 2 recall | 93.29% → 93.29% | 93.29% → 93.29% |
 | **False-match rate** | **0.00%** | **0.00%** |
 | Defects mishandled | 0 | 0 |
-| Cost | $0.038, 428s | $0.041, 377s |
+| Cost | $0.0342, 297s | $0.0428, 258s |
 
 **Every case the model saw produced a worked account of the residual, and not
 one of them could be verified, so nothing was booked.** That is the thesis
 landing, not a disappointing result: the tier's job is to turn a bare number
 into an explanation a human can act on, and the gate's job is to refuse to book
-an explanation nothing confirms. Four cases on dev and five on held-out closed
+an explanation nothing confirms. Four cases on dev and seven on held-out closed
 the arithmetic on a rate no document in the book issues — `needs_approval`,
-held, visible, not reconciled. Two and three respectively the model declined
-outright, which is also the right answer.
+held, visible, not reconciled. One and two respectively the model declined
+outright, which is also the right answer. Two dev replies came back malformed
+and are counted as such rather than as refusals: an answer that could not be
+parsed is a failure of this tier, not a judgement by the model.
 
 **The zero is the number to read, and it is allowed to be zero.** An LLM tier
 that resolved seven of seven here would mean the gate had been talked into
@@ -166,8 +168,9 @@ caught (below).
 **Both profiles land on 93.29%, and that is construction rather than a
 copy-paste.** The two mixes hold each leg's *total* defect rate constant and
 invert only the composition, so with the paperwork withheld both books lose the
-same number of leg-2 credits. Where they differ is underneath: 15 leg-2
-exceptions against 16, and 7 residual-bearing items against 9.
+same number of leg-2 credits — 11 leg-2 exceptions on each. Where they differ
+is underneath: 7 residual-bearing items against 9, which is what the tier
+actually sees.
 
 **The earlier `--no-paperwork` numbers stay void.** They were taken when fee and
 FX cases still reached the model, so their denominators describe a tier that no

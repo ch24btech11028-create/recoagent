@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import pathlib
 
+import re
+
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -79,3 +81,124 @@ def test_the_unknown_class_verdict_is_not_quietly_downgraded():
     assert "Safety property beyond the written taxonomy: HOLDS" in artifact
     assert "WRONG OR UNNOTICED           0" in artifact
     assert "nothing guessed" in README or "wrong-matched or missed" in README
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# The Q&A counts
+#
+# These were caught by a reader, not by this file. The README stated "17 derived
+# questions", then a table reading Correct 17 / Declined 2 / Coverage 88.24% --
+# three numbers that look like three different denominators and are in fact one
+# arithmetic: 15 answered right + 2 correctly declined = 17 correct of 17 asked,
+# with coverage counting only the 15 it answered. Nothing pinned that, so
+# nothing noticed the ambiguity.
+#
+# The artifact is parsed rather than string-matched, because the failure mode
+# here is arithmetic between three figures rather than one stale figure.
+# ─────────────────────────────────────────────────────────────────────────────
+
+QA_ARTIFACTS = ["results/qa_dev.txt", "results/qa_holdout.txt"]
+
+
+def _qa_counts(artifact: str) -> dict[str, int | float]:
+    text = (ROOT / artifact).read_text()
+    coverage = re.search(r"coverage\s+([\d.]+)%\s+\((\d+) of (\d+) answered\)", text)
+    tallies = re.search(
+        r"correct (\d+)(?: of \d+)?.*?wrong (\d+)\s+declined (\d+)\s+call failed (\d+)",
+        text, re.S,
+    )
+    assert coverage, f"{artifact} no longer prints a coverage line"
+    assert tallies, f"{artifact} no longer prints the correct/wrong/declined tallies"
+    return {
+        "coverage_pct": float(coverage.group(1)),
+        "answered": int(coverage.group(2)),
+        "total": int(coverage.group(3)),
+        "correct": int(tallies.group(1)),
+        "wrong": int(tallies.group(2)),
+        "declined": int(tallies.group(3)),
+        "failed": int(tallies.group(4)),
+    }
+
+
+@pytest.mark.parametrize("artifact", QA_ARTIFACTS)
+def test_the_qa_counts_add_up_within_the_artifact(artifact):
+    """Answered + declined + failed must be every question asked, and `correct`
+    must be the answers it got right plus the declines it was right to make.
+
+    Either identity failing means the report is quoting two populations under
+    one heading, which is exactly what made the README unreadable.
+    """
+    c = _qa_counts(artifact)
+    assert c["answered"] + c["declined"] + c["failed"] == c["total"], c
+    assert c["correct"] == (c["answered"] - c["wrong"]) + c["declined"], c
+    assert round(c["answered"] / c["total"] * 100, 2) == c["coverage_pct"], c
+
+
+@pytest.mark.parametrize("artifact", QA_ARTIFACTS)
+def test_the_readme_states_the_qa_numbers_the_artifacts_hold(artifact):
+    c = _qa_counts(artifact)
+    assert f"{c['total']} derived questions" in README
+    assert f"{c['answered']} of {c['total']}" in README
+    assert f"{c['correct']} of {c['total']}" in README
+    assert f"{c['coverage_pct']:.2f}%" in README
+
+
+def test_the_readme_names_the_seed_each_published_run_used():
+    """A judge reproducing `--profile holdout` without `--seed 21` gets a
+    different book and a table that looks fabricated. The profile does not fix
+    the seed, so the README has to."""
+    assert "--seed 7" in README and "--seed 21" in README
+    assert "97.98%" in README, (
+        "the README no longer shows what the wrong seed produces, which is the "
+        "part that makes the warning concrete"
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EVIDENCE.md's B3 table
+#
+# Also caught by a reader. EVIDENCE carried needs-approval 4/5, declined 2/3 and
+# malformed 1/1 while the artifacts said 4/7, 1/2 and 2/0 -- the whole held-out
+# column wrong and dev's declined and malformed transposed. The README was
+# right, which is worse rather than better: two documents disagreeing is what a
+# judge cross-checking actually finds.
+#
+# Only this file pinned any prose against artifacts, and it only read README.md.
+# ─────────────────────────────────────────────────────────────────────────────
+
+EVIDENCE = (ROOT / "EVIDENCE.md").read_text()
+
+#: (row label in EVIDENCE.md, the line label in results/B3_*_nopaper.txt)
+B3_ROWS = [
+    ("needs approval", "needs approval"),
+    ("declined by the model", "declined by the model"),
+    ("rejected by the gate", "rejected by the gate"),
+    ("malformed reply", "malformed reply"),
+]
+
+
+def _b3_count(profile: str, label: str) -> int:
+    text = (ROOT / f"results/B3_{profile}_nopaper.txt").read_text()
+    m = re.search(rf"^\s*{re.escape(label)}\s+(\d+)", text, re.M)
+    assert m, f"B3_{profile}_nopaper.txt no longer reports {label!r}"
+    return int(m.group(1))
+
+
+@pytest.mark.parametrize("row, label", B3_ROWS, ids=[r[0] for r in B3_ROWS])
+def test_evidence_b3_table_matches_the_artifacts(row, label):
+    dev, holdout = _b3_count("dev", label), _b3_count("holdout", label)
+    pattern = rf"^\|\s*{re.escape(row)}\s*\|\s*\**(\d+)\**\s*\|\s*\**(\d+)\**\s*\|"
+    m = re.search(pattern, EVIDENCE, re.M)
+    assert m, f"EVIDENCE.md no longer has a B3 row for {row!r}"
+    assert (int(m.group(1)), int(m.group(2))) == (dev, holdout), (
+        f"EVIDENCE.md says {row} = {m.group(1)}/{m.group(2)}, the artifacts say "
+        f"{dev}/{holdout}. Regenerate the run or correct EVIDENCE.md."
+    )
+
+
+def test_evidence_and_readme_agree_on_what_the_agent_tier_resolved():
+    """The one B3 number that would be a lie rather than merely stale."""
+    for profile in ("dev", "holdout"):
+        assert _b3_count(profile, r"RESOLVED \(source-backed\)".replace("\\", "")) == 0 \
+            or _b3_count(profile, "RESOLVED (source-backed)") == 0
+    assert "**0** | **0**" in EVIDENCE or "| **0** | **0** |" in EVIDENCE
