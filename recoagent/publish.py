@@ -425,13 +425,12 @@ def build(repo_url: str) -> str:
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>FinMind &mdash; scorecard</title>
+<title>RecoAgent &mdash; scorecard</title>
 <style>{_CSS}</style></head><body><div class="wrap">
 <header>
-<h1>FinMind</h1>
-<p class="sub">A finance controller built on a reconciliation engine, on the
-principle that you cannot categorise, report on, or answer questions about a
-book you have not first proved.</p>
+<h1>RecoAgent</h1>
+<p class="sub">A settlement reconciliation engine that proves every match
+before it books it &mdash; and files an exception rather than guessing.</p>
 <p class="meta">{counts} &middot; generated {date.today().isoformat()} from the
 committed artifacts &middot; <a href="{html.escape(repo_url)}">source</a></p>
 </header>

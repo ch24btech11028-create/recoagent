@@ -67,3 +67,17 @@ def test_every_panel_renders(page):
     for heading in ("Reconciliation", "Attacking it on purpose", "The books",
                     "The agent tier, measured", "Throughput"):
         assert f"<h2>{heading}</h2>" in page
+
+
+def test_the_page_calls_the_project_what_the_readme_calls_it(page):
+    """A judge following the link from a repo called RecoAgent must not land on
+    a page titled something else. The project was renamed once and the page
+    kept the old name, which is exactly the kind of drift a reader reads as
+    carelessness."""
+    import re as _re
+    from pathlib import Path as _Path
+
+    name = _Path(__file__).resolve().parents[1] / "README.md"
+    heading = _re.match(r"#\s+(\S+)", name.read_text()).group(1)
+    assert f"<title>{heading}" in page, f"page title does not start with {heading!r}"
+    assert f"<h1>{heading}</h1>" in page

@@ -458,7 +458,7 @@ recoagent/
   eval/                    the scorers, BenchRec, throughput, repeatability
   ui.py, web/              the operator console
 results/                   committed run artifacts
-tests/             460 tests
+tests/             461 tests
 ```
 
 - [docs/PROJECT.md](docs/PROJECT.md) — the whole project in plain language, for
